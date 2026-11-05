@@ -1,6 +1,6 @@
 import { floorPosition, surfaceAt, isLoft, type Point } from "./resident-movement.ts";
 import { WANDER, WANDER_DESTINATIONS } from "./resident-movement-data.ts";
-export const canWander = (enabled: boolean, held: boolean, walking: boolean, now: number, after: number): boolean => enabled && !held && !walking && now >= after;
+export const canWander = (enabled: boolean, held: boolean, walking: boolean, now: number, after: number, foregroundCue = false): boolean => enabled && !held && !walking && !foregroundCue && now >= after;
 export function wanderTarget(home: Point, interest: Point, at: string, random: number, explore = false): Point {
   if (at === "interest") return { ...home };
   if (explore) {

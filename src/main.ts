@@ -18,7 +18,10 @@ import { FavoriteSpots } from "./favorite-spots";
 import { installPostcard } from "./postcard";
 import { installLighting } from "./lighting-view";
 import { mountSceneActions } from "./scene-actions";
+import { makeNowPlaying } from "./now-playing";
 import { installIntro } from "./intro";
+import { activeRoom, roomLayoutFor, setRoomLayout } from "./room-layout";
+import { installRoomResize } from "./room-resize";
 
 async function start(intro: ReturnType<typeof installIntro>): Promise<void> {
   const shell = document.querySelector<HTMLElement>("#grove")!;
@@ -36,7 +39,9 @@ async function start(intro: ReturnType<typeof installIntro>): Promise<void> {
   app.stage.eventMode = "none";
   shell.prepend(app.canvas);
   const settings = new SceneSettings({ getItem: (key) => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) });
+  setRoomLayout(roomLayoutFor(innerWidth, innerHeight));
   const scene = await makeScene(settings, app.renderer);
+  shell.dataset.room = activeRoom;
   app.stage.addChild(scene.world);
   const look = new Look(scroller, worldEl, scene.puff.cast.home.x);
   const roomAudio = installRoomAudio();
@@ -57,16 +62,17 @@ async function start(intro: ReturnType<typeof installIntro>): Promise<void> {
   installLighting(settings);
   applySettings();
   const favorites = new FavoriteSpots(worldEl, look, settings, overlay, scene.favoriteScenery);
+  const syncRoom = installRoomResize({ app, scene, runtime, settings, favorites, shell, scroller, applySettings });
   installPostcard(app);
-  mountSceneActions();
+  const tray = mountSceneActions([makeNowPlaying(roomAudio, () => look.frozen), document.querySelector<HTMLElement>(".postcard-action")!]);
   if (params.has("debug")) installDebug(shell, app, scene, runtime, look);
   runtime.update(0);
   app.ticker.add((ticker) => { runtime.update(ticker.deltaMS); favorites.update(); });
-  document.addEventListener("visibilitychange", () => document.hidden ? app.stop() : app.start());
   if (document.hidden) app.stop();
   app.render();
   shell.dataset.ready = "true";
-  intro.ready(roomAudio.unlock);
+  intro.ready(() => { roomAudio.unlock(); tray.peek(); });
+  void syncRoom();
 }
 
 const intro = installIntro(document.querySelector<HTMLElement>("#grove")!, new URLSearchParams(location.search).has("still"));

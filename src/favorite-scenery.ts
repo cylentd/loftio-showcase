@@ -2,7 +2,7 @@ import { ColorMatrixFilter, Container, Sprite, Texture } from "pixi.js";
 import { FAVORITE_ART, FAVORITE_LIGHT } from "./favorite-scenery-data";
 import { favoriteLightMatrix } from "./favorite-light-model";
 
-function illuminatedPainting(room: Texture, polygons: number[][]): Container {
+function illuminatedPainting(room: Texture, polygons: number[][]) {
   const horizontal = polygons.flatMap(polygon => polygon.filter((_, index) => index % 2 === 0));
   const vertical = polygons.flatMap(polygon => polygon.filter((_, index) => index % 2 === 1));
   const left = Math.min(...horizontal) - FAVORITE_LIGHT.padding;
@@ -24,10 +24,11 @@ function illuminatedPainting(room: Texture, polygons: number[][]): Container {
   const painting = new Sprite(room);
   const filter = new ColorMatrixFilter(); filter.matrix = favoriteLightMatrix(1);
   painting.filters = [filter];
-  const mask = new Sprite(Texture.from(canvas)); mask.position.set(left, top);
+  const maskTexture = Texture.from(canvas);
+  const mask = new Sprite(maskTexture); mask.position.set(left, top);
   painting.mask = mask;
   const root = new Container(); root.addChild(painting, mask); root.visible = false;
-  return root;
+  return { root, maskTexture, filter };
 }
 
 export class FavoriteScenery {
@@ -37,11 +38,19 @@ export class FavoriteScenery {
   private selected: string[] = [];
   constructor(room: Texture, private readonly foreground: Container) {
     this.furniture = Object.entries(FAVORITE_ART).map(([id, polygons]) => {
-      const sprite = illuminatedPainting(room, polygons); this.root.addChild(sprite);
-      return { id, sprite };
+      const { root: sprite, maskTexture, filter } = illuminatedPainting(room, polygons); this.root.addChild(sprite);
+      return { id, sprite, maskTexture, filter };
     });
   }
   get active(): string[] { return [...this.selected]; }
+  destroy(): void {
+    this.foreground.filters = [];
+    this.foregroundExposure.destroy();
+    for (const { maskTexture, filter } of this.furniture) {
+      maskTexture.destroy(true);
+      filter.destroy();
+    }
+  }
   update(ids: string[], now: number, frozen: boolean): void {
     this.selected = ids;
     const wave = (1 - Math.cos(now / FAVORITE_LIGHT.periodMs * Math.PI * 2)) / 2;

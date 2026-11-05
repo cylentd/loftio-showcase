@@ -340,7 +340,7 @@ export class Resident {
     this.booster.place(h, this.aspect, this.held || this.walking ? 0 : seat.lift, this.lighting, cloud);
     const base = h / this.sprite.texture.height;
     this.root.position.set(this.pos.x, this.pos.y);
-    this.root.zIndex = this.held ? PLACEMENT.heldDepth : this.climbing ? TRAVEL.climbDepth : residentDepth(this.pos);
+    this.root.zIndex = this.held ? PLACEMENT.heldDepth : this.climbing ? TRAVEL.climbDepth : residentDepth(this.pos, this.walking);
     this.body.position.set(0, -lift - this.supportLift);
     this.body.rotation = rot;
     this.sprite.scale.set(base * sx * this.facingShown, base * sy);

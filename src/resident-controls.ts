@@ -7,7 +7,6 @@ import type { Scene } from "./scene";
 import type { Runtime } from "./runtime";
 import type { Overlay } from "./overlay";
 import type { SceneSettings } from "./scene-settings";
-import { seatDrop } from "./seat-occupancy";
 
 type Held = { resident: Resident; button: HTMLButtonElement; origin: Point; pointer: number | null };
 
@@ -97,13 +96,10 @@ class ResidentControls {
 
   private drop(held: Held, cancel: boolean): void {
     const resident = held.resident;
-    const landing = seatDrop(resident.pos, held.origin, this.scene.residents.filter(member => member !== resident).flatMap(member => member.seatClaims));
-    const blocked = !cancel && landing.blocked;
-    if (blocked) { Object.assign(resident.pos, landing.position); cancel = true; }
     resident.putDown(!cancel, !this.runtime.look.frozen, this.runtime.clock);
     delete held.button.dataset.held;
     held.button.setAttribute("aria-pressed", "false");
-    this.overlay.announce(`${NAMES[resident.cast.id]} ${blocked ? COPY.seatTaken : cancel ? COPY.cancelled : COPY.placed}`);
+    this.overlay.announce(`${NAMES[resident.cast.id]} ${cancel ? COPY.cancelled : COPY.placed}`);
     const interest = resident.cast.interest;
     if (!cancel && Math.hypot(resident.pos.x - interest.x, resident.pos.y - interest.y) <= PLACEMENT.interestRadius) {
       this.overlay.arrive(resident.cast.id);

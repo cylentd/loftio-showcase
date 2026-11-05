@@ -18,12 +18,13 @@ function fadeIn(tracks: Soundtrack[]): void {
   requestAnimationFrame(step);
 }
 
-export function installRoomAudio(): { unlock(): void } {
-  const tracks = [installSoundtrack(), installRainSound()];
+export function installRoomAudio() {
+  const music = installSoundtrack();
+  const tracks = [music.model, installRainSound()];
   const button = document.createElement("button"); button.className = "room-audio room-action"; button.type = "button";
   const sync = () => {
     const playing = tracks.some(track => track.playing);
-    button.replaceChildren(icon(playing ? "sound" : "muted"));
+    button.replaceChildren(icon(playing ? "pause" : "play"));
     button.setAttribute("aria-label", playing ? ROOM_AUDIO.mute : ROOM_AUDIO.enable);
     button.setAttribute("aria-pressed", String(playing));
     button.title = tracks.some(track => track.failed) ? ROOM_AUDIO.blocked : playing ? ROOM_AUDIO.mute : ROOM_AUDIO.enable;
@@ -58,7 +59,12 @@ export function installRoomAudio(): { unlock(): void } {
   for (const track of tracks) track.subscribe(sync);
   document.addEventListener("click", unlock, true);
   document.addEventListener("keydown", unlock, true);
-  document.body.append(button); sync(); void start();
+  sync(); void start();
   // Passing the title is a user gesture, so sound the browser blocked on load can start then, fading up with the room.
-  return { unlock: () => retryBlocked(true) };
+  // The play button and playlist go to the now-playing pill in the corner tray.
+  return {
+    unlock: () => retryBlocked(true), button, music,
+    subscribe(listener: () => void) { for (const track of tracks) track.subscribe(listener); },
+    get playing() { return tracks.some(track => track.playing); },
+  };
 }

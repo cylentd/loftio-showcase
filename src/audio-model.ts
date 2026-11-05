@@ -1,4 +1,4 @@
-export interface AudioPort { volume: number; src: string; currentTime: number; play(): Promise<void>; pause(): void }
+export interface AudioPort { volume: number; src: string; currentTime: number; readonly duration?: number; play(): Promise<void>; pause(): void }
 export class Soundtrack {
   desired = false;
   playing = false;
@@ -40,6 +40,15 @@ export class Soundtrack {
     if (this.hidden === hidden) return;
     this.hidden = hidden;
     await this.reconcile();
+  }
+  get position(): { current: number; duration: number } {
+    return { current: this.audio.currentTime, duration: this.audio.duration ?? NaN };
+  }
+  /** Jump within the song. Playing or paused stays as it was. */
+  seek(seconds: number): void {
+    const duration = this.audio.duration ?? NaN;
+    if (!Number.isFinite(seconds) || !Number.isFinite(duration)) return;
+    this.audio.currentTime = Math.max(0, Math.min(duration, seconds));
   }
   volume(value: number): void {
     if (!Number.isFinite(value)) return;

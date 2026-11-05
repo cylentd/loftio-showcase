@@ -1,5 +1,7 @@
-export const PUZZLE_TABLE = { depth: 670, polygons: [[230, 625, 340, 613, 540, 627, 542, 655, 375, 671, 233, 653]] };
-export const LOFT_RAIL = { depth: 450, polygons: [
+import { roomData } from "./room-layout.ts";
+import { PORTRAIT_PUZZLE, PORTRAIT_RAIL } from "./portrait-scenery-data.ts";
+export const PUZZLE_TABLE = roomData({ depth: 670, polygons: [[230, 625, 340, 613, 540, 627, 542, 655, 375, 671, 233, 653]] }, PORTRAIT_PUZZLE);
+export const LOFT_RAIL = roomData({ depth: 450, polygons: [
   [300, 398, 874, 401, 880, 431, 299, 432],
   [1021, 399, 1265, 394, 1265, 430, 1030, 430],
   [306, 345, 878, 369, 879, 379, 306, 355],
@@ -15,4 +17,4 @@ export const LOFT_RAIL = { depth: 450, polygons: [
   [1066, 373, 1076, 373, 1076, 400, 1066, 400],
   [1128, 371, 1138, 371, 1138, 399, 1128, 399],
   [1190, 369, 1200, 369, 1200, 397, 1190, 397],
-] };
+] }, PORTRAIT_RAIL);

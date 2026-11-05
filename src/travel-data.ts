@@ -1,12 +1,14 @@
-export const TRAVEL = {
+import { roomData } from "./room-layout.ts";
+import { PORTRAIT_NODES, PORTRAIT_OBSTACLES } from "./portrait-movement-data.ts";
+export const TRAVEL = roomData({
   climbMs: 4800, climbDepth: 460,
   groundZone: "ground", ladderBottom: "ladder-bottom", ladderTop: "ladder-top",
-};
-export const TRAVEL_OBSTACLES = [
+}, { climbDepth: 355 });
+export const TRAVEL_OBSTACLES = roomData([
   { left: 735, right: 1135, back: 710, front: 825 },
   { left: 225, right: 555, back: 620, front: 752 },
-];
-export const TRAVEL_NODES = [
+], PORTRAIT_OBSTACLES);
+export const TRAVEL_NODES = roomData([
   { id: "left-front", x: 600, y: 850, zone: "ground" },
   { id: "right-front", x: 1200, y: 850, zone: "ground" },
   { id: "left-back", x: 620, y: 690, zone: "ground" },
@@ -29,10 +31,11 @@ export const TRAVEL_NODES = [
   { id: "bed-right-approach", x: 1170, y: 400, zone: "loft-right" },
   { id: "bed-left", x: 510, y: 345, zone: "bed-left" },
   { id: "bed-right", x: 1090, y: 365, zone: "bed-right" },
-];
+], PORTRAIT_NODES);
 export const TRAVEL_LINKS = [
   ["ladder-bottom", "ladder-top"], ["ladder-top", "loft-left"], ["ladder-top", "loft-right"],
   ["chair-left-approach", "chair-left"], ["chair-right-approach", "chair-right"],
   ["lounge-approach", "lounge"], ["ottoman-approach", "ottoman"],
   ["chair-right", "table"], ["bed-left-approach", "bed-left"], ["bed-right-approach", "bed-right"],
+  ["couch-approach", "couch"],
 ];

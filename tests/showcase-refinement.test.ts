@@ -1,6 +1,7 @@
+import { DragPlacement } from "../src/resident-movement.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { seatAvailable, seatDrop } from "../src/seat-occupancy.ts";
+import { seatAvailable } from "../src/seat-occupancy.ts";
 import { defaultLampGlow } from "../src/lamp-glow.ts";
 import { postcardLayout } from "../src/postcard-layout.ts";
 import { POSTCARD_RENDER as PRINT } from "../src/postcard-data.ts";
@@ -14,10 +15,13 @@ test("a seated or incoming resident reserves the sitting spot, not the whole flo
   assert.equal(seatAvailable({ x: 510, y: 345 }, [{ x: 600, y: 350 }]), false);
 });
 
-test("an occupied seat rejects a drop without displacing its occupant or inventing markers", () => {
+test("a manual drop stays at its shadow even when an autonomous seat claim exists", () => {
   const origin = { x: 1200, y: 900 };
-  assert.deepEqual(seatDrop(CHAIR, origin, [CHAIR]), { position: origin, blocked: true });
-  assert.deepEqual(seatDrop(CHAIR, origin, []), { position: CHAIR, blocked: false });
+  assert.equal(seatAvailable(CHAIR, [CHAIR]), false);
+  const drag = new DragPlacement();
+  drag.begin("puff", 1, origin, origin, origin);
+  drag.move(1, CHAIR, CHAIR);
+  assert.deepEqual(drag.finish(1)?.position, CHAIR);
 });
 
 test("lamp glow defaults to 20% lamplit, 300% dusk and zero moonlit", () => {

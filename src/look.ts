@@ -4,6 +4,7 @@ import { controlText } from "./settings-components";
 import { EFFECTS } from "./effects-constants";
 import { cameraOffset } from "./effects-model";
 import { WORLD } from "./tune";
+import { activeRoom, roomFrame } from "./room-layout";
 
 const PHONE_MAX = 600;
 export class Look {
@@ -15,7 +16,7 @@ export class Look {
   readonly reduced = matchMedia("(prefers-reduced-motion: reduce)");
   private readonly forcedReduced = new URLSearchParams(location.search).has("reduced");
   private target = { x: 0, y: 0 };
-  private drag: { x: number; y: number; targetX: number; targetY: number } | null = null;
+  private drag: { x: number; y: number; targetX: number; targetY: number; left: number } | null = null;
   private readonly motionButton = document.createElement("button");
   private readonly lookButton = document.createElement("button");
 
@@ -24,13 +25,18 @@ export class Look {
     this.layout();
     addEventListener("resize", () => this.layout());
     scroller.addEventListener("pointerdown", (e) => {
-      if (e.pointerType !== "mouse" || (e.target as HTMLElement).closest("button") || this.frozen) return;
-      this.drag = { x: e.clientX, y: e.clientY, targetX: this.target.x, targetY: this.target.y };
+      if (e.pointerType !== "mouse" || (e.target as HTMLElement).closest("button") || (this.frozen && activeRoom !== "portrait")) return;
+      this.drag = { x: e.clientX, y: e.clientY, targetX: this.target.x, targetY: this.target.y, left: scroller.scrollLeft };
       scroller.setPointerCapture(e.pointerId);
       scroller.classList.add("looking");
     });
     scroller.addEventListener("pointermove", (e) => {
-      if (!this.drag || this.frozen) return;
+      if (!this.drag) return;
+      if (activeRoom === "portrait") {
+        scroller.scrollLeft = this.drag.left + this.drag.x - e.clientX;
+        return;
+      }
+      if (this.frozen) return;
       this.target = {
         x: Math.max(-1, Math.min(1, this.drag.targetX + (this.drag.x - e.clientX) / EFFECTS.dragDistance)),
         y: Math.max(-1, Math.min(1, this.drag.targetY + (this.drag.y - e.clientY) / EFFECTS.dragDistance)),
@@ -59,13 +65,21 @@ export class Look {
     look.title = LOOK.help;
     look.addEventListener("keydown", (e) => {
       const axis = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1], Home: [0, 0] }[e.key];
+      if (axis && activeRoom === "portrait") {
+        e.preventDefault();
+        this.scroller.scrollLeft = e.key === "Home" ? this.focusX * this.scale - innerWidth / 2 : this.scroller.scrollLeft + axis[0]! * innerWidth / 2;
+        return;
+      }
       if (!axis || this.frozen) return;
       e.preventDefault();
       this.target = e.key === "Home" ? { x: 0, y: 0 } : {
         x: axis[0] || this.target.x, y: axis[1] || this.target.y,
       };
     });
-    look.addEventListener("click", () => { this.target = { x: 0, y: 0 }; });
+    look.addEventListener("click", () => {
+      this.target = { x: 0, y: 0 };
+      if (activeRoom === "portrait") this.scroller.scrollLeft = this.focusX * this.scale - innerWidth / 2;
+    });
     controlText(this.motionButton, "pause", LOOK.still);
     this.motionButton.addEventListener("click", () => { this.still = !this.still; this.sync(); });
     toolbar.append(look, this.motionButton);
@@ -80,12 +94,20 @@ export class Look {
 
   private layout(): void {
     controlText(this.lookButton, "look", innerWidth <= PHONE_MAX ? LOOK.swipe : LOOK.drag);
-    this.scale = Math.max(innerWidth / WORLD.width, innerHeight / WORLD.height) * EFFECTS.overscan;
-    this.offsetY = (innerHeight - WORLD.height * this.scale) / 2;
+    const frame = roomFrame(innerWidth, innerHeight, WORLD, activeRoom === "portrait" ? 1 : EFFECTS.overscan);
+    this.scale = frame.scale;
+    this.offsetY = frame.offsetY;
     this.worldEl.style.width = `${WORLD.width * this.scale}px`;
     this.worldEl.style.height = `${innerHeight}px`;
-    this.scroller.scrollLeft = innerWidth <= PHONE_MAX
+    this.scroller.scrollLeft = activeRoom === "portrait"
       ? this.focusX * this.scale - innerWidth / 2 : (WORLD.width * this.scale - innerWidth) / 2;
+  }
+
+  refresh(focusX: number): void {
+    this.focusX = focusX;
+    this.x = this.y = 0;
+    this.target = { x: 0, y: 0 };
+    this.layout();
   }
 
   update(dt: number): void {

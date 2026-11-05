@@ -8,6 +8,8 @@ import type { SceneSettings } from "./scene-settings";
 import { canWander, wanderTarget } from "./wander-model";
 import { isLoft } from "./resident-movement";
 import { PLACEMENT } from "./resident-movement-data";
+import { activeRoom } from "./room-layout";
+import { PORTRAIT_MESSAGE_SPOT } from "./portrait-movement-data";
 
 const TAP_MIN = 44;
 const HIT_WIDTH = 0.78;
@@ -18,6 +20,7 @@ const BUBBLE_CUE = 0.6;
 export class Runtime {
   clock = 0;
   private nextWalk = ROUTINE.firstWalkMs;
+  private messageTrip = false;
   private readonly rand = seeded(ROUTINE.seed);
   constructor(private scene: Scene, readonly look: Look, private overlay: Overlay, private busy: boolean, private settings: SceneSettings) {}
 
@@ -27,7 +30,7 @@ export class Runtime {
       return;
     }
     for (const resident of this.scene.residents) {
-      if (!resident.walking || resident.held) continue;
+      if (!resident.walking || resident.held || this.messageTrip && this.foregroundCarrier(resident.cast.id)) continue;
       resident.stopWalking();
       resident.update(0, this.clock, true);
     }
@@ -68,14 +71,28 @@ export class Runtime {
     this.place();
   }
 
+  private foregroundCarrier(id: string): boolean {
+    return activeRoom === "portrait" && this.settings.showCue && id === this.scene.puff.cast.id;
+  }
+
+  private approachMessage(): boolean {
+    const { residents, puff } = this.scene;
+    if (!this.foregroundCarrier(puff.cast.id) || puff.held) { this.messageTrip = false; return false; }
+    if (puff.walking && (this.messageTrip || puff.climbing)) return false;
+    if (!puff.walking && Math.hypot(puff.pos.x - PORTRAIT_MESSAGE_SPOT.x, puff.pos.y - PORTRAIT_MESSAGE_SPOT.y) <= 2) { this.messageTrip = false; return false; }
+    if (!puff.walking && residents.filter(resident => resident.walking).length >= ROUTINE.maxMoving) return false;
+    this.messageTrip = puff.walkTo(PORTRAIT_MESSAGE_SPOT, "home", !residents.some(resident => resident.ladderReserved), residents.filter(resident => resident !== puff).flatMap(resident => resident.seatClaims));
+    return this.messageTrip;
+  }
+
   private routine(dt: number): void {
-    if (!this.settings.wander) return;
+    if (this.approachMessage() || !this.settings.wander) return;
     this.nextWalk -= dt;
     const { residents } = this.scene;
     if (residents.filter((r) => r.walking).length >= ROUTINE.maxMoving) return;
-    const resuming = residents.find((r) => r.wanderAfter > 0 && canWander(this.settings.wander, r.held, r.walking, this.clock, r.wanderAfter));
+    const resuming = residents.find((r) => r.wanderAfter > 0 && canWander(this.settings.wander, r.held, r.walking, this.clock, r.wanderAfter, this.foregroundCarrier(r.cast.id)));
     if (!resuming && this.nextWalk > 0) return;
-    const idle = residents.filter((r) => canWander(this.settings.wander, r.held, r.walking, this.clock, r.wanderAfter));
+    const idle = residents.filter((r) => canWander(this.settings.wander, r.held, r.walking, this.clock, r.wanderAfter, this.foregroundCarrier(r.cast.id)));
     const who = resuming ?? idle[Math.floor(this.rand() * idle.length)];
     if (who) {
       who.wanderAfter = 0;
@@ -105,7 +122,7 @@ export class Runtime {
       const r = residents.find((resident) => resident.cast.id === id);
       if (!r) return null;
       const lift = id === "puff" && this.settings.showCue ? r.height * (1 + CUE.lift) + CUE.size * BUBBLE_CUE : r.height * HIT_HEIGHT;
-      return { x: (r.pos.x + cast.x - x) * scale, y: (r.pos.y + cast.y - y - r.lift - lift) * scale + offsetY };
+      return { x: (r.pos.x + cast.x - x) * scale, y: (r.pos.y + cast.y - y - r.lift - lift) * scale + offsetY, height: r.height * scale };
     });
   }
 }

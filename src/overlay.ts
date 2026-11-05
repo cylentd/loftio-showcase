@@ -1,5 +1,6 @@
 import { CUE_LABEL, LINES, NAMES, PANEL, ARRIVALS, LOFT_ARRIVAL } from "./copy";
 import { BUBBLE_MS } from "./tune";
+import { bubbleMetrics } from "./bubble-model";
 
 export type Rect = { x: number; y: number; w: number; h: number };
 
@@ -57,13 +58,16 @@ export class Overlay {
   }
 
   /** Anchor point (head top, centre) of whoever is speaking, so the bubble rides along. */
-  placeBubble(anchor: (id: string) => { x: number; y: number } | null): void {
+  placeBubble(anchor: (id: string) => { x: number; y: number; height: number } | null): void {
     if (!this.bubbleFor) return;
     const a = anchor(this.bubbleFor);
     if (!a) return;
+    const metrics = bubbleMetrics(a.height);
+    this.bubble.style.setProperty("--bubble-width", metrics.width + "px");
+    this.bubble.style.setProperty("--bubble-scale", String(metrics.scale));
     const style = getComputedStyle(this.bubble);
     const gutter = parseFloat(style.getPropertyValue("--bubble-gutter"));
-    const gap = parseFloat(style.getPropertyValue("--bubble-gap"));
+    const gap = parseFloat(style.getPropertyValue("--bubble-gap")) * metrics.scale;
     const origin = this.bubble.parentElement!.getBoundingClientRect();
     const width = this.bubble.offsetWidth;
     const left = Math.max(gutter - origin.left, Math.min(innerWidth - gutter - origin.left - width, a.x - width / 2));

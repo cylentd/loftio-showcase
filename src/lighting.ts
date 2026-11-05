@@ -1,12 +1,14 @@
-import { Container, RenderTexture, Sprite, type Renderer, type Texture } from "pixi.js";
+import { ColorMatrixFilter, Container, RenderTexture, Sprite, type Renderer, type Texture } from "pixi.js";
 import { LAMPS } from "./cast";
 import { LIGHTING, type LightingMode } from "./lighting-data";
 import { lampFlicker } from "./lighting-model";
 import { LightingTimeline } from "./lighting-timeline";
+import { WORLD } from "./tune";
+import { activeRoom } from "./room-layout";
+import { PORTRAIT_NIGHT_MATRIX } from "./portrait-scenery-data";
 
 export class Lighting {
-  readonly texture = RenderTexture.create({ width: LIGHTING.width, height: LIGHTING.height });
-  readonly timeline = new LightingTimeline();
+  readonly texture = RenderTexture.create({ width: WORLD.width, height: WORLD.height });
   readonly flickers = LAMPS.map(() => 1);
   private readonly painting = new Container();
   private readonly night: Sprite;
@@ -15,12 +17,17 @@ export class Lighting {
   private renderedFlickers = "";
   private readonly renderer: Renderer;
 
-  constructor(warm: Texture, moonlit: Texture, dot: Texture, renderer: Renderer) {
+  constructor(warm: Texture, moonlit: Texture, dot: Texture, renderer: Renderer, readonly timeline = new LightingTimeline()) {
     this.renderer = renderer;
     const day = new Sprite(warm);
     this.night = new Sprite(moonlit);
-    day.width = this.night.width = LIGHTING.width;
-    day.height = this.night.height = LIGHTING.height;
+    day.width = this.night.width = WORLD.width;
+    day.height = this.night.height = WORLD.height;
+    if (activeRoom === "portrait") {
+      const moonlight = new ColorMatrixFilter();
+      moonlight.matrix = PORTRAIT_NIGHT_MATRIX;
+      this.night.filters = [moonlight];
+    }
     this.painting.addChild(day, this.night);
     this.shades = LAMPS.map(lamp => {
       const shade = new Sprite(dot);
@@ -49,5 +56,11 @@ export class Lighting {
     this.renderer.render({ container: this.painting, target: this.texture, clear: true });
     this.renderedBlend = blend;
     this.renderedFlickers = flickers;
+  }
+
+  destroy(): void {
+    for (const filter of this.night.filters ?? []) filter.destroy();
+    this.painting.destroy({ children: true });
+    this.texture.destroy(true);
   }
 }

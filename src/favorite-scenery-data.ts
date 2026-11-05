@@ -1,9 +1,11 @@
+import { roomData } from "./room-layout.ts";
+import { PORTRAIT_FAVORITES } from "./portrait-scenery-data.ts";
 export const FAVORITE_LIGHT = {
   exposure: 1.2, colorRetention: 0.3, tint: [0.78, 1.05, 1.4], lift: [12, 24, 38],
   luminance: [0.2126, 0.7152, 0.0722], channelMax: 255, matrixStride: 5, pixelStride: 4,
   feather: 5, padding: 20, periodMs: 2800, minimumAlpha: 0.82, steadyAlpha: 0.95,
 };
-export const FAVORITE_ART: Record<string, number[][]> = {
+export const FAVORITE_ART: Record<string, number[][]> = roomData({
   hoodie: [
     [187, 574, 211, 565, 298, 565, 317, 577, 322, 615, 280, 621, 217, 628, 196, 626],
     [218, 684, 255, 677, 329, 679, 358, 686, 363, 709, 351, 723, 236, 725, 220, 715],
@@ -13,4 +15,4 @@ export const FAVORITE_ART: Record<string, number[][]> = {
   chomper: [[997, 648, 1015, 634, 1019, 622, 1033, 624, 1036, 639, 1051, 650, 1051, 704, 1045, 715, 1002, 714, 995, 705]],
   slime: [[312, 291, 348, 280, 455, 300, 549, 329, 589, 348, 595, 377, 325, 397, 307, 375]],
   burger: [[1147, 578, 1192, 571, 1210, 580, 1210, 603, 1145, 605], [1122, 499, 1141, 480, 1165, 499, 1164, 539, 1122, 545]],
-};
+}, PORTRAIT_FAVORITES);

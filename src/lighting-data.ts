@@ -2,8 +2,6 @@ export const LIGHTING_MODES = ["cycle", "lamplit", "dusk", "moonlit"] as const;
 export type LightingMode = typeof LIGHTING_MODES[number];
 export const LIGHTING = {
   artUrl: "art/moonlit.jpg",
-  width: 1920,
-  height: 1081,
   cycleMs: 240000,
   transitionMs: 1800,
   stops: [[0, 0], [30000, 0], [70000, 0.5], [95000, 0.5], [135000, 1], [185000, 1], [240000, 0]],

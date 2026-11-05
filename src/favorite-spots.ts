@@ -43,6 +43,11 @@ export class FavoriteSpots {
 
   private dismiss(): void { this.pointerHeld = null; this.update(); }
 
+  setScenery(scenery: FavoriteScenery): void {
+    this.scenery = scenery;
+    this.dismiss();
+  }
+
   update(): void {
     const active = document.hidden ? [] : this.entries.filter(({ id, character }) =>
       this.settings.showFavorites || this.pointerHeld === id || character.dataset.held === "true").map(entry => entry.id);

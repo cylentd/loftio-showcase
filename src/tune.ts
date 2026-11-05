@@ -1,9 +1,11 @@
-// Every motion and layout number for the spike. World units are pixels of room-desktop.jpg (1920 x 1081).
+// Motion values and room geometry use the selected painting's pixel coordinates.
 
-export const WORLD = { width: 1920, height: 1081 };
+import { roomData } from "./room-layout.ts";
+import { PORTRAIT_WORLD, PORTRAIT_DEPTH } from "./portrait-movement-data.ts";
+export const WORLD = roomData({ width: 1920, height: 1081 }, PORTRAIT_WORLD);
 
 // Depth: a resident's height follows its feet's y. Back of the floor (behind the coffee table) to the front edge.
-export const DEPTH = { backY: 680, frontY: 1040, backHeight: 135, frontHeight: 245 };
+export const DEPTH = roomData({ backY: 680, frontY: 1040, backHeight: 135, frontHeight: 245 }, PORTRAIT_DEPTH);
 
 export const ROUTINE = {
   minGapMs: 8000, // spec item 3: one walk every 8 to 20 s
