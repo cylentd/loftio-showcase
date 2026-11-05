@@ -1,0 +1,154 @@
+.scene-actions {
+  position: fixed; bottom: max(var(--space-4), env(safe-area-inset-bottom)); right: max(var(--space-4), env(safe-area-inset-right));
+  z-index: var(--controls-layer); display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1);
+  border: var(--border-width) solid var(--scene-actions-edge); border-radius: var(--chip-radius);
+  background: var(--scene-actions-bg); color: var(--scene-actions-ink); box-shadow: var(--scene-actions-shadow);
+}
+.scene-settings { position: relative; margin-left: var(--space-2); padding-left: var(--space-2); border-left: var(--border-width) solid var(--scene-actions-edge); }
+.room-action {
+  position: relative; display: grid; place-items: center; flex-shrink: 0; width: var(--tap-min); height: var(--tap-min);
+  padding: 0; border: 0; border-radius: var(--chip-radius); background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.room-action:hover, .room-action:focus-visible, .scene-settings[open] > summary { background: var(--scene-actions-hover); }
+.room-action:focus-visible { outline: var(--focus-width) solid var(--scene-actions-ink); outline-offset: var(--focus-offset); }
+.room-action:disabled { opacity: var(--controls-rest-opacity); cursor: wait; }
+.room-action::after {
+  content: attr(aria-label); position: absolute; bottom: calc(100% + var(--space-3)); right: 0;
+  width: max-content; max-width: calc(100vw - 2 * var(--space-4)); padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--scene-actions-edge); border-radius: var(--radius-1);
+  background: var(--scene-actions-bg); color: var(--scene-actions-ink); font: var(--text-sm) / var(--line-body) var(--font-body);
+  pointer-events: none; visibility: hidden;
+}
+.room-action:hover::after, .room-action:focus-visible::after { visibility: visible; }
+.scene-settings[open] > summary::after { visibility: hidden; }
+.scene-settings > summary { list-style: none; }
+.scene-settings > summary::-webkit-details-marker { display: none; }
+.control-icon, .scene-settings > summary svg {
+  width: var(--controls-icon); height: var(--controls-icon); flex-shrink: 0; vertical-align: middle;
+}
+.scene-controls {
+  position: absolute; bottom: calc(100% + var(--space-2)); right: 0;
+  width: min(var(--controls-width), calc(100vw - 2 * var(--space-4)));
+  height: min(var(--controls-height), calc(100dvh - 2 * var(--space-4) - var(--tap-min) - var(--space-2)));
+  overflow: hidden; overscroll-behavior: contain; display: flex; flex-direction: column;
+  gap: var(--space-2); padding: var(--space-4); border: var(--border-width) solid var(--controls-edge);
+  border-radius: var(--controls-panel-radius); background: var(--controls-bg); color: var(--controls-ink);
+  box-shadow: var(--controls-panel-shadow); color-scheme: light;
+}
+.settings-heading {
+  margin: 0; font: var(--weight-strong) var(--controls-title-size) / var(--line-heading) var(--font-body);
+}
+.settings-tabs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-1);
+  flex-shrink: 0; padding-bottom: var(--space-2); border-bottom: var(--border-width) solid var(--controls-divider);
+}
+.scene-controls button {
+  min-height: var(--tap-min); padding: var(--space-2) var(--space-3); border: var(--border-width) solid transparent;
+  border-radius: var(--radius-1); background: transparent; color: inherit; font: inherit;
+  font-size: var(--controls-tab-size); cursor: pointer; text-align: left;
+}
+.scene-controls button:hover { background: var(--controls-hover); }
+.scene-controls button:disabled { opacity: var(--controls-rest-opacity); cursor: default; }
+.scene-controls .settings-tabs button {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-1);
+}
+.scene-controls .settings-tabs button[aria-selected="true"] {
+  background: var(--controls-selected); color: var(--controls-accent);
+}
+.scene-controls :is(button, summary, select, input):focus-visible, .scene-settings > summary:focus-visible {
+  outline: var(--focus-width) solid var(--controls-accent); outline-offset: var(--focus-offset);
+}
+.scene-tab-panel {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--controls-scroll) transparent;
+  display: grid; align-content: start; gap: var(--space-3); padding: var(--space-1);
+}
+.scene-tab-panel::-webkit-scrollbar { width: var(--controls-scroll-width); }
+.scene-tab-panel::-webkit-scrollbar-track { background: transparent; }
+.scene-tab-panel::-webkit-scrollbar-thumb { background: var(--controls-scroll); border-radius: var(--chip-radius); }
+.scene-tab-panel[hidden] { display: none; }
+.room-motion, .room-resident-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); align-items: start; }
+.room-motion button { text-align: center; background: var(--controls-hover); border-color: var(--controls-divider); }
+.scene-controls button[aria-pressed="true"] { color: var(--controls-accent); background: var(--controls-selected); border-color: var(--controls-edge); }
+.settings-group { border-bottom: var(--border-width) solid var(--controls-divider); padding-bottom: var(--space-3); }
+.room-lighting { display: grid; gap: var(--space-2); }
+.room-lighting h3 { margin: 0; font: var(--text-lg) / var(--line-heading) var(--font-heading); }
+.lighting-choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-1); }
+.scene-controls .lighting-choices button { min-width: 0; min-height: var(--controls-mode-height); padding: var(--space-2) var(--space-1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); text-align: center; border-color: var(--controls-divider); background: var(--controls-surface); }
+.settings-hint { margin: 0; color: var(--controls-muted); font-size: var(--controls-label-size); line-height: var(--line-body); }
+.cue-control { display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap-min); padding-block: var(--space-2); font-size: var(--controls-tab-size); cursor: pointer; }
+.cue-control input {
+  appearance: none; flex-shrink: 0; position: relative; width: var(--controls-switch-width); height: var(--controls-switch-height);
+  margin: 0; border: var(--border-width) solid var(--controls-edge); border-radius: var(--chip-radius); background: var(--controls-hover); cursor: pointer;
+}
+.cue-control input::after {
+  content: ""; position: absolute; top: var(--controls-switch-inset); left: var(--controls-switch-inset);
+  width: var(--controls-switch-dot); height: var(--controls-switch-dot); border-radius: var(--chip-radius); background: var(--controls-muted);
+}
+.cue-control input:checked { background: var(--controls-accent); border-color: var(--controls-accent); }
+.cue-control input:checked::after { transform: translateX(var(--controls-switch-travel)); background: var(--controls-on-accent); }
+.scene-residents summary { cursor: pointer; min-height: var(--tap-min); padding: var(--space-3) 0; font-size: var(--controls-tab-size); }
+.resident-panel { font-size: var(--controls-label-size); line-height: var(--line-body); color: var(--controls-muted); }
+.resident-panel p { margin: 0; }
+.room-resident-actions > button { border-color: var(--controls-divider); text-align: center; }
+.scene-audio h3, .scene-rain h3 { margin: 0; display: flex; align-items: center; gap: var(--space-2); font-size: var(--controls-tab-size); font-weight: 600; line-height: var(--tap-min); }
+.effect-panel { display: grid; gap: var(--space-3); }
+.effect-panel p { margin: 0; color: var(--controls-muted); font-size: var(--controls-label-size); line-height: var(--line-body); }
+.effect-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--controls-tab-size); }
+.effect-heading output { font-variant-numeric: tabular-nums; color: var(--controls-accent); }
+.effect-control input, .audio-panel input { width: 100%; min-height: var(--tap-min); margin: 0; accent-color: var(--controls-accent); cursor: pointer; }
+.scene-controls .effect-panel > button { border-color: var(--controls-divider); text-align: center; }
+.scene-audio, .scene-rain { position: relative; }
+.scene-rain { padding-top: var(--space-3); border-top: var(--border-width) solid var(--controls-divider); }
+.audio-panel { display: grid; gap: var(--space-2); font-size: var(--controls-label-size); }
+.audio-panel label { display: grid; gap: var(--space-1); color: var(--controls-muted); }
+.audio-panel > button { position: absolute; top: 0; right: 0; border-color: var(--controls-edge); }
+.scene-rain .audio-panel > button { top: var(--space-3); }
+.audio-panel p { margin: 0; color: var(--controls-muted); font-size: var(--controls-label-size); line-height: var(--line-body); }
+.audio-panel select {
+  min-width: 0; width: 100%; min-height: var(--tap-min); padding: var(--space-2);
+  border: var(--border-width) solid var(--controls-edge); border-radius: var(--radius-1);
+  background: var(--controls-hover); color: var(--controls-ink); font: inherit; font-size: var(--controls-tab-size);
+}
+.audio-panel option { background: var(--controls-bg); color: var(--controls-ink); }
+.postcard-controls { flex-shrink: 0; border-top: var(--border-width) solid var(--controls-divider); padding-top: var(--space-3); }
+.scene-controls .postcard-controls button {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: var(--space-2);
+  background: var(--controls-accent); color: var(--controls-on-accent);
+}
+.postcard-controls .settings-hint { display: none; }
+.postcard-status:empty { display: none; }
+.hit.resident-hit { touch-action: none; cursor: grab; }
+.resident-hit[data-held="true"] { cursor: grabbing; }
+.resident-hit[data-input="pointer"]:focus-visible { outline: none; }
+@media (forced-colors: active) {
+  .cue-control input { appearance: auto; }
+  .cue-control input::after { display: none; }
+}
+
+.settings-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-shrink: 0; }
+.scene-controls .settings-close { display: grid; place-items: center; width: var(--tap-min); padding: 0; flex-shrink: 0; }
+.settings-group > h3 { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-1); color: var(--controls-muted); font: 600 var(--controls-tab-size) / var(--line-heading) var(--font-body); }
+.setting-copy { display: grid; gap: var(--space-1); flex: 1; }
+.setting-copy small { color: var(--controls-muted); font-size: var(--controls-label-size); line-height: var(--line-body); }
+.cue-control > svg { color: var(--controls-muted); }
+.cue-control input { margin-left: auto; }
+.room-resident-actions { grid-template-columns: minmax(0, 1fr) auto; align-items: start; padding-top: var(--space-1); }
+.scene-controls .room-resident-actions > button { gap: var(--space-1); padding-inline: var(--space-2); white-space: nowrap; }
+.room-resident-actions > button, .room-letter > button { display: flex; align-items: center; justify-content: center; gap: var(--space-2); border-color: var(--controls-edge); font-size: var(--controls-label-size); }
+.scene-residents summary { padding: var(--space-2) 0; color: var(--controls-muted); font-size: var(--controls-label-size); }
+.room-letter { display: grid; gap: var(--space-1); border-bottom: none; padding-bottom: 0; }
+.room-motion button, .effect-panel > button, .audio-panel > button { display: flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.effect-heading label { display: flex; align-items: center; gap: var(--space-2); }
+.effect-heading label svg { color: var(--controls-muted); }
+.effect-control { padding-top: var(--space-1); border-top: var(--border-width) solid var(--controls-divider); }
+.effect-panel { gap: var(--space-1); }
+.effect-heading output { min-width: var(--tap-min); text-align: right; font-size: var(--controls-label-size); }
+.scene-controls input[type="range"] { appearance: none; background: transparent; }
+.scene-controls input[type="range"]::-webkit-slider-runnable-track { height: var(--controls-track-height); background: var(--controls-track); border-radius: var(--chip-radius); }
+.scene-controls input[type="range"]::-moz-range-track { height: var(--controls-track-height); background: var(--controls-track); border-radius: var(--chip-radius); }
+.scene-controls input[type="range"]::-webkit-slider-thumb { appearance: none; width: var(--controls-thumb); height: var(--controls-thumb); margin-top: calc((var(--controls-track-height) - var(--controls-thumb)) / 2); border: var(--border-width) solid var(--controls-bg); border-radius: var(--chip-radius); background: var(--controls-accent); }
+.scene-controls input[type="range"]::-moz-range-thumb { width: var(--controls-thumb); height: var(--controls-thumb); border: var(--border-width) solid var(--controls-bg); border-radius: var(--chip-radius); background: var(--controls-accent); }
+@media (forced-colors: active) {
+  .scene-controls input[type="range"] { appearance: auto; }
+}

@@ -1,0 +1,57 @@
+// Every motion and layout number for the spike. World units are pixels of room-desktop.jpg (1920 x 1081).
+
+export const WORLD = { width: 1920, height: 1081 };
+
+// Depth: a resident's height follows its feet's y. Back of the floor (behind the coffee table) to the front edge.
+export const DEPTH = { backY: 680, frontY: 1040, backHeight: 135, frontHeight: 245 };
+
+export const ROUTINE = {
+  minGapMs: 8000, // spec item 3: one walk every 8 to 20 s
+  maxGapMs: 20000,
+  busyMinGapMs: 600, // ?busy=1, for the FPS "busy" measure: keeps three walking
+  busyMaxGapMs: 1400,
+  firstWalkMs: 1800, // the first walk starts soon, so the room is visibly alive on arrival
+  maxMoving: 3,
+  seed: 20261103,
+};
+
+export const HOP = {
+  durationMs: 440, // one hop, crouch to landing
+  crouch: 0.16, // share of the hop spent crouching before take-off
+  land: 0.2, // share spent landing and recovering
+  length: 0.42, // hop length, in resident heights
+  height: 0.28, // hop apex, in resident heights
+  squash: { x: 1.16, y: 0.82 }, // crouch and landing
+  stretch: { x: 0.9, y: 1.12 }, // in the air
+  lean: 0.12, // radians, forward into the hop
+  turnMs: 180, // flipping to face the other way
+};
+
+export const IDLE = {
+  breathMs: 2600, // one in-and-out breath
+  breath: 0.03, // vertical scale swing
+  fidgetMinMs: 3500, // a little hop, look-around or wiggle, per resident
+  fidgetMaxMs: 9000,
+  nodMs: 900,
+  pressMs: 380,
+};
+
+// Two layers: a wide soft pool and a tight dark core where the body touches the floor.
+export const SHADOW = { width: 1.0, height: 0.2, alpha: 0.55, coreWidth: 0.62, coreHeight: 0.085, coreAlpha: 0.9, airShrink: 0.45 };
+
+export const CUE = { lift: 0.32, bobMs: 2200, bob: 12, sway: 0.08, size: 84 };
+
+export const AMBIENCE = {
+  rainDrops: 140,
+  rainSpeed: 1.6, // world px per ms
+  rainLength: 26,
+  motes: 46,
+  moteDrift: 0.012,
+  glowFlickerMs: 6500, // a warm lamp, not a fault (matches --motion-flicker)
+  parallax: 12, // world px the camera drifts with the pointer on desktop
+  moteParallax: 2.4, // motes drift this many times further, so they read as nearer
+};
+
+export const BUBBLE_MS = 3000; // spec item 5
+export const METER_MS = 500;
+export const MAX_RESOLUTION = 2; // a phone's full-width world at DPR 3 would pass the 4096 texture limit

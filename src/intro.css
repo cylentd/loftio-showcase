@@ -1,0 +1,171 @@
+.grove-intro {
+  --intro-bg: rgb(25 24 24 / 60%);
+  --intro-blur: 10px;
+  --intro-ink: #eadcc4;
+  --intro-muted: #baa98f;
+  --intro-width: 40rem;
+  --intro-art-shadow: drop-shadow(0 0.75rem 1.5rem rgb(0 0 0 / 35%));
+  --intro-inset: 1.5rem;
+  --intro-gap: 1.5rem;
+  --intro-enter: 1000ms;
+  --intro-unlit: brightness(0.4) saturate(0.7);
+  /* The whole sign warms from dim in one steady, unbroken rise (a mid-way falter read as lag, owner 2026-11-05). */
+  --intro-wake: 2600ms;
+  --intro-wake-delay: 900ms;
+  --intro-wake-ease: cubic-bezier(0.45, 0, 0.25, 1);
+  /* Amber aura behind the sign: blooms with the wake, settles, then breathes slowly while the title waits. */
+  --intro-aura-color: rgb(255 176 96 / 62%);
+  --intro-aura-mid: rgb(255 168 90 / 24%);
+  --intro-aura-spread: -45% -20%;
+  --intro-aura-rest: 0.75;
+  --intro-aura-dim: 0.5;
+  --intro-aura-breathe: 5200ms;
+  --intro-flicker: 900ms;
+  --intro-flicker-delay: 2300ms;
+  /* Lantern flame centre, measured on public/brand/grove-sign.webp. */
+  --intro-lantern-x: 90.7%;
+  --intro-lantern-y: 72.4%;
+  --intro-glow-size: 22%;
+  --intro-glow-color: rgb(255 196 120 / 60%);
+  --intro-mote-color: rgb(255 230 175);
+  --intro-mote-halo: rgb(255 200 120 / 45%);
+  --intro-leaf-shadow: drop-shadow(0 0.25rem 0.35rem rgb(0 0 0 / 30%));
+  --intro-hint-fade: 900ms;
+  --intro-hint-breathe: 2800ms;
+  --intro-hint-dim: 0.45;
+  --intro-hint-type: 0.95rem;
+  --intro-exit: 1200ms;
+  --intro-exit-fade: 700ms;
+  --intro-exit-fade-delay: 500ms;
+  --intro-exit-lift: -3rem;
+  --intro-exit-scale: 0.94;
+  --intro-bg-clear: rgb(25 24 24 / 0%);
+  --intro-reduced-fade: 180ms;
+  --intro-type: 1rem;
+  --intro-name: 3rem;
+  --intro-button-edge: rgb(234 220 196 / 32%);
+  --intro-button-bg: rgb(234 220 196 / 8%);
+  --intro-button-hover: rgb(234 220 196 / 16%);
+  --intro-layer: 30;
+  position: fixed; inset: 0; z-index: var(--intro-layer); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: var(--intro-inset); gap: var(--intro-gap); background: var(--intro-bg); color: var(--intro-ink);
+  -webkit-backdrop-filter: blur(var(--intro-blur)); backdrop-filter: blur(var(--intro-blur));
+  cursor: pointer; opacity: 1;
+  /* On exit the blur clears and the dimming lifts first; the overlay itself fades last. */
+  transition: opacity var(--intro-exit-fade) var(--intro-exit-fade-delay) ease-in,
+    backdrop-filter var(--intro-exit) ease-out, -webkit-backdrop-filter var(--intro-exit) ease-out,
+    background-color var(--intro-exit) ease-out;
+}
+.grove-intro-sign { position: relative; container-type: inline-size; width: min(100%, var(--intro-width)); animation: grove-arrive var(--intro-enter) ease-out both; }
+.grove-intro img { display: block; width: 100%; height: auto; filter: var(--intro-art-shadow); }
+.grove-intro-sign > [hidden] { display: none; }
+/* The aura sits behind the sign art (z-index -1 stays inside the sign's own stacking context). */
+.grove-intro-sign::before {
+  content: ""; position: absolute; inset: var(--intro-aura-spread); z-index: -1; pointer-events: none;
+  /* closest-side reaches transparent before the box edge, so the aura has no visible rim. */
+  background: radial-gradient(ellipse closest-side, var(--intro-aura-color), var(--intro-aura-mid) 45%, transparent); opacity: 0;
+  animation: grove-aura-bloom var(--intro-wake) var(--intro-wake-delay) var(--intro-wake-ease) forwards,
+    grove-aura-breathe var(--intro-aura-breathe) calc(var(--intro-wake-delay) + var(--intro-wake)) ease-in-out infinite;
+}
+/* An unlit copy of the sign over the lit one; it fades away, so the whole sign warms up together. */
+.grove-intro-shade {
+  position: absolute; inset: 0; background: center / 100% 100% no-repeat; filter: var(--intro-unlit);
+  animation: grove-wake var(--intro-wake) var(--intro-wake-delay) var(--intro-wake-ease) both;
+}
+/* The designer's vine garland over the sign's painted vines, cut into the still run and two hanging ends. */
+.grove-intro-vine {
+  position: absolute; left: var(--vine-x); top: var(--vine-y); width: var(--vine-width); aspect-ratio: var(--vine-aspect); pointer-events: none;
+}
+.grove-intro-vine-part { position: absolute; inset: 0; background: var(--vine-art) center / 100% 100% no-repeat; clip-path: var(--clip); }
+/* Each hanging end swings from its stem on an uneven breeze; the clip turns with it, so its cut stays on the stem. */
+.grove-intro-vine-part:not(.is-run) {
+  transform-origin: var(--hang); animation: grove-vine-breeze var(--breeze-time) var(--breeze-delay) ease-in-out infinite;
+}
+/* An unlit copy of each piece that warms up with the sign. */
+.grove-intro-vine-part::after {
+  content: ""; position: absolute; inset: 0; background: inherit; filter: var(--intro-unlit);
+  animation: grove-wake var(--intro-wake) var(--intro-wake-delay) var(--intro-wake-ease) both;
+}
+/* Warm bloom over the lantern; flickers on partway through the wake, then stays lit. */
+.grove-intro-glow {
+  position: absolute; left: var(--intro-lantern-x); top: var(--intro-lantern-y); width: var(--intro-glow-size); aspect-ratio: 1;
+  translate: -50% -50%; border-radius: 50%; pointer-events: none; mix-blend-mode: screen;
+  background: radial-gradient(circle, var(--intro-glow-color), transparent 65%);
+  animation: grove-flicker var(--intro-flicker) var(--intro-flicker-delay) linear both;
+}
+.grove-intro-air { position: absolute; inset: 0; pointer-events: none; }
+.grove-intro-mote {
+  position: absolute; left: var(--x); top: var(--y); width: var(--size); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, var(--intro-mote-color) 0 30%, transparent 70%); opacity: 0; mix-blend-mode: screen;
+  box-shadow: 0 0 var(--size) var(--intro-mote-halo);
+  animation: grove-mote var(--duration) var(--delay) ease-in-out infinite;
+}
+.grove-intro-leaf {
+  position: absolute; left: var(--x); top: var(--y); width: var(--size); aspect-ratio: 1;
+  background: var(--art) center / contain no-repeat; filter: var(--intro-leaf-shadow); opacity: 0;
+  animation: grove-leaf var(--duration) var(--delay) ease-in-out infinite;
+}
+.grove-intro-name { text-align: center; font: var(--weight-strong) var(--intro-name) / var(--line-heading) var(--font-body); }
+.grove-intro-status { margin: 0; text-align: center; font: var(--intro-type) / var(--line-body) var(--font-body); color: var(--intro-ink); }
+.grove-intro-status[hidden], .grove-intro-hint[hidden] { display: none; }
+.grove-intro-hint {
+  margin: 0; text-align: center; font: var(--intro-hint-type) / var(--line-body) var(--font-body); color: var(--intro-muted);
+  animation: grove-arrive var(--intro-hint-fade) ease-out both, grove-breathe var(--intro-hint-breathe) ease-in-out infinite;
+}
+.grove-intro button { min-height: var(--tap-min); padding: var(--space-2) var(--space-5); border: var(--border-width) solid var(--intro-button-edge); border-radius: var(--chip-radius); background: var(--intro-button-bg); color: inherit; font: var(--weight-strong) var(--controls-tab-size) / var(--line-body) var(--font-body); cursor: pointer; }
+.grove-intro button:hover { background: var(--intro-button-hover); }
+.grove-intro button:focus-visible { outline: var(--focus-width) solid var(--intro-ink); outline-offset: var(--focus-offset); }
+.grove-intro.is-leaving {
+  opacity: 0; background-color: var(--intro-bg-clear);
+  -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); cursor: default;
+}
+.grove-intro.is-leaving .grove-intro-sign {
+  animation: none; opacity: 0; transform: translateY(var(--intro-exit-lift)) scale(var(--intro-exit-scale));
+  transition: transform var(--intro-exit) cubic-bezier(0.3, 0, 0.2, 1), opacity var(--intro-exit-fade) ease-in;
+}
+.grove-intro.is-leaving .grove-intro-hint { animation: none; opacity: 0; transition: opacity var(--intro-reduced-fade) ease-out; }
+.grove-intro.is-still .grove-intro-sign, .grove-intro.is-still .grove-intro-glow, .grove-intro.is-still .grove-intro-hint, .grove-intro.is-still .grove-intro-vine-part { animation: none; }
+.grove-intro.is-still :is(.grove-intro-shade, .grove-intro-air), .grove-intro.is-still .grove-intro-vine-part::after { display: none; }
+.grove-intro.is-still .grove-intro-sign::before { animation: none; opacity: var(--intro-aura-rest); }
+@keyframes grove-arrive { from { opacity: 0; } to { opacity: 1; } }
+/* Both rise in one unbroken curve; the aura lands on its resting glow, where the breathing picks up. */
+@keyframes grove-wake { from { opacity: 1; } to { opacity: 0; } }
+@keyframes grove-aura-bloom { from { opacity: 0; } to { opacity: var(--intro-aura-rest); } }
+@keyframes grove-aura-breathe { 0%, 100% { opacity: var(--intro-aura-rest); } 50% { opacity: var(--intro-aura-dim); } }
+@keyframes grove-flicker {
+  0% { opacity: 0; } 12% { opacity: 0.8; } 20% { opacity: 0.1; } 34% { opacity: 0.9; }
+  42% { opacity: 0.3; } 58% { opacity: 1; } 68% { opacity: 0.6; } 100% { opacity: 1; }
+}
+@keyframes grove-mote {
+  0% { opacity: 0; translate: 0 0; }
+  25% { opacity: var(--peak); }
+  75% { opacity: calc(var(--peak) * 0.6); }
+  100% { opacity: 0; translate: var(--dx) var(--dy); }
+}
+/* Each leaf falls in the first ~60% of its cycle, then rests unseen, so leaves stay occasional. */
+@keyframes grove-leaf {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  6% { opacity: 0.95; }
+  20% { transform: translate(var(--sway), 7cqw) rotate(40deg); }
+  38% { transform: translate(calc(var(--sway) * -1), 15cqw) rotate(-25deg); }
+  52% { opacity: 0.85; transform: translate(var(--sway), 23cqw) rotate(30deg); }
+  62%, 100% { opacity: 0; transform: translate(0, 30cqw) rotate(-10deg); }
+}
+/* A breeze, not a pendulum: one push out, a smaller drift back past rest, a long settle, then stillness until the next gust. */
+@keyframes grove-vine-breeze {
+  0% { rotate: 0deg; }
+  18% { rotate: var(--breeze); }
+  34% { rotate: calc(var(--breeze) * 0.35); }
+  46% { rotate: calc(var(--breeze) * 0.6); }
+  62% { rotate: calc(var(--breeze) * -0.2); }
+  78%, 100% { rotate: 0deg; }
+}
+@keyframes grove-breathe { 50% { opacity: var(--intro-hint-dim); } }
+@media (prefers-reduced-motion: reduce) {
+  .grove-intro, .grove-intro.is-leaving .grove-intro-sign { transition-duration: var(--intro-reduced-fade); transition-delay: 0s; }
+  .grove-intro.is-leaving .grove-intro-sign { transform: none; }
+  /* `.grove-intro` in front of the vine piece outranks the breeze rule's :not(.is-run). */
+  .grove-intro-sign, .grove-intro-glow, .grove-intro-hint, .grove-intro .grove-intro-vine-part { animation: none; }
+  .grove-intro-shade, .grove-intro-air, .grove-intro-vine-part::after { display: none; }
+  .grove-intro-sign::before { animation: none; opacity: var(--intro-aura-rest); }
+}

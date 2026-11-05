@@ -1,0 +1,170 @@
+/*
+ * Every colour, space, type and motion literal lives here. app.css reads these variables and defines none.
+ *
+ * Colour map (Still mode, a rainy-night loft): cool ink-blue night for the page, warm paper text, and one amber
+ * "desk lamp" accent that marks the single next action and keyboard focus. Nothing else is amber.
+ *   bg / surface / raised / sunk  depth by surface shift, never glow or shadow
+ *   accent                        the one primary action on a screen
+ *   focus                         keyboard focus ring, everywhere
+ *   demo                          the DEMO DATA label only
+ *   link                          in-page text links
+ */
+:root {
+  /* Palette */
+  --color-bg: #15151c;
+  --color-surface: #1e1d27;
+  --color-surface-raised: #292733;
+  --color-surface-sunk: #111117;
+  --color-border: #3b3846;
+  --color-border-strong: #57526a;
+  --color-text: #f1e9df;
+  --color-text-muted: #bdb3ab;
+  --color-accent: #e9b872;
+  --color-accent-strong: #f3c98a;
+  --color-accent-ink: #231c10;
+  --color-accent-line: #7a6240;
+  --color-focus: #ffd98f;
+  --color-demo-bg: #3a2f1e;
+  --color-demo-text: #ffd98f;
+  --color-link: #e7c999;
+  --color-selection-bg: #6b5530;
+  --color-selection-text: #fff6e8;
+  --color-scrollbar-thumb: #4a4658;
+  --color-scrollbar-track: #15151c;
+
+  /* Mode and card surfaces. Scene overlays lay these over the room image, so the card keeps text contrast on any
+     pixel behind it. */
+  --color-card-bg: #1e1d27; /* same as surface: opaque, so the image behind never lowers text contrast */
+  --color-card-border: #57526a;
+  --color-card-glow: rgb(233 184 114 / 0.35); /* amber lamp halo on the one next-action card */
+  --color-scene-scrim: rgb(21 21 28 / 0.55); /* dims the room image under the UI */
+  --color-positive: #5de7c6; /* completed, on dark card surfaces (10.88 on #1e1d27, 10.43 on the Lock In card #17213a) */
+
+  /* Space (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Type: a bookish serif for headings over a plain sans for reading */
+  --font-body: "Segoe UI", "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif;
+  --font-heading: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --line-body: 1.5;
+  --line-tight: 1.3;
+  --line-heading: 1.2;
+  --weight-normal: 400;
+  --weight-strong: 600;
+  --tracking-label: 0.04em;
+  --underline-offset: 0.2em;
+
+  /* Shape */
+  --radius-1: 0.5rem;
+  --radius-2: 0.875rem;
+  --card-radius: 1.25rem; /* board cards and the A/B tiles read as 20px round */
+  --chip-radius: 62.5rem; /* pill: nav, chips, primary buttons */
+  --card-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35); /* soft lift under a card over the room */
+  --card-shadow-lamp: 0 0 1.25rem var(--color-card-glow); /* the amber halo, next-action card only */
+  --card-padding: var(--space-5);
+  --border-width: 1px;
+  --focus-width: 3px;
+  --focus-offset: 2px;
+  --focus-offset-inset: -3px;
+  --tap-min: 2.75rem; /* 44 CSS px: the WCAG 2.5.5 touch target */
+  --measure: 42rem;
+  --shell-wide: 76rem;
+  --column-side: 24rem;
+  --nav-bar-height: 4.25rem; /* tap-min plus the bar's padding and border, so content clears the fixed phone nav */
+  --layer-bar: 10;
+  --notice-width: 28rem; /* a shell notice in two lines on desktop, short enough to clear the residents' plates */
+  --scrollbar-size: 0.625rem;
+  /* Breakpoints, documented here because var() is not allowed in a media query. app.css repeats them:
+     600px  the nav leaves the phone's bottom bar and sits beside the DEMO DATA label
+     960px  Home and the Project Room split into two columns */
+  --breakpoint-note: 600px;
+  --breakpoint-wide-note: 960px;
+
+  /* Motion: feedback only */
+  --motion-fast: 120ms;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --motion-gentle: 200ms; /* ADR-016: Gentle transitions run 150 to 250 ms */
+  /* Motion modes (motion.css). Ambient only: none of these is tied to a project's state, so nothing implies work. */
+  --motion-ui: 180ms; /* Gentle and Lively UI transitions, inside ADR-016's 150 to 250 ms */
+  --motion-flicker: 6.5s; /* one lamp flicker cycle: slow enough to read as a warm lamp, not a fault */
+  --motion-rain: 1.4s; /* one fall of the rain on the window */
+  --motion-idle-step: 20s; /* ADR-016: one resident idle shift every 20 s or longer */
+  --motion-idle-cycle: 120s; /* six residents, one step each, so each one shifts every two minutes */
+  --motion-idle-first: 6s; /* the first shift waits until the page has settled */
+  --motion-react: 420ms; /* Lively: a resident's hop when pressed, settling back */
+  --motion-ease-hop: cubic-bezier(0.3, 1.8, 0.5, 1); /* overshoots once, so the hop lands */
+  --motion-idle-lift: 0.1875rem; /* 3px: a weight shift, not a jump */
+  --motion-press-scale: 1.08 0.92; /* Lively: squash on press */
+  --rain-spacing: 0.8rem; /* between streaks across the window */
+  --rain-gap: 2rem; /* dry run between drops, down a streak */
+  --rain-period: 3rem; /* one drop plus its gap: the mask tile, and the distance one fall moves it */
+  --color-rain: rgb(191 226 255 / 0.28); /* streaks over the window's own blue rain */
+  --color-lamp-glow: rgb(255 199 102 / 0.22); /* Amber Glow, thin, over each lamp */
+
+  /* Settings menu (settings.css) */
+  --settings-width: 22rem;
+  --switch-width: 2.75rem;
+  --switch-height: 1.5rem;
+  --switch-knob: 1.125rem;
+}
+
+/*
+ * Lock In: a cool palette over the same token names (ADR-016). Warm paper and amber give way to ice text and a
+ * sky-blue accent. Measured WCAG contrast ratios (relative luminance, sRGB):
+ *   Still   text     #f1e9df on bg #15151c            15.11
+ *           text     #f1e9df on surface/card #1e1d27  13.86
+ *           text     #f1e9df on raised #292733        12.19
+ *           muted    #bdb3ab on card #1e1d27           8.09
+ *           muted    #bdb3ab on raised #292733         7.12
+ *           accent   ink #231c10 on #e9b872            9.29
+ *           demo     #ffd98f on #3a2f1e                9.70
+ *   Lock In text     #eaf1fb on bg #0f1626            15.88
+ *           text     #eaf1fb on surface/card #17213a  14.05
+ *           text     #eaf1fb on raised #202c4a        12.15
+ *           muted    #a9b8d4 on bg #0f1626             9.02
+ *           muted    #a9b8d4 on card #17213a           7.98
+ *           muted    #a9b8d4 on raised #202c4a         6.90
+ *           accent   ink #0b1a2e on #74c9ff            9.61
+ *           link     #9cdcff on card #17213a          10.72
+ * Every pair clears AA (4.5:1).
+ */
+[data-mode="lock-in"] {
+  --color-bg: #0f1626;
+  --color-surface: #17213a;
+  --color-surface-raised: #202c4a;
+  --color-surface-sunk: #0a101d;
+  --color-border: #2f3d63;
+  --color-border-strong: #4d5f94;
+  --color-text: #eaf1fb;
+  --color-text-muted: #a9b8d4;
+  --color-accent: #74c9ff;
+  --color-accent-strong: #9cdcff;
+  --color-accent-ink: #0b1a2e;
+  --color-accent-line: #3d6c94;
+  --color-focus: #bfe8ff;
+  --color-demo-bg: #1d3350;
+  --color-demo-text: #bfe8ff;
+  --color-link: #9cdcff;
+  --color-selection-bg: #2f5a86;
+  --color-selection-text: #f4faff;
+  --color-scrollbar-thumb: #36456b;
+  --color-scrollbar-track: #0f1626;
+  --color-card-bg: #17213a;
+  --color-card-border: #4d5f94;
+  --color-card-glow: rgb(116 201 255 / 0.3);
+  --color-scene-scrim: rgb(10 16 29 / 0.65);
+  --color-positive: #5de7c6;
+  --color-lamp-glow: rgb(191 232 255 / 0.12); /* the lamps dim to cool light while locked in */
+}

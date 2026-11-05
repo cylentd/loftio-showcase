@@ -1,0 +1,10 @@
+export const TRACKS = [
+  { id: "paper", file: "Paper_Cranes_and_Coffee.mp3" },
+  { id: "slow", file: "Slow_Afternoon_Light.mp3" },
+  { id: "save", file: "The_Quiet_Save_Point.mp3" },
+  { id: "lanterns", file: "Lanterns_in_the_Rain.mp3" },
+  { id: "tea", file: "Tea_and_Tiny_Books.mp3" },
+  { id: "aisles", file: "Midnight_Aisles.mp3" },
+  { id: "treehouse", file: "Midnight_in_the_Treehouse.mp3" },
+  { id: "hideaway", file: "The_Lamp_Lit_Hideaway.mp3" },
+] as const;

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Loftio · The Grove</title>
+    <meta name="description" content="A cozy treehouse loft where little residents wander, nap and keep you company. Rain, lamplight and lo-fi music." />
+    <meta name="theme-color" content="#2a1c14" />
+    <link rel="icon" type="image/png" href="./brand/sprout-icon.png" />
+    <link rel="stylesheet" href="./src/intro.css" />
+  </head>
+  <body>
+    <div id="grove-intro" class="grove-intro" role="status" aria-live="polite">
+      <div class="grove-intro-sign">
+        <img src="./brand/grove-sign.webp" width="1520" height="537" alt="" fetchpriority="high" />
+        <div class="grove-intro-shade" aria-hidden="true"></div>
+        <div class="grove-intro-vine" aria-hidden="true"></div>
+        <div class="grove-intro-glow" aria-hidden="true"></div>
+        <div class="grove-intro-name" hidden></div>
+      </div>
+      <p class="grove-intro-status"></p>
+      <p class="grove-intro-hint" hidden></p>
+      <button class="grove-intro-retry" type="button" hidden></button>
+    </div>
+    <main id="grove" class="grove">
+      <div id="scroller" class="scroller">
+        <div id="world" class="world"></div>
+      </div>
+    </main>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
