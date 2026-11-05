@@ -1,9 +1,9 @@
-import sprout from "../ui/assets/crew/sprout-idle.png";
-import hoodie from "../ui/assets/crew/hoodie-idle.png";
-import puff from "../ui/assets/crew/puff-idle.png";
-import chomper from "../ui/assets/crew/chomper-idle.png";
-import slime from "../ui/assets/crew/slime-idle.png";
-import burger from "../ui/assets/crew/burger-idle.png";
+import sprout from "./art/crew/sprout.webp";
+import hoodie from "./art/crew/hoodie.webp";
+import puff from "./art/crew/puff.webp";
+import chomper from "./art/crew/chomper.webp";
+import slime from "./art/crew/slime.webp";
+import burger from "./art/crew/burger.webp";
 import { TRAVEL_NODES } from "./travel-data";
 
 const SPROUT_SOFA = TRAVEL_NODES.find(node => node.id === "bed-right")!;
