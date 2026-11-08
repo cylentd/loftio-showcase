@@ -8,6 +8,7 @@ import type { SceneSettings } from "./scene-settings";
 import { canWander, wanderTarget } from "./wander-model";
 import { isLoft } from "./resident-movement";
 import { PLACEMENT } from "./resident-movement-data";
+import { LobbyFidget } from "./lobby-fidget";
 import { activeRoom } from "./room-layout";
 import { PORTRAIT_MESSAGE_SPOT } from "./portrait-movement-data";
 
@@ -22,7 +23,10 @@ export class Runtime {
   private nextWalk = ROUTINE.firstWalkMs;
   private messageTrip = false;
   private readonly rand = seeded(ROUTINE.seed);
-  constructor(private scene: Scene, readonly look: Look, private overlay: Overlay, private busy: boolean, private settings: SceneSettings) {}
+  readonly fidget: LobbyFidget;
+  constructor(private scene: Scene, readonly look: Look, private overlay: Overlay, private busy: boolean, private settings: SceneSettings) {
+    this.fidget = new LobbyFidget(scene, look);
+  }
 
   syncWander(): void {
     if (this.settings.wander) {
@@ -44,6 +48,7 @@ export class Runtime {
     lighting.update(dt, this.settings.lighting, this.look.frozen, this.clock, render);
     this.settings.updateLightingBlend(lighting.timeline.blend);
     for (const resident of residents) resident.setLighting(lighting.timeline.blend);
+    this.look.setTower(this.fidget.stacks.bounds(), !!document.querySelector('.resident-hit[data-held="true"]'));
     this.look.update(dt);
     const { scale, x, y, offsetY, left } = this.look;
     world.scale.set(scale);
@@ -63,6 +68,7 @@ export class Runtime {
       }
     }
     if (!dt && this.look.frozen) for (const resident of residents) if (resident.held) resident.update(0, this.clock, true);
+    this.fidget.update(dt, this.clock);
     ambience.update(this.clock, lighting.timeline.blend, lighting.flickers);
     foliage.update(this.clock);
     letter.position.set(puff.pos.x + cast.x, puff.pos.y + cast.y - puff.lift - puff.height * (1 + CUE.lift)

@@ -59,14 +59,14 @@ export class DragPlacement {
     this.grab = { id, pointer, client, origin: { ...position }, position: { ...position }, offset: { x: position.x - world.x, y: position.y - world.y }, moved: false };
     return true;
   }
-  move(pointer: number, client: Point, world: Point, _scale = 1): Point | null {
+  move(pointer: number, client: Point, world: Point, _scale = 1, carryTop = 0): Point | null {
     const grab = this.grab;
     if (!grab || grab.pointer !== pointer) return null;
     if (!grab.moved && Math.hypot(client.x - grab.client.x, client.y - grab.client.y) < PLACEMENT.threshold) return null;
     grab.moved = true;
     grab.position = {
       x: Math.max(0, Math.min(WORLD.width, world.x + grab.offset.x)),
-      y: Math.max(0, Math.min(WORLD.height, world.y + grab.offset.y)),
+      y: Math.max(Math.min(0, carryTop), Math.min(WORLD.height, world.y + grab.offset.y)),
     };
     return { ...grab.position };
   }

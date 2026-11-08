@@ -4,6 +4,8 @@ import { controlText } from "./settings-components";
 import { EFFECTS } from "./effects-constants";
 import { cameraOffset } from "./effects-model";
 import { WORLD } from "./tune";
+import { STACK } from "./stack-data";
+import { towerFrame, type TowerBounds } from "./stack-camera";
 import { activeRoom, roomFrame } from "./room-layout";
 
 const PHONE_MAX = 600;
@@ -16,6 +18,12 @@ export class Look {
   readonly reduced = matchMedia("(prefers-reduced-motion: reduce)");
   private readonly forcedReduced = new URLSearchParams(location.search).has("reduced");
   private target = { x: 0, y: 0 };
+  private baseScale = 1;
+  private inset = 0;
+  private tower: TowerBounds | null = null;
+  private holdingResident = false;
+
+  setTower(bounds: TowerBounds | null, holding: boolean): void { this.tower = bounds; this.holdingResident = holding; }
   private drag: { x: number; y: number; targetX: number; targetY: number; left: number } | null = null;
   private readonly motionButton = document.createElement("button");
   private readonly lookButton = document.createElement("button");
@@ -97,10 +105,27 @@ export class Look {
     const frame = roomFrame(innerWidth, innerHeight, WORLD, activeRoom === "portrait" ? 1 : EFFECTS.overscan);
     this.scale = frame.scale;
     this.offsetY = frame.offsetY;
+    this.baseScale = this.scale;
+    this.inset = 0;
+    this.worldEl.style.marginLeft = "0px";
     this.worldEl.style.width = `${WORLD.width * this.scale}px`;
     this.worldEl.style.height = `${innerHeight}px`;
     this.scroller.scrollLeft = activeRoom === "portrait"
       ? this.focusX * this.scale - innerWidth / 2 : (WORLD.width * this.scale - innerWidth) / 2;
+  }
+
+  private frameTower(dt: number): void {
+    if (this.holdingResident) return;
+    const target = towerFrame(this.tower, this.baseScale, innerHeight, WORLD.height);
+    const follow = this.frozen ? 1 : 1 - Math.exp(-dt / STACK.cameraFollowMs);
+    const center = (this.left + innerWidth / 2) / this.scale;
+    this.scale += (target.scale - this.scale) * follow;
+    this.offsetY += (target.offsetY - this.offsetY) * follow;
+    const width = WORLD.width * this.scale;
+    this.inset = Math.max(0, (innerWidth - width) / 2);
+    this.worldEl.style.width = `${width}px`;
+    this.worldEl.style.marginLeft = `${this.inset}px`;
+    this.scroller.scrollLeft = center * this.scale + this.inset - innerWidth / 2;
   }
 
   refresh(focusX: number): void {
@@ -114,15 +139,17 @@ export class Look {
     // matches can update before the browser dispatches the media-query change event.
     if (this.motionButton.disabled !== (this.reduced.matches || this.forcedReduced)
       || this.motionButton.getAttribute("aria-pressed") !== String(this.frozen)) this.sync();
+    this.frameTower(dt);
     if (dt) {
       const target = cameraOffset(this.target, innerWidth, innerHeight, this.scale);
+      if (this.tower) target.y = 0;
       const follow = 1 - Math.exp(-dt / EFFECTS.followMs);
       this.x += (target.x - this.x) * follow;
       this.y += (target.y - this.y) * follow;
     }
     const left = this.scroller.scrollLeft / this.scale;
-    this.x = Math.max(-left, Math.min(WORLD.width - innerWidth / this.scale - left, this.x));
+    this.x = WORLD.width * this.scale < innerWidth ? 0 : Math.max(-left, Math.min(WORLD.width - innerWidth / this.scale - left, this.x));
   }
 
-  get left(): number { return this.scroller.scrollLeft; }
+  get left(): number { return this.scroller.scrollLeft - this.inset; }
 }

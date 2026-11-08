@@ -11,6 +11,10 @@ import { seatAvailable } from "./seat-occupancy";
 import { heldPose } from "./held-pose";
 import { ChairBooster } from "./chair-booster";
 import { cloudPose } from "./cloud-pose";
+import { FLOOR_PLAY } from "./floor-play-data";
+import { GRAB } from "./grab-data";
+import { grabState, pullGrab, advanceGrab, grabPose } from "./grab-model";
+import { STACK } from "./stack-data";
 
 type Action = { kind: "hop" | "look" | "wiggle" | "nod" | "press" | "settle"; t: number; dur: number };
 type Palette = { shadow: string; tintFront: string; tintBack: string };
@@ -50,6 +54,8 @@ export class Resident {
   held = false;
   private carryHeight = 0;
   private carryTime = 0;
+  private grab = grabState();
+  private caughtLift = 0;
   private carryOrigin: Point | null = null;
   private lighting = 0;
   placed = false;
@@ -104,7 +110,9 @@ export class Resident {
     this.sprite.tint = residentLighting(mixColour(this.palette.tintBack, this.palette.tintFront, depth), blend);
   }
 
-  pickUp(): void {
+  pickUp(caught = false): void {
+    this.grab = grabState(caught);
+    this.caughtLift = caught ? this.lift - this.height * PLACEMENT.lift : 0;
     this.carryTime = 0;
     this.carryOrigin = { ...this.pos };
     this.carryHeight = this.height;
@@ -114,6 +122,30 @@ export class Resident {
     this.carriedMotion = { walking: this.walking, paused: this.paused };
     this.walking = this.paused = false;
     this.action = this.queued = null;
+  }
+
+  pull(dx: number, dy: number): void { pullGrab(this.grab, dx, dy, this.carryHeight); }
+
+  renderFloorPlay(x: number, y: number, lift: number, vx: number, impact: number): void {
+    this.carrySupportLift = 0;
+    this.pos.x = x; this.pos.y = y;
+    this.carryHeight = heightAt(y, this.cast.sizeBias);
+    const squash = impact * FLOOR_PLAY.squash;
+    const lean = Math.max(-1, Math.min(1, vx / FLOOR_PLAY.leanSpeed)) * FLOOR_PLAY.maxLean;
+    const spring = grabPose(this.grab);
+    this.layout(lift, Math.min(1, lift / this.carryHeight), (1 + squash) * spring.sx, (1 - squash) * spring.sy, lean);
+    this.root.zIndex = residentDepth(this.pos);
+  }
+
+  renderStack(x: number, y: number, lift: number, level: number, age: number, frozen: boolean): void {
+    this.pos.x = x; this.pos.y = y; this.carrySupportLift = 0;
+    this.carryHeight = heightAt(y, this.cast.sizeBias);
+    const t = Math.min(1, age / STACK.wobbleMs);
+    const wobble = frozen ? 0 : Math.sin(t * Math.PI * 2 * STACK.wobbleCycles) * (1 - t);
+    const squash = frozen ? 0 : (1 - t) * STACK.squash;
+    this.layout(lift, 0, 1 + squash, 1 - squash, wobble * STACK.wobble * (level + 1));
+    this.root.zIndex = residentDepth(this.pos) + level * STACK.depthStep;
+    if (level > 0) this.shadow.alpha = this.core.alpha = 0;
   }
 
   putDown(placed: boolean, animate: boolean, now = 0): void {
@@ -199,8 +231,12 @@ export class Resident {
     this.poseTime = now;
     if (this.held) {
       if (!reduced) this.carryTime += dt;
+      if (!reduced) advanceGrab(this.grab, dt);
       const pose = heldPose(this.carryTime, this.phase, reduced);
-      this.layout(this.carryHeight * (PLACEMENT.lift + pose.lift), PLACEMENT.air, pose.sx, pose.sy, pose.rotation);
+      const spring = grabPose(this.grab, reduced);
+      const catchLift = reduced ? 0 : this.caughtLift * Math.exp(-this.carryTime / GRAB.liftMs);
+      this.layout(this.carryHeight * (PLACEMENT.lift + pose.lift) + catchLift, PLACEMENT.air,
+        pose.sx * spring.sx, pose.sy * spring.sy, pose.rotation + spring.rotation);
       return;
     }
     if (this.paused) return;
@@ -341,6 +377,7 @@ export class Resident {
     const base = h / this.sprite.texture.height;
     this.root.position.set(this.pos.x, this.pos.y);
     this.root.zIndex = this.held ? PLACEMENT.heldDepth : this.climbing ? TRAVEL.climbDepth : residentDepth(this.pos, this.walking);
+    this.body.pivot.set(0, 0);
     this.body.position.set(0, -lift - this.supportLift);
     this.body.rotation = rot;
     this.sprite.scale.set(base * sx * this.facingShown, base * sy);

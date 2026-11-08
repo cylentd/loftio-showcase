@@ -9,6 +9,7 @@ export function installDebug(shell: HTMLElement, app: Application, scene: Scene,
   makeMeter(shell, app.ticker, () => scene.residents.filter((r) => r.walking).length);
   Object.assign(window, { __grove: {
     snapshot: () => ({ clock: runtime.clock, camera: { x: look.x, y: look.y }, frozen: look.frozen,
+      fidget: runtime.fidget.snapshot(),
       favoriteLighting: { active: scene.favoriteScenery.active },
       lighting: { blend: scene.lighting.timeline.blend, elapsed: scene.lighting.timeline.elapsed, flickers: [...scene.lighting.flickers] },
       residents: scene.residents.map((resident) => ({ id: resident.cast.id, x: resident.pos.x, y: resident.pos.y, home: { ...resident.home }, wanderAfter: resident.wanderAfter, held: resident.held, placed: resident.placed, walking: resident.walking, climbing: resident.climbing, ladderReserved: resident.ladderReserved, depth: resident.root.zIndex, height: resident.height })),
@@ -19,7 +20,10 @@ export function installDebug(shell: HTMLElement, app: Application, scene: Scene,
       const resident = scene.residents.find(member => member.cast.id === id);
       if (!resident) throw new Error("Unknown fixture resident");
       const body = resident.root.children.at(-1)!;
-      return { rotation: body.rotation, lift: resident.lift, height: resident.height, seat: resident.seatSupport, renderedHeight: body.children[0]!.height };
+      const shadow = resident.root.children[0]!;
+      return { rotation: body.rotation, lift: resident.lift, height: resident.height, seat: resident.seatSupport, renderedHeight: body.children[0]!.height,
+        ground: { x: resident.root.x, y: resident.root.y, depth: resident.root.zIndex },
+        shadow: { x: resident.root.x + shadow.x, y: resident.root.y + shadow.y, alpha: shadow.alpha } };
     },
     walkResident: (id: string, x: number, y: number) => {
       const resident = scene.residents.find(member => member.cast.id === id);
