@@ -5,7 +5,13 @@ export const RESIDENT_COPY = {
   greeting: 'A little place to call home.', empty: 'Your saved residents will be here.',
   originals: 'The original six are always at home.',
   capacity: 'The loft has room for 12 created residents alongside the original six. Remove one from the loft to make space; its image stays saved.',
-  create: 'Bring to life', creating: 'Bringing your design to life. You can close this drawer.',
+  create: 'Bring to life',
+  // Shown while a resident is being made. Online the image arrives through this page, so leaving it loses the image.
+  creating: {
+    mock: 'Bringing your design to life. You can close this drawer.',
+    local: 'Bringing your design to life. You can close this drawer or leave the page; it keeps going.',
+    online: 'Bringing your design to life. You can close this drawer, but keep this page open until it arrives.',
+  },
   preparing: 'Your image is saved. Getting it ready for the loft…',
   reconnect: 'Reconnect', retryPreparation: 'Retry preparation',
   loadFailure: 'Could not load residents. Your saved data has been preserved.',
@@ -14,7 +20,7 @@ export const RESIDENT_COPY = {
   notice: {
     mock: 'Preview mode: the result is sample art and won’t match your design.',
     local: 'Uses Codex allowance. Closing this drawer keeps it running.',
-    online: 'Each resident is a brand-new image, drawn just for you. Stay on this page until it arrives.',
+    online: 'Each resident is a brand-new image, drawn just for you. It takes about a minute.',
   },
   original: 'Download original PNG',
   ticketNote: (left: number) => ['Uses 1 build ticket ·', left, 'left'].join(' '),

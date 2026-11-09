@@ -14,7 +14,8 @@ import { RESIDENT_COPY } from './copy';
 import { motionFor } from './motion';
 import { ARRIVAL, arrivalPlace } from './placement';
 
-const SIZE_BIAS = 0.85;
+// The median of the original six (0.85 to 1 in cast.ts). 0.85 made every created resident Slime-small (David, 2026-11-09).
+const SIZE_BIAS = 0.95;
 const ARRIVAL_GLOW = 'arrived';
 export const arrivalSpot = () => floorPosition(ARRIVAL.entry[activeRoom]);
 /** The open floor spot a newcomer will take, clear of everyone standing or walking now. */

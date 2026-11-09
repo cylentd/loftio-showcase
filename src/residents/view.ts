@@ -79,6 +79,8 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   const { registry, builder, tickets, ticketKey } = current;
   // Test tickets only where images are free placeholders; real builds (local, online) never get them.
   const form = residentForm(builder, mode, mode === 'mock' ? () => tickets.grant(1) : undefined); chrome.panels[2]!.append(form.form, challenge);
+  // Online the image arrives through this page and the ticket is already spent, so leaving mid-build asks first.
+  if (mode === 'online') addEventListener('beforeunload', event => { if (builder.state().status === 'generating') event.preventDefault(); });
   // Another tab spent or added a ticket: show the new count here too.
   addEventListener('storage', event => { if (event.key === ticketKey) render(); });
   const failure = (error: unknown) => { chrome.error.textContent = error instanceof Error ? error.message : COPY.actionFailure; overlay.announce(chrome.error.textContent); };
@@ -98,7 +100,7 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   let basketSpot: { x: number; y: number } | null = null;
   function render() {
     const state = builder.state(); form.update();
-    chrome.status.textContent = state.status === 'generating' ? state.stage === 'preparing' ? COPY.preparing : COPY.creating : '';
+    chrome.status.textContent = state.status === 'generating' ? state.stage === 'preparing' ? COPY.preparing : COPY.creating[mode] : '';
     chrome.error.textContent = createAction(state).drawerAlert;
     try { for (const saved of state.kept) registry.discover(saved.id, saved.state === 'kept' ? 'saved' : 'waiting'); } catch (error) { failure(error); return; }
     const entries = registry.list(); const ready = entries.some(entry => entry.arrival === 'waiting'); basket.hidden = !ready;

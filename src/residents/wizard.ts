@@ -30,6 +30,8 @@ export function createWizard(builder: Picker, rng: () => number) {
       choose(field() === 'palette' ? palettes[Math.min(palettes.length - 1, Math.floor(rng() * palettes.length))]! : SURPRISE);
     },
     back() { goTo(step - 1); },
+    /** After a resident is made: a fresh design from the first question. The builder keeps its last picks as defaults. */
+    restart() { picked.clear(); goTo(0); },
     goTo,
     make() { return step === SUMMARY_STEP ? builder.create() : undefined; },
   };

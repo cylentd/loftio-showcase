@@ -67,6 +67,16 @@ test('a summary pick jumps back to its own step', () => {
   assert.equal(wizard.step, SUMMARY_STEP);
 });
 
+test('restart goes back to the first question with nothing shown as picked, and changes no pick', () => {
+  const builder = fakeBuilder(); const wizard = createWizard(builder, () => 0);
+  wizard.choose('fox'); wizard.choose('sleepy'); wizard.choose('scarf'); wizard.choose(null);
+  wizard.restart();
+  assert.equal(wizard.step, 0);
+  assert.equal(wizard.field, 'creature');
+  assert.equal(WIZARD_FIELDS.some(field => wizard.chosen(field)), false);
+  assert.equal(builder.picks.length, 4);
+});
+
 test('Bring to life calls create once, and only from the summary', async () => {
   const builder = fakeBuilder(); const wizard = createWizard(builder, () => 0);
   await wizard.make();

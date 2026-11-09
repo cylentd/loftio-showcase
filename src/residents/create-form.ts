@@ -96,6 +96,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const choices = document.createElement('div'); choices.className = 'wizard-confirm-choices'; choices.append(no, yes);
   confirm.append(question, choices);
   let confirming = false, armed = false;
+  let lastStatus = builder.state().status;
   // No tickets: this panel takes Bring to life's place, so there is no dead button to press.
   const out = document.createElement('div'); out.className = 'wizard-out'; out.setAttribute('role', 'status');
   const outTitle = document.createElement('p'); outTitle.className = 'wizard-out-title'; outTitle.textContent = RESIDENT_COPY.outOfTickets;
@@ -153,6 +154,9 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     const state = builder.state(); const busy = state.status === 'generating' || state.saving;
     // A creation already running (or resumed after reload) is shown where it was started: on the summary.
     if (busy && wizard.step !== SUMMARY_STEP) { wizard.goTo(SUMMARY_STEP); show(false); return; }
+    // A finished resident waits in the loft's basket, so the panel starts a fresh design.
+    const finished = lastStatus === 'generating' && state.status === 'ready'; lastStatus = state.status;
+    if (finished) { wizard.restart(); show(false); return; }
     // A card shows as picked only after the user picked on that step, though the builder always holds a value.
     if (!pending) for (const { button, field, value } of cards) button.setAttribute('aria-pressed', String(wizard.chosen(field) && state.selections[field] === value));
     for (const { button } of cards) button.disabled = busy;
