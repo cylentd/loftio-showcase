@@ -1,0 +1,35 @@
+/* Focus-card picker (view.ts): eight raised parchment tiles, two across. Colours are --world-* skin tokens,
+   so every scenery draws it in its own materials. Moss green (--world-accent) means picked, as in the builder. */
+:root {
+  --focus-drawer-width: 480px; /* two tiles of ~200px, so the longest tiny thing fits on two lines */
+  --focus-card-radius: 18px;
+  --focus-card-lift: 3px; /* the raised edge; a press sinks it flat */
+  --focus-ring: 3px; /* a picked card's moss ring */
+}
+.focus-drawer { --world-drawer-width: var(--focus-drawer-width); }
+.focus-drawer .world-content { display: grid; gap: var(--space-3); }
+.focus-intro, .focus-status, .focus-later { margin: 0; }
+.focus-later { color: var(--world-muted); font-size: var(--text-sm); }
+.focus-status { font-weight: var(--weight-strong); }
+.focus-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.focus-card {
+  display: grid; align-content: start; justify-items: start; gap: var(--space-1); text-align: left;
+  min-height: var(--tap-min); padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--world-edge); border-radius: var(--focus-card-radius);
+  background: linear-gradient(var(--world-paper), var(--world-paper-sunk)); color: var(--world-ink); font: inherit; cursor: pointer;
+  box-shadow: 0 var(--focus-card-lift) 0 var(--world-edge);
+  transition: transform var(--motion-ui) var(--motion-ease), box-shadow var(--motion-ui) var(--motion-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.focus-label { font-weight: var(--weight-strong); line-height: var(--line-tight); }
+.focus-tiny { color: var(--world-muted); font-size: var(--text-sm); line-height: var(--line-tight); }
+.focus-card:active:not(:disabled) { transform: translateY(var(--focus-card-lift)); box-shadow: none; }
+/* Picked: ring and fill, so the state reads by shape as well as colour. */
+.focus-card[aria-pressed="true"] {
+  border-color: var(--world-accent); background: linear-gradient(var(--world-paper), var(--world-selected));
+  box-shadow: 0 0 0 var(--focus-ring) var(--world-accent), 0 var(--focus-card-lift) 0 var(--focus-ring) var(--world-accent-edge);
+}
+.focus-card:disabled { cursor: default; opacity: var(--controls-rest-opacity); }
+.focus-card:focus-visible { outline: var(--focus-width) solid var(--world-accent); outline-offset: calc(var(--focus-offset) + var(--focus-ring)); }
+.focus-finish { justify-self: end; }
+@media (prefers-reduced-motion: reduce) { .focus-card { transition: none; } .focus-card:active:not(:disabled) { transform: none; } }

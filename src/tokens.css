@@ -61,7 +61,6 @@
   --scene-actions-hover: rgb(245 231 203 / 0.12);
   --scene-actions-shadow: 0 2px 8px rgb(28 15 10 / 0.2);
   --scene-actions-muted: rgb(245 231 203 / 0.72); /* the paused song name: --scene-actions-ink, dimmed */
-  --tray-slide: 1.5rem; /* how far tray items travel as they come out from behind Settings */
   --now-playing-name-min: 4rem;
   --now-playing-name-max: 13rem; /* fits "Paper Cranes and Coffee", the longest title, at --text-sm beside the note */
   --song-wave-height: 12px; /* matches SONG_WAVE.height in song-wave-data.ts, which draws in this box */

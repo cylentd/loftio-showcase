@@ -1,7 +1,4 @@
-import { NAMES, RESIDENT_CONTROLS as COPY, SETTINGS_NAV, FIDGET_COPY } from "./copy";
-import { flick, type Sample } from "./fidget-model";
-import { FIDGET } from "./fidget-data";
-import { FLOOR_PLAY } from "./floor-play-data";
+import { NAMES, RESIDENT_CONTROLS as COPY, SETTINGS_NAV } from "./copy";
 import { controlText, settingsGroup, switchRow } from "./settings-components";
 import { DragPlacement, floorPosition, worldPoint, placementPosition, surfaceAt, type Point } from "./resident-movement";
 import { PLACEMENT } from "./resident-movement-data";
@@ -11,13 +8,14 @@ import type { Runtime } from "./runtime";
 import type { Overlay } from "./overlay";
 import type { SceneSettings } from "./scene-settings";
 
+/** `caught`: taken back out of a game feature's play (runtime.play), so it is held from the first touch. */
 type Held = { resident: Resident; button: HTMLButtonElement; origin: Point; pointer: number | null; caught?: boolean };
 
 class ResidentControls {
+  onDrop?: (resident: Resident) => void;
   private readonly drag = new DragPlacement();
   private held: Held | null = null;
   private suppressClick: HTMLButtonElement | null = null;
-  private samples: Sample[] = [];
   constructor(private scene: Scene, private runtime: Runtime, private overlay: Overlay, private settings: SceneSettings) {
     for (const resident of scene.residents) this.bind(resident);
     addEventListener("blur", () => this.cancel());
@@ -29,7 +27,7 @@ class ResidentControls {
     this.menu();
   }
 
-  private bind(resident: Resident): void {
+  bind(resident: Resident): void {
     const button = this.overlay.residentButton(resident.cast.id);
     button.classList.add("resident-hit");
     button.setAttribute("aria-describedby", "resident-help");
@@ -39,8 +37,8 @@ class ResidentControls {
       button.dataset.input = "pointer";
       const client = { x: event.clientX, y: event.clientY };
       if (!this.drag.begin(resident.cast.id, event.pointerId, client, this.world(client), resident.pos)) return;
-      const caught = this.runtime.fidget.catch(resident, this.runtime.clock);
-      this.samples = [{ ...this.world(client), time: event.timeStamp }];
+      const caught = this.catch(resident);
+      this.runtime.play?.sample(this.world(client), event.timeStamp, true);
       this.suppressClick = null;
       this.held = { resident, button, origin: caught ? floorPosition(resident.pos) : { ...resident.pos }, pointer: event.pointerId, caught };
       if (caught) this.pickUp(this.held);
@@ -61,6 +59,10 @@ class ResidentControls {
     button.addEventListener("blur", () => { delete button.dataset.input; if (this.held?.pointer === null && this.held.button === button) this.cancel(); });
   }
 
+  private catch(resident: Resident): boolean {
+    return this.runtime.play?.catch(resident, this.runtime.clock) ?? false;
+  }
+
   private world(point: Point): Point {
     const { look } = this.runtime;
     return worldPoint(point, { scale: look.scale, left: -look.left - look.x * look.scale + this.scene.cast.x * look.scale,
@@ -71,9 +73,9 @@ class ResidentControls {
     const held = this.held;
     if (!held || held.pointer !== event.pointerId) return;
     const client = { x: event.clientX, y: event.clientY };
-    this.samples.push({ ...this.world(client), time: event.timeStamp });
-    this.samples = this.samples.filter(sample => sample.time >= event.timeStamp - FIDGET.sampleMs);
-    const position = this.drag.move(event.pointerId, client, this.world(client), this.runtime.look.scale, this.runtime.fidget.stacks.bounds()?.top);
+    const world = this.world(client);
+    this.runtime.play?.sample(world, event.timeStamp, false);
+    const position = this.drag.move(event.pointerId, client, world, this.runtime.look.scale, this.runtime.play?.carryTop());
     if (!position) return;
     if (!held.resident.held) this.pickUp(held);
     held.resident.pull(position.x - held.resident.pos.x, position.y - held.resident.pos.y);
@@ -90,11 +92,10 @@ class ResidentControls {
     this.held = null;
     if (result.moved || held.caught) {
       this.suppressClick = held.button;
-      const velocity = !cancel && !this.runtime.look.frozen && !this.runtime.look.still ? flick(this.samples, event.timeStamp, this.runtime.look.scale) : null;
-      if (velocity) this.toss(held, velocity);
-      else if (!cancel && result.moved && this.stack(held)) {
-        // Stack targeting uses the visible feet before floor-placement snapping.
-      } else {
+      const { look } = this.runtime;
+      const line = cancel ? null : this.runtime.play?.release(held.resident, event.timeStamp, look.scale, result.moved, !look.frozen && !look.still) ?? null;
+      if (line) this.released(held, line);
+      else {
         Object.assign(held.resident.pos, held.caught && (cancel || !result.moved) ? held.origin : result.position);
         this.drop(held, cancel);
       }
@@ -106,25 +107,16 @@ class ResidentControls {
     held.resident.pickUp(held.caught);
     held.button.dataset.held = "true";
     held.button.setAttribute("aria-pressed", "true");
-    this.overlay.announce(`${NAMES[held.resident.cast.id]} ${COPY.picked}`);
+    this.overlay.announce(`${held.button.getAttribute('aria-label') ?? NAMES[held.resident.cast.id]} ${COPY.picked}`);
     this.draw(held.resident);
   }
 
-  private toss(held: Held, velocity: Point): void {
-    this.runtime.fidget.throwResident(held.resident, velocity);
+  /** Play took the resident (a toss, a pile): it is no longer held by this control. */
+  private released(held: Held, line: string): void {
     delete held.button.dataset.held;
     held.button.setAttribute("aria-pressed", "false");
-    this.overlay.announce(`${NAMES[held.resident.cast.id]} ${FIDGET_COPY.thrown}`);
+    this.overlay.announce(`${held.button.getAttribute('aria-label') ?? NAMES[held.resident.cast.id]} ${line}`);
     this.runtime.update(0);
-  }
-
-  private stack(held: Held, keyboard = false): boolean {
-    if (!this.runtime.fidget.stacks.tryPlace(held.resident, keyboard)) return false;
-    delete held.button.dataset.held;
-    held.button.setAttribute("aria-pressed", "false");
-    this.overlay.announce(`${NAMES[held.resident.cast.id]} ${FIDGET_COPY.stacked}`);
-    this.runtime.update(0);
-    return true;
   }
 
   private drop(held: Held, cancel: boolean): void {
@@ -132,12 +124,13 @@ class ResidentControls {
     resident.putDown(!cancel || !!held.caught, !this.runtime.look.frozen, this.runtime.clock);
     delete held.button.dataset.held;
     held.button.setAttribute("aria-pressed", "false");
-    this.overlay.announce(`${NAMES[resident.cast.id]} ${cancel ? COPY.cancelled : COPY.placed}`);
+    this.overlay.announce(`${held.button.getAttribute('aria-label') ?? NAMES[resident.cast.id]} ${cancel ? COPY.cancelled : COPY.placed}`);
     const interest = resident.cast.interest;
     if (!cancel && Math.hypot(resident.pos.x - interest.x, resident.pos.y - interest.y) <= PLACEMENT.interestRadius) {
       this.overlay.arrive(resident.cast.id);
     }
     this.draw(resident);
+    if (!cancel) this.onDrop?.(resident);
   }
 
   private draw(resident: Resident): void {
@@ -150,7 +143,7 @@ class ResidentControls {
       event.preventDefault();
       if (event.repeat) return;
       if (!this.held) {
-        const caught = this.runtime.fidget.catch(resident, this.runtime.clock);
+        const caught = this.catch(resident);
         this.held = { resident, button, origin: caught ? floorPosition(resident.pos) : { ...resident.pos }, pointer: null, caught };
         this.pickUp(this.held);
       } else if (this.held.button === button && this.held.pointer === null) {
@@ -159,15 +152,11 @@ class ResidentControls {
       return;
     }
     if (this.held?.button !== button || this.held.pointer !== null) return;
-    if (event.key.toLowerCase() === "s") {
+    const { look } = this.runtime;
+    const line = this.runtime.play?.key(resident, event.key, !look.frozen && !look.still) ?? null;
+    if (line) {
       event.preventDefault();
-      if (this.stack(this.held, true)) this.held = null;
-      return;
-    }
-    if (event.key === "Enter" && !this.runtime.look.frozen && !this.runtime.look.still) {
-      event.preventDefault();
-      const held = this.held; this.held = null;
-      this.toss(held, { x: FLOOR_PLAY.keyboardX, y: FLOOR_PLAY.keyboardY });
+      const held = this.held; this.held = null; this.released(held, line);
       return;
     }
     if (event.key === "PageUp" || event.key === "PageDown") {
@@ -213,11 +202,11 @@ class ResidentControls {
     panel.className = "resident-panel";
     const help = document.createElement("p");
     help.id = "resident-help"; help.textContent = COPY.help;
-    const reset = document.createElement("button");
+    const reset = document.createElement("button"); reset.className = "world-button";
     controlText(reset, "reset", COPY.reset);
     reset.addEventListener("click", () => {
       this.cancel();
-      this.runtime.fidget.reset(this.runtime.clock);
+      this.runtime.play?.reset(this.runtime.clock);
       for (const resident of this.scene.residents) { resident.resetHome(); this.draw(resident); }
       this.overlay.announce(COPY.restored);
     });
@@ -230,6 +219,6 @@ class ResidentControls {
   }
 }
 
-export function installResidentControls(scene: Scene, runtime: Runtime, overlay: Overlay, settings: SceneSettings): void {
-  new ResidentControls(scene, runtime, overlay, settings);
+export function installResidentControls(scene: Scene, runtime: Runtime, overlay: Overlay, settings: SceneSettings) {
+  return new ResidentControls(scene, runtime, overlay, settings);
 }

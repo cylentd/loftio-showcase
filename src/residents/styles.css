@@ -1,0 +1,94 @@
+:root { --resident-thumb: 88px; --basket-width: 120px; --basket-height: 66px; --arrival-peek: 24px; --arrival-duration: 700ms; --basket-weave: 10px; --basket-ridge: 3px; }
+.residents-trigger { position: fixed; z-index: var(--controls-layer); left: var(--space-4); bottom: max(var(--space-4), env(safe-area-inset-bottom)); max-width: calc(100vw - 2 * var(--space-4)); }
+.resident-form { display: grid; gap: var(--space-4); }
+.resident-form p { margin: 0; line-height: var(--line-body); color: var(--world-muted); }
+/* A failure reads in full ink right above the button that answers it. Empty, it stays in the accessibility tree
+   (so the live region is ready before text arrives) and the negative margin cancels its grid gap. */
+.resident-form .resident-failure { color: var(--world-ink); font-weight: var(--weight-strong); }
+.resident-form .resident-failure:empty { margin-bottom: calc(-1 * var(--space-4)); }
+.resident-card { display: grid; grid-template-columns: var(--resident-thumb) 1fr; gap: var(--space-2); align-items: center; margin-bottom: var(--space-4); }
+.resident-card img { width: var(--resident-thumb); height: var(--resident-thumb); object-fit: contain; grid-row: span 2; }
+.resident-card p { margin: 0; }
+/* Wicker: an over-under weave (checker of light and dark strands, shaded rows) under a braided rolled rim.
+   The same basket in the room and in the reveal; skin colours come from the --world-* wood tokens. */
+:root { --basket-wicker:
+    repeating-linear-gradient(60deg, var(--world-wood-light) 0 var(--basket-ridge), var(--world-edge) var(--basket-ridge) calc(2 * var(--basket-ridge)), var(--world-wood-dark) calc(2 * var(--basket-ridge)) calc(3 * var(--basket-ridge))) top / 100% var(--basket-rim) no-repeat,
+    linear-gradient(transparent 0 calc(100% - var(--basket-ridge)), var(--world-wood-dark)) 0 0 / 100% var(--basket-weave),
+    repeating-conic-gradient(var(--world-edge) 0 25%, var(--world-wood-light) 0 50%) 0 0 / calc(2 * var(--basket-weave)) calc(2 * var(--basket-weave)),
+    radial-gradient(ellipse at 50% 0, transparent 40%, color-mix(in srgb, var(--world-wood-dark) 60%, transparent)) border-box;
+  --basket-shape: var(--radius-1) var(--radius-1) 50% 50% / var(--radius-1) var(--radius-1) var(--basket-bowl) var(--basket-bowl); }
+.arrival-basket { position: absolute; transform: translate(-50%, -100%); min-width: var(--basket-width); min-height: var(--basket-height);
+  z-index: 1; display: grid; place-items: start center; padding: 0 var(--space-4) var(--space-2);
+  border: var(--world-lip) solid var(--world-wood-dark); border-radius: var(--basket-shape);
+  background: var(--basket-wicker), var(--world-wood); color: var(--world-ink); box-shadow: var(--world-shadow); font: inherit; white-space: nowrap; cursor: pointer; }
+.arrival-basket::before { content: ''; position: absolute; inset: calc(-1 * var(--space-4)) var(--space-4) auto; height: var(--space-4); border: var(--world-lip) solid var(--world-wood-dark); border-bottom: 0; border-radius: var(--world-radius) var(--world-radius) 0 0;
+  background: none; box-shadow: inset 0 var(--world-lip) 0 var(--world-edge); }
+/* The label is a parchment tag hung from the rim on a short cord, solid and dark-inked so it reads at any lighting phase. */
+.arrival-basket[hidden] { display: none; }
+.arrival-basket span { position: relative; pointer-events: none; translate: 0 var(--basket-tag-drop); padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--world-wood-dark); border-radius: var(--radius-1); background: var(--world-paper); color: var(--world-ink);
+  font-weight: var(--weight-strong); box-shadow: 0 var(--world-press) 0 var(--world-wood-dark), 0 var(--space-1) var(--space-2) color-mix(in srgb, var(--world-ink) 40%, transparent); }
+/* Treehouse draws the painted basket (public/brand/basket-treehouse.webp, 480 x 365).
+   The tag hangs over its rim, so the weave stays visible and the tag never reaches the controls below. */
+/* --basket-tag-lift: in tag heights; 90% lands the tag on the painted rim (about 30% down the art) instead of above the handle. */
+:root { --basket-art-width: 152px; --basket-art-aspect: 480 / 365; --basket-tag-lift: 90%; }
+:root[data-world-theme="treehouse"] .arrival-basket {
+  width: var(--basket-art-width); aspect-ratio: var(--basket-art-aspect); min-height: 0; place-items: start center;
+  padding: 0; border: 0; border-radius: 0; box-shadow: none;
+  background: var(--art-basket) center / contain no-repeat;
+  filter: drop-shadow(0 var(--space-1) var(--space-2) color-mix(in srgb, var(--world-ink) 55%, transparent));
+}
+:root[data-world-theme="treehouse"] .arrival-basket::before { content: none; }
+:root[data-world-theme="treehouse"] .arrival-basket span { translate: 0 var(--basket-tag-lift); }
+.arrival-basket:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
+.reveal-basket { position: relative; width: 100%; overflow: hidden; }
+/* The newcomer sits in the bowl: the image's lower edge is hidden behind the woven front and its rolled rim. */
+.reveal-basket::after { content: ''; position: absolute; bottom: var(--space-2); left: calc((100% - var(--reveal-bowl-width)) / 2); width: var(--reveal-bowl-width); height: var(--reveal-bowl-height);
+  border: var(--world-lip) solid var(--world-wood-dark); border-radius: var(--basket-shape);
+  background: var(--basket-wicker), var(--world-wood);
+  box-shadow: inset 0 var(--world-lip) 0 var(--world-edge), 0 var(--space-2) var(--space-3) calc(-1 * var(--space-1)) color-mix(in srgb, var(--world-ink) 55%, transparent); }
+.reveal-basket { padding-bottom: var(--space-2); }
+/* Treehouse: the newcomer sits on the painted basket's blanket instead of behind a CSS rim.
+   The basket spans --reveal-basket-width of the row. The lift of 24% of the row width was tuned by eye in the
+   fixture QA (2026-11-06, 390 and 1500 wide): the cutout's feet land on the blanket, the rim covers its bottom edge. */
+:root { --reveal-basket-width: 72%; --reveal-basket-lift: 24%; }
+:root[data-world-theme="treehouse"] .reveal-basket { isolation: isolate; padding-bottom: var(--reveal-basket-lift); }
+:root[data-world-theme="treehouse"] .reveal-basket::after {
+  bottom: 0; left: calc((100% - var(--reveal-basket-width)) / 2); right: auto; width: var(--reveal-basket-width); height: auto;
+  aspect-ratio: var(--basket-art-aspect); z-index: -1; border: 0; border-radius: 0; box-shadow: none;
+  background: var(--art-basket) center / contain no-repeat;
+}
+.resident-reveal img { display: block; width: 100%; max-height: 40dvh; object-fit: contain; }
+.resident-reveal .world-content { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
+.resident-reveal p { width: 100%; text-align: center; }
+.world-drawer :is([role="status"], [role="alert"]):empty { margin: 0; }
+.resident-reveal a { color: var(--world-accent); min-height: var(--tap-min); display: inline-flex; align-items: center; }
+.arrival-peek { animation: arrival-peek var(--arrival-duration) ease-out both; }
+@keyframes arrival-peek { from { transform: translateY(var(--arrival-peek)); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .arrival-peek { animation: none; } }
+
+/* Residents are lit from the floor, not boxed: keyboard focus is a lamp-amber ring at the feet,
+   and a newcomer stands in a warm pool of light that fades after it settles in. */
+:root { --resident-pool-width: 92%; --resident-pool-height: 26px; --arrival-pool-width: 130%; --arrival-pool-height: 40px; --resident-pool-drop: 40%; --arrival-glow-duration: 4.5s; }
+.hit.resident-hit:focus-visible { outline: none; }
+/* ::before is the arrival pool, ::after the focus ring, so focus never cuts the fade short. */
+.hit.resident-hit::before, .hit.resident-hit::after {
+  content: ""; position: absolute; left: 50%; bottom: 0; width: var(--resident-pool-width); height: var(--resident-pool-height);
+  translate: -50% var(--resident-pool-drop); border-radius: 50%; pointer-events: none; opacity: 0;
+}
+.hit.resident-hit:focus-visible::after {
+  opacity: 1; border: var(--focus-width) solid var(--color-focus);
+  box-shadow: 0 0 var(--space-3) color-mix(in srgb, var(--color-focus) 70%, transparent), inset 0 0 var(--space-2) color-mix(in srgb, var(--color-focus) 45%, transparent);
+}
+.hit.resident-hit[data-input="pointer"]:focus-visible::after { opacity: 0; }
+.hit.resident-hit[data-arrived="true"]::before {
+  width: var(--arrival-pool-width); height: var(--arrival-pool-height);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--grove-mote) 85%, transparent), color-mix(in srgb, var(--grove-glow) 45%, transparent) 55%, transparent);
+  animation: arrival-glow var(--arrival-glow-duration) var(--motion-ease) forwards;
+}
+@keyframes arrival-glow { 0% { opacity: 0; } 12%, 55% { opacity: 1; } 100% { opacity: 0; } }
+/* Reduced motion: the light simply stays on for the same time, then goes out. */
+@keyframes arrival-glow-still { 0% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .hit.resident-hit[data-arrived="true"]::before { animation-name: arrival-glow-still; animation-timing-function: step-end; } }
+.world-header .world-close:focus-visible { outline-color: var(--color-focus); }
+@media (max-width: 700px) { .residents-trigger { bottom: calc(var(--tap-min) + 3 * var(--space-4) + env(safe-area-inset-bottom)); } }

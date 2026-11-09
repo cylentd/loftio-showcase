@@ -1,0 +1,11 @@
+@import '../tokens.css';
+
+:root {
+  --builder-width: 64rem;
+  --builder-form-width: 22rem;
+  --builder-preview-width: 22rem;
+  --builder-gallery-min: 9rem;
+  --builder-gallery-image: 8rem;
+  --builder-disabled: 0.55;
+  --builder-danger: #993d31;
+}

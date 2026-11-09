@@ -1,19 +1,23 @@
 import { STACK } from "./stack-data";
-import { chooseStack, splitStack } from "./stack-model";
+import { chooseStack } from "./stack-model";
+import { addMember, canAutoJoin, detachPile, newPile, playerOwned, tickAutoPile, tumblePile, type Pile } from "./pile-book";
+import type { StackSounds } from "./sfx";
+import { AUTO_STACK } from "./auto-stack-data";
 import { PLACEMENT } from "./resident-movement-data";
 import { heightAt, type Resident } from "./resident";
 import type { Scene } from "./scene";
 import { airborneStack } from "./air-stack-model";
 import type { FloorBody } from "./floor-play-model";
 
-type Pile = { members: Resident[]; age: number };
 type Release = (resident: Resident, velocity: { x: number; y: number }) => void;
 
 export class ResidentStacks {
-  private piles: Pile[] = [];
-  constructor(private scene: Scene, private release: Release, private land: (resident: Resident, now: number) => void) {}
+  private piles: Pile<Resident>[] = [];
+  constructor(private scene: Scene, private release: Release, private land: (resident: Resident, now: number) => void, private sound?: StackSounds) {}
 
   contains(r: Resident): boolean { return this.piles.some(p => p.members.includes(r)); }
+  /** Residents in the pile `r` stands in, or 0. */
+  size(r: Resident): number { return this.piles.find(p => p.members.includes(r))?.members.length ?? 0; }
   isBase(r: Resident): boolean { return this.piles.some(p => p.members[0] === r); }
 
   private tops(resident: Resident): Resident[] {
@@ -48,21 +52,20 @@ export class ResidentStacks {
 
   private attach(resident: Resident, target: Resident): boolean {
     let pile = this.piles.find(p => p.members.includes(target));
-    if (!pile) { target.pickUp(); pile = { members: [target], age: 0 }; this.piles.push(pile); }
+    if (!pile) { target.pickUp(); pile = newPile([target]); this.piles.push(pile); }
     if (!resident.held) resident.pickUp();
-    pile.members.push(resident); pile.age = 0;
+    playerOwned(pile); pile.age = 0;
+    addMember(pile, resident, this.sound);
     this.update(0, false);
     return true;
   }
 
   detach(resident: Resident, now: number): boolean {
-    const pile = this.piles.find(p => p.members.includes(resident));
-    if (!pile) return false;
-    const { lower, falling } = splitStack(pile.members, pile.members.indexOf(resident));
-    this.piles = this.piles.filter(p => p !== pile);
-    if (lower.length > 1) this.piles.push({ members: lower, age: 0 });
-    else if (lower[0]) this.land(lower[0], now);
-    falling.forEach((r, i) => this.release(r, { x: (i % 2 ? -1 : 1) * STACK.toppleSpeed, y: 0 }));
+    const split = detachPile(this.piles, resident, this.sound);
+    if (!split) return false;
+    this.piles = split.piles;
+    if (split.landing) this.land(split.landing, now);
+    split.falling.forEach((r, i) => this.release(r, { x: (i % 2 ? -1 : 1) * STACK.toppleSpeed, y: 0 }));
     return true;
   }
 
@@ -70,6 +73,7 @@ export class ResidentStacks {
     const pile = this.piles.find(p => p.members[0] === base);
     if (!pile) return;
     this.piles = this.piles.filter(p => p !== pile);
+    tumblePile(pile, this.sound);
     pile.members.slice(1).forEach((r, i) => this.release(r, { x: velocity.x + (i % 2 ? -1 : 1) * STACK.toppleSpeed, y: velocity.y }));
   }
 
@@ -78,13 +82,41 @@ export class ResidentStacks {
     this.piles = [];
   }
 
-  update(dt: number, frozen: boolean): void {
+  /** A resident climbs onto `base` of its own accord. Self-made piles stop at AUTO_STACK.maxHeight. */
+  autoJoin(climber: Resident, base: Resident): boolean {
+    if (!canAutoJoin(this.piles, base, climber)) return false;
+    let pile = this.piles.find(p => p.members.includes(base));
+    if (!pile) { base.pickUp(); pile = newPile([base], true); this.piles.push(pile); }
+    climber.pickUp();
+    pile.age = 0;
+    addMember(pile, climber, this.sound);
+    this.update(0, false);
+    return true;
+  }
+
+  /** Self-made piles that have stood long enough: residents step down, top first, and wander again. */
+  private dissolve(dt: number, now: number): void {
+    for (const pile of this.piles) {
+      tickAutoPile(pile, dt).forEach((resident, i) => {
+        if (i === 0) resident.pos.x += (pile.members.length % 2 ? -1 : 1) * AUTO_STACK.descendOffset;
+        this.land(resident, now);
+      });
+    }
+    this.piles = this.piles.filter(p => p.members.length);
+  }
+
+  update(dt: number, frozen: boolean, now = 0): void {
+    if (!frozen) this.dissolve(dt, now);
     for (const pile of this.piles) {
       if (!frozen) pile.age += dt;
       const base = pile.members[0]!;
       let lift = 0;
       pile.members.forEach((resident, level) => {
-        resident.renderStack(base.pos.x, base.pos.y, lift, level, pile.age, frozen);
+        const t = Math.min(1, pile.age / STACK.wobbleMs);
+        const wobble = frozen ? 0 : Math.sin(t * Math.PI * 2 * STACK.wobbleCycles) * (1 - t);
+        const squash = frozen ? 0 : (1 - t) * STACK.squash;
+        resident.poseAt(base.pos.x, base.pos.y, lift, { air: 0, sx: 1 + squash, sy: 1 - squash,
+          rotation: wobble * STACK.wobble * (level + 1), depth: level * STACK.depthStep, noShadow: level > 0 });
         lift += resident.height * STACK.supportHeight;
       });
     }

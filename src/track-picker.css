@@ -1,0 +1,47 @@
+/* The record beside the song title is a button; the song list opens above it on the tray's own parchment.
+   The record's face is still --capsule-disc (world-tray.css), so every skin keeps its own disc. The script places the list. */
+:root {
+  --track-list-width: 15rem; /* "Paper Cranes and Coffee", the longest title, beside the note at --text-sm */
+  --track-disc-reach: calc((var(--tap-min) - var(--capsule-disc-size)) / 2); /* the 44 px target overhangs the 40 px record this much each side */
+  --track-disc-turn: 24deg; /* how far the record turns under the pointer: a nudge, not a spin */
+}
+
+.now-playing-disc {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: var(--tap-min); height: var(--tap-min); margin: calc(-1 * var(--track-disc-reach));
+  padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer;
+}
+.now-playing-disc > svg { transition: rotate var(--motion-gentle) var(--motion-ease); }
+.now-playing-disc:hover > svg, .now-playing-disc[aria-expanded="true"] > svg { rotate: var(--track-disc-turn); }
+
+.track-list {
+  inset: auto; margin: 0; box-sizing: border-box; width: var(--track-list-width);
+  padding: var(--space-1); overflow-y: auto; overscroll-behavior: contain;
+  border: var(--border-width) solid var(--world-wood-dark); border-radius: var(--radius-2);
+  background: var(--world-paper); color: var(--world-ink); box-shadow: var(--world-shadow);
+  font: var(--text-sm) / var(--line-tight) var(--font-body);
+  scrollbar-color: var(--controls-scroll) transparent; scrollbar-width: thin;
+  transition: opacity var(--motion-ui) var(--motion-ease), translate var(--motion-ui) var(--motion-ease);
+}
+.track-list:popover-open { display: grid; gap: var(--border-width); }
+@starting-style {
+  .track-list:popover-open { opacity: 0; translate: 0 var(--space-2); }
+}
+
+.track-list-song {
+  display: grid; grid-template-columns: var(--controls-icon) 1fr; align-items: center; gap: var(--space-2);
+  min-height: var(--tap-min); width: 100%; padding: 0 var(--space-3);
+  border: 0; border-radius: var(--radius-1); background: none; color: inherit;
+  font: inherit; text-align: start; cursor: pointer;
+}
+.track-list-song > svg { width: var(--controls-icon); height: var(--controls-icon); color: var(--world-accent); visibility: hidden; }
+.track-list-song:hover { background: var(--world-paper-sunk); }
+/* The playing song: olive note, stronger weight and the selected tint, so it never rests on colour alone. */
+.track-list-song[aria-checked="true"] { background: var(--world-selected); font-weight: var(--weight-strong); }
+.track-list-song[aria-checked="true"] > svg { visibility: visible; }
+.scene-actions .track-list-song:focus-visible { outline: var(--focus-width) solid var(--world-accent); outline-offset: var(--focus-offset-inset); }
+
+@media (prefers-reduced-motion: reduce) {
+  .track-list, .now-playing-disc > svg { transition: none; }
+  .now-playing-disc:hover > svg, .now-playing-disc[aria-expanded="true"] > svg { rotate: none; }
+}

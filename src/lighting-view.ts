@@ -10,7 +10,7 @@ export function installLighting(settings: SceneSettings): void {
   const choices = document.createElement("div"); choices.className = "lighting-choices";
   choices.setAttribute("role", "group"); choices.setAttribute("aria-label", LIGHTING_COPY.title);
   for (const mode of LIGHTING_MODES) {
-    const button = document.createElement("button");
+    const button = document.createElement("button"); button.className = "world-button";
     controlText(button, mode === "lamplit" ? "lamp" : mode === "moonlit" ? "moon" : mode, LIGHTING_COPY.modes[mode]);
     button.dataset.lighting = mode;
     if (mode === "cycle") button.title = LIGHTING_COPY.help;

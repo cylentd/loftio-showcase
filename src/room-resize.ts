@@ -18,7 +18,7 @@ export function installRoomResize(context: Context): () => Promise<void> {
     if (switching || layout === activeRoom) return;
     switching = true;
     app.stop();
-    runtime.fidget.reset(runtime.clock);
+    runtime.play?.reset(runtime.clock);
     scroller.inert = true;
     const previousLayout = activeRoom;
     const previous = { world: scene.world, lighting: scene.lighting, scenery: scene.favoriteScenery };

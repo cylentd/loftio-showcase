@@ -1,0 +1,154 @@
+:root {
+  --world-paper: #fff4da; --world-ink: #35271d; --world-muted: #69503a; --world-wood: #684327;
+  --world-edge: #a57942; --world-accent: #365335; --world-selected: #e0e7c8;
+  --world-frame: 7px; --world-radius: 24px; --world-drawer-width: 420px; --world-inset: 16px;
+  --world-shadow: 0 18px 60px #20160e66, inset 0 2px 0 #ffffff80;
+  --world-button-shadow: 0 3px 0 var(--world-edge), inset 0 1px 0 #ffffffb0;
+  --world-press: 2px; --world-duration: 180ms;
+  /* Treehouse Den skin (docs/design/LOFTIO-UI-DESIGN-SYSTEM.md): carved wood, parchment, moss-green pills */
+  --world-wood-light: color-mix(in srgb, var(--world-wood) 62%, var(--world-edge));
+  --world-wood-dark: color-mix(in srgb, var(--world-wood) 72%, var(--world-ink));
+  --world-carved: 12px; /* frame thickness: reads as a carved board at both 390 and 1500 */
+  --world-grain: 4px; /* a quarter of one grain cycle */
+  --world-grain-angle: 62deg; /* diagonal, so top and side boards read alike */
+  --world-lip: 2px; /* the bevel where wood meets parchment */
+  --world-panel-inner: 18.5rem; /* settings parchment width inside the frame and padding: three tabs and two buttons on one line each */
+  --world-paper-sunk: color-mix(in srgb, var(--world-paper) 86%, var(--world-edge));
+  --world-on-accent: var(--world-paper); /* 8.6:1 on --world-accent */
+  --world-accent-edge: color-mix(in srgb, var(--world-accent) 62%, var(--world-ink));
+  --world-pill-edge: 3px; /* the slight 3D bottom edge of a pill */
+  --world-leaf: var(--postcard-leaf);
+  --world-leaf-light: color-mix(in srgb, var(--postcard-leaf) 70%, var(--grove-mote)); /* lamplight on the leaf's top */
+  --world-leaf-size: 40px;
+  --world-leaf-tilt: -32deg;
+  --world-close-stroke: 2.25; /* heavier than the 1.5 icon default so the x reads on wood */
+  --controls-bg: var(--world-paper); --controls-ink: var(--world-ink); --controls-muted: var(--world-muted);
+  --controls-edge: var(--world-edge); --controls-accent: var(--world-accent); --controls-selected: var(--world-selected);
+  --controls-surface: var(--world-paper); --controls-on-accent: var(--world-on-accent);
+  --scene-actions-bg: var(--world-wood); --scene-actions-ink: #fff8e9;
+  --scene-actions-edge: var(--world-edge); --controls-panel-shadow: var(--world-shadow);
+}
+.world-drawer, .scene-controls {
+  border: var(--world-frame) solid var(--world-wood); border-radius: var(--world-radius);
+  background: var(--world-paper); color: var(--world-ink); box-shadow: var(--world-shadow);
+}
+.world-drawer {
+  position: fixed; inset: var(--world-inset) var(--world-inset) var(--world-inset) auto;
+  margin: 0; width: min(var(--world-drawer-width), calc(100vw - 2 * var(--world-inset)));
+  max-height: calc(100dvh - 2 * var(--world-inset)); padding: var(--space-4); font-family: var(--font-body);
+}
+.world-drawer[open] { display: flex; flex-direction: column; gap: var(--space-3); }
+.world-drawer::backdrop { background: var(--color-scene-scrim); }
+/* Carved frame, shared by the Residents drawer and the settings panel:
+   grain on the border box, parchment on the padding box, a dark lip between them. */
+.world-frame {
+  overflow: visible; border: var(--world-carved) solid transparent;
+  background: linear-gradient(var(--world-paper), var(--world-paper)) padding-box,
+    repeating-linear-gradient(var(--world-grain-angle), var(--world-wood) 0, var(--world-wood-light) var(--world-grain), var(--world-wood) calc(2 * var(--world-grain)), var(--world-wood-dark) calc(3 * var(--world-grain)), var(--world-wood) calc(4 * var(--world-grain))) border-box;
+  box-shadow: var(--world-shadow), inset 0 0 0 var(--world-lip) var(--world-wood-dark), 0 0 0 var(--border-width) var(--world-wood-dark);
+}
+/* A sprig of two leaves on each top corner of the frame (the top stays on screen as a phone sheet);
+   the second leaf is the first one's box-shadow, so it shares the leaf shape. */
+.world-frame::before, .world-frame::after {
+  content: ""; position: absolute; top: calc(-1 * var(--world-carved)); width: var(--world-leaf-size); height: calc(var(--world-leaf-size) / 2);
+  border-radius: 0 100%; background: linear-gradient(var(--world-leaf-light), var(--world-leaf)); pointer-events: none;
+  box-shadow: calc(var(--world-leaf-size) / 2) calc(var(--world-leaf-size) / -3) 0 calc(var(--world-leaf-size) / -10) var(--world-leaf);
+}
+.world-frame::before { left: calc(-1 * var(--world-carved) / 2); rotate: var(--world-leaf-tilt); }
+.world-frame::after { right: calc(var(--tap-min) + var(--space-2)); scale: -1 1; rotate: calc(-1 * var(--world-leaf-tilt)); }
+.world-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding-right: var(--tap-min); }
+.world-header h2 { margin: 0; font-family: var(--font-heading); }
+.world-content { overflow: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--world-edge) transparent; }
+.world-button, .world-content select {
+  min-height: var(--tap-min); min-width: var(--tap-min); padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--world-edge); border-radius: var(--chip-radius);
+  color: var(--world-ink); background: var(--world-paper); font: inherit; cursor: pointer;
+}
+.world-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  background: linear-gradient(var(--world-paper), var(--world-paper-sunk)); box-shadow: var(--world-button-shadow);
+  transition: transform var(--world-duration) var(--motion-ease), box-shadow var(--world-duration) var(--motion-ease);
+}
+.world-button:active { transform: translateY(var(--world-press)); box-shadow: none; }
+.world-button[aria-pressed="true"], .world-primary {
+  background: var(--world-accent); color: var(--world-on-accent); border-color: var(--world-accent-edge);
+  box-shadow: 0 var(--world-pill-edge) 0 var(--world-accent-edge), inset 0 var(--border-width) 0 color-mix(in srgb, var(--world-on-accent) 30%, transparent);
+}
+.world-button:disabled { opacity: var(--controls-rest-opacity); cursor: default; }
+.world-button:disabled:active { transform: none; }
+/* A pressed switch that the system holds on (Still under reduced motion) is still on: full green, not faded.
+   Its title says why it can't be turned off. */
+.world-button[aria-pressed="true"]:disabled { opacity: 1; }
+/* Icon + label tabs on a recessed track; the open tab is the green pill. */
+.world-tabs { display: flex; gap: var(--space-1); margin-bottom: var(--space-4); padding: var(--space-1);
+  border-radius: var(--chip-radius); background: var(--world-paper-sunk); box-shadow: inset 0 1px 0 var(--world-edge); }
+.world-tabs > * { flex: 1; min-width: 0; padding-inline: var(--space-2); border-color: transparent; background: transparent; box-shadow: none; white-space: nowrap; }
+.world-tabs > [aria-selected="true"] { background: var(--world-accent); color: var(--world-on-accent); box-shadow: 0 var(--world-press) 0 var(--world-accent-edge); }
+/* Round close set on the top-right corner of the frame. */
+.world-header .world-close {
+  position: absolute; top: calc(-1 * var(--world-carved) - var(--space-2)); right: calc(-1 * var(--world-carved) - var(--space-2));
+  width: var(--tap-min); height: var(--tap-min); padding: 0; color: var(--world-on-accent);
+  border: var(--world-lip) solid var(--world-edge); background: radial-gradient(circle at 50% 35%, var(--world-wood-light), var(--world-wood-dark));
+  box-shadow: 0 var(--world-pill-edge) 0 var(--world-wood-dark), var(--scene-actions-shadow);
+}
+.world-header .world-close .control-icon { width: var(--controls-icon); height: var(--controls-icon); stroke-width: var(--world-close-stroke); }
+:is(.world-drawer, .scene-controls, .postcard-preview, .scene-actions) :is(button, input, select, summary):focus-visible {
+  outline: var(--focus-width) solid var(--world-accent); outline-offset: var(--focus-offset);
+}
+/* The frame grows outward: the parchment keeps its width whatever the skin's wood thickness. */
+.scene-controls { position: fixed; top: var(--world-inset); bottom: auto; right: var(--world-inset); height: auto; max-height: calc(100dvh - 2 * var(--world-inset));
+  width: min(calc(var(--world-panel-inner) + 2 * (var(--world-carved) + var(--space-4))), calc(100vw - 2 * var(--world-inset))); }
+.postcard-preview { border: var(--world-frame) solid var(--world-wood); }
+.postcard-footer .btn { width: auto; padding-inline: var(--space-3); }
+.postcard-footer .btn span { display: inline; }
+body:has(.scene-settings[open]) .residents-trigger { visibility: hidden; }
+.bubble { background: var(--world-paper); color: var(--world-ink); border-color: var(--world-edge); }
+.bubble::before { content: attr(data-name); display: block; color: var(--world-accent); font-weight: var(--weight-strong); }
+@media (max-width: 700px) {
+  .postcard-preview { --postcard-chrome-height: 15rem; --postcard-mobile-chrome: 15rem; }
+  .postcard-footer { grid-column: 1 / -1; grid-row: 3; justify-content: flex-end; }
+  .world-drawer, .scene-controls { inset: auto 0 0; width: 100%; max-width: none; max-height: 85dvh; height: auto;
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom)); border-radius: var(--world-radius) var(--world-radius) 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { .world-button:active { transform: none; } }
+
+/* Treehouse (also the fallback skin): the painted frame and leaves replace the CSS wood above.
+   Coffee and beach keep the CSS frame. --art-* urls are set by world-art.ts. */
+:root[data-world-theme="treehouse"] {
+  /* Measured on public/brand/frame-treehouse.webp (937 x 933) by scripts/clean_brand_art.py:
+     wood 80/88/81/85 px thick (left/top/right/bottom); the corner curve ends 178 px in, the fan carving ~155 px. */
+  --frame-art-slice: 210; /* clears both the curve and the carving, so the straight edges stretch plain wood only */
+  --frame-art-corner: 2.5; /* slice / mean wood thickness (210 / 84): the drawn corner keeps the wood its own width */
+  --frame-art-radius: 1.4; /* outer corner radius / wood thickness on the art (about 120 / 84) */
+  --world-carved: 30px; /* drawn wood thickness on desktop: 1.5x the first pass, so it reads as the concept board's chunky frame */
+  --frame-leaf-sprig: 64px;
+  /* Music tray and name tag (world-tray.css): a carved wood board with leaf tufts, a rose-brown tag */
+  --skin-tag: #8a4a43; /* rose-brown; 6.2:1 under --world-paper */
+  --capsule-disc: var(--disc-record);
+  /* Wood grain between the theme's two tray tones (world-theme.ts), so the cream ink is checked against its lightest stripe */
+  --tray-base: repeating-linear-gradient(var(--world-grain-angle), color-mix(in srgb, var(--world-tray) 50%, var(--world-tray-deep)) 0, var(--world-tray) var(--world-grain), color-mix(in srgb, var(--world-tray) 50%, var(--world-tray-deep)) calc(2 * var(--world-grain)), var(--world-tray-deep) calc(3 * var(--world-grain)), color-mix(in srgb, var(--world-tray) 50%, var(--world-tray-deep)) calc(4 * var(--world-grain)));
+  --tray-tuft: var(--art-leaf-1); --tray-tuft-end: var(--art-leaf-2);
+  --tray-label-ink: var(--world-tray-ink);
+}
+:root[data-world-theme="treehouse"] .world-frame {
+  border-image: var(--art-frame) var(--frame-art-slice) / calc(var(--world-carved) * var(--frame-art-corner)) stretch;
+  border-radius: calc(var(--world-carved) * var(--frame-art-radius));
+  background: var(--world-paper) padding-box; box-shadow: var(--world-shadow);
+}
+/* A painted sprig on each top corner: one leaf on the frame, a smaller one tucked behind it. */
+:root[data-world-theme="treehouse"] .world-frame::before, :root[data-world-theme="treehouse"] .world-frame::after {
+  top: calc(-1 * var(--world-carved) - var(--space-4)); width: var(--frame-leaf-sprig); height: var(--frame-leaf-sprig);
+  border-radius: 0; box-shadow: none; rotate: none;
+  background: var(--art-leaf-3) right top / 58% no-repeat, var(--art-leaf-1) left bottom / 66% no-repeat;
+  filter: drop-shadow(0 var(--world-lip) var(--world-lip) color-mix(in srgb, var(--world-ink) 45%, transparent));
+}
+:root[data-world-theme="treehouse"] .world-frame::before { left: calc(-1 * var(--world-carved)); }
+:root[data-world-theme="treehouse"] .world-frame::after { background: var(--art-leaf-3) right top / 58% no-repeat, var(--art-leaf-2) left bottom / 66% no-repeat; }
+@media (max-width: 700px) {
+  /* Phone sheet: thinner wood, and the frame runs off the bottom of the screen instead of closing under it. */
+  :root[data-world-theme="treehouse"] { --world-carved: 14px; --frame-leaf-sprig: 52px; }
+  :root[data-world-theme="treehouse"] .world-frame {
+    border-bottom-width: 0; border-image-width: calc(var(--world-carved) * var(--frame-art-corner)) calc(var(--world-carved) * var(--frame-art-corner)) 0;
+    border-radius: calc(var(--world-carved) * var(--frame-art-radius)) calc(var(--world-carved) * var(--frame-art-radius)) 0 0;
+  }
+}

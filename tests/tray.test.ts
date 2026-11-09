@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TrayModel, nearTray } from "../src/tray-model.ts";
+import { TRAY } from "../src/copy.ts";
 
 const PEEK = 4000;
 
@@ -69,4 +70,50 @@ test("near the tray means within reach of its box, on any side", () => {
   assert.equal(nearTray(125, 152, rect, 48), true);
   assert.equal(nearTray(125, 151, rect, 48), false);
   assert.equal(nearTray(199, 293, rect, 48), false, "a corner beyond reach diagonally");
+});
+
+test("the Music tile shows the player at first, and each press hides or shows it", () => {
+  const tray = new TrayModel(PEEK);
+  assert.equal(tray.musicShown, true);
+  assert.equal(tray.toggleMusic(), false);
+  assert.equal(tray.musicShown, false);
+  assert.equal(tray.toggleMusic(), true);
+  assert.equal(tray.musicShown, true);
+});
+
+test("hiding the player leaves the tray out, and a tucked tray keeps the choice", () => {
+  const tray = new TrayModel(PEEK);
+  tray.peek(0);
+  tray.toggleMusic();
+  assert.equal(tray.isOpen(1), true, "pressing Music does not tuck the tray");
+  assert.equal(tray.isOpen(PEEK), false);
+  tray.peek(PEEK);
+  assert.equal(tray.musicShown, false, "the player stays hidden the next time the tray comes out");
+});
+
+test("tucked, the board shows the player row alone; open, the tiles under it", () => {
+  const tray = new TrayModel(PEEK);
+  assert.deepEqual(tray.rows(0), { player: true, tiles: "none" });
+  tray.peek(0);
+  assert.deepEqual(tray.rows(1), { player: true, tiles: "all" });
+});
+
+test("with Music off, a tucked board is a slim bar holding only Settings (QA, 2026-11-06)", () => {
+  const tray = new TrayModel(PEEK);
+  tray.toggleMusic();
+  assert.deepEqual(tray.rows(0), { player: false, tiles: "settings" });
+  tray.hovering = true;
+  assert.deepEqual(tray.rows(0), { player: false, tiles: "all" });
+});
+
+test("the tray starts with the saved Music choice", () => {
+  assert.equal(new TrayModel(PEEK, false).musicShown, false);
+  assert.equal(new TrayModel(PEEK, true).musicShown, true);
+});
+
+test("each dock tile's accessible name contains its visible label", () => {
+  for (const [tile, { label, name }] of Object.entries(TRAY)) {
+    assert.ok(name.toLowerCase().includes(label.toLowerCase()), `${tile}: "${name}" lacks "${label}"`);
+  }
+  assert.deepEqual(Object.values(TRAY).map(tile => tile.label), ["Music", "Postcard", "Settings"]);
 });

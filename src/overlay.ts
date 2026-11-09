@@ -21,9 +21,10 @@ export class Overlay {
   private bubbleFor: string | null = null;
   private bubbleTimer = 0;
   private returnFocus: HTMLElement | null = null;
+  private readonly labels = new Map<string, string>();
 
   constructor(
-    layer: HTMLElement,
+    private readonly layer: HTMLElement,
     ids: string[],
     onPress: (id: string) => void,
     private readonly onLater: () => void,
@@ -79,6 +80,18 @@ export class Overlay {
 
   residentButton(id: string): HTMLButtonElement { return this.buttons.get(id)!; }
 
+  addResident(id: string, name: string, onPress: () => void, greeting: string): void {
+    if (this.buttons.has(id)) return;
+    const button = el('button', 'hit'); button.type = 'button'; button.setAttribute('aria-label', name);
+    button.addEventListener('click', () => { onPress(); this.say(id, greeting); });
+    this.labels.set(id, name); this.buttons.set(id, button); this.layer.append(button);
+  }
+
+  removeResident(id: string): void {
+    this.buttons.get(id)?.remove(); this.buttons.delete(id); this.labels.delete(id);
+    if (this.bubbleFor === id) { this.bubble.hidden = true; this.bubbleFor = null; }
+  }
+
   announce(message: string): void { this.live.textContent = message; }
 
   arrive(id: string, upstairs = false): void { this.say(id, upstairs ? LOFT_ARRIVAL : ARRIVALS[id]); }
@@ -87,8 +100,9 @@ export class Overlay {
     if (!line) return;
     this.bubbleFor = id;
     this.bubble.textContent = line;
+    this.bubble.dataset.name = this.labels.get(id) ?? NAMES[id] ?? id;
     this.bubble.hidden = false;
-    this.live.textContent = `${NAMES[id]}: ${line}`;
+    this.live.textContent = `${this.labels.get(id) ?? NAMES[id] ?? id}: ${line}`;
     window.clearTimeout(this.bubbleTimer);
     this.bubbleTimer = window.setTimeout(() => {
       this.bubble.hidden = true;

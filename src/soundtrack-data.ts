@@ -8,3 +8,7 @@ export const TRACKS = [
   { id: "treehouse", file: "Midnight_in_the_Treehouse.mp3" },
   { id: "hideaway", file: "The_Lamp_Lit_Hideaway.mp3" },
 ] as const;
+
+/** The song a visit most often opens on, and how often; any other song shares the rest equally. The owner's pick on 2026-11-08. Next continues down the list from the opener. */
+export const START_TRACK = "lanterns";
+export const START_TRACK_CHANCE = 0.3;

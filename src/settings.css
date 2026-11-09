@@ -30,7 +30,10 @@
   position: absolute; bottom: calc(100% + var(--space-2)); right: 0;
   width: min(var(--controls-width), calc(100vw - 2 * var(--space-4)));
   height: min(var(--controls-height), calc(100dvh - 2 * var(--space-4) - var(--tap-min) - var(--space-2)));
-  overflow: hidden; overscroll-behavior: contain; display: flex; flex-direction: column;
+  overflow: hidden; overscroll-behavior: contain;
+  /* Heading, tabs, then every tab panel stacked in one cell: the panel is as tall as its tallest tab,
+     so it holds no empty parchment and switching tabs never moves the tabs or the close button. */
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2); padding: var(--space-4); border: var(--border-width) solid var(--controls-edge);
   border-radius: var(--controls-panel-radius); background: var(--controls-bg); color: var(--controls-ink);
   box-shadow: var(--controls-panel-shadow); color-scheme: light;
@@ -38,43 +41,38 @@
 .settings-heading {
   margin: 0; font: var(--weight-strong) var(--controls-title-size) / var(--line-heading) var(--font-body);
 }
-.settings-tabs {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-1);
-  flex-shrink: 0; padding-bottom: var(--space-2); border-bottom: var(--border-width) solid var(--controls-divider);
-}
-.scene-controls button {
+/* Tabs, close and the everyday buttons wear the shared .world-tabs / .world-button / .world-close pills (world-ui.css). */
+.settings-tabs { flex-shrink: 0; margin-bottom: 0; }
+.scene-controls .world-button { font-size: var(--controls-tab-size); }
+.scene-controls button:not(.world-button) {
   min-height: var(--tap-min); padding: var(--space-2) var(--space-3); border: var(--border-width) solid transparent;
   border-radius: var(--radius-1); background: transparent; color: inherit; font: inherit;
   font-size: var(--controls-tab-size); cursor: pointer; text-align: left;
 }
-.scene-controls button:hover { background: var(--controls-hover); }
+.scene-controls button:not(.world-button):hover { background: var(--controls-hover); }
 .scene-controls button:disabled { opacity: var(--controls-rest-opacity); cursor: default; }
-.scene-controls .settings-tabs button {
-  display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-1);
-}
-.scene-controls .settings-tabs button[aria-selected="true"] {
-  background: var(--controls-selected); color: var(--controls-accent);
-}
 .scene-controls :is(button, summary, select, input):focus-visible, .scene-settings > summary:focus-visible {
   outline: var(--focus-width) solid var(--controls-accent); outline-offset: var(--focus-offset);
 }
 .scene-tab-panel {
-  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  grid-row: 3; grid-column: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-color: var(--controls-scroll) transparent;
   display: grid; align-content: start; gap: var(--space-3); padding: var(--space-1);
 }
 .scene-tab-panel::-webkit-scrollbar { width: var(--controls-scroll-width); }
 .scene-tab-panel::-webkit-scrollbar-track { background: transparent; }
 .scene-tab-panel::-webkit-scrollbar-thumb { background: var(--controls-scroll); border-radius: var(--chip-radius); }
-.scene-tab-panel[hidden] { display: none; }
+/* A closed tab keeps its height in the shared cell but is invisible, inert to the pointer and out of the accessibility tree. */
+.scene-tab-panel[hidden] { display: grid; visibility: hidden; }
 .room-motion, .room-resident-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); align-items: start; }
-.room-motion button { text-align: center; background: var(--controls-hover); border-color: var(--controls-divider); }
-.scene-controls button[aria-pressed="true"] { color: var(--controls-accent); background: var(--controls-selected); border-color: var(--controls-edge); }
+.scene-controls button:not(.world-button)[aria-pressed="true"] { color: var(--controls-accent); background: var(--controls-selected); border-color: var(--controls-edge); }
 .settings-group { border-bottom: var(--border-width) solid var(--controls-divider); padding-bottom: var(--space-3); }
 .room-lighting { display: grid; gap: var(--space-2); }
 .room-lighting h3 { margin: 0; font: var(--text-lg) / var(--line-heading) var(--font-heading); }
-.lighting-choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-1); }
-.scene-controls .lighting-choices button { min-width: 0; min-height: var(--controls-mode-height); padding: var(--space-2) var(--space-1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); text-align: center; border-color: var(--controls-divider); background: var(--controls-surface); }
+/* Mood pills sit icon-beside-label, two to a row so "Moonlit" never wraps on a phone. */
+.lighting-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); padding-bottom: var(--world-pill-edge); }
+.room-motion { padding-bottom: var(--space-2); } /* room under the pills' raised edge before the Residents group */
+.scene-controls .lighting-choices button { min-width: 0; padding-inline: var(--space-2); }
 .settings-hint { margin: 0; color: var(--controls-muted); font-size: var(--controls-label-size); line-height: var(--line-body); }
 .cue-control { display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap-min); padding-block: var(--space-2); font-size: var(--controls-tab-size); cursor: pointer; }
 .cue-control input {
@@ -90,14 +88,13 @@
 .scene-residents summary { cursor: pointer; min-height: var(--tap-min); padding: var(--space-3) 0; font-size: var(--controls-tab-size); }
 .resident-panel { font-size: var(--controls-label-size); line-height: var(--line-body); color: var(--controls-muted); }
 .resident-panel p { margin: 0; }
-.room-resident-actions > button { border-color: var(--controls-divider); text-align: center; }
 .scene-audio h3, .scene-rain h3 { margin: 0; display: flex; align-items: center; gap: var(--space-2); font-size: var(--controls-tab-size); font-weight: 600; line-height: var(--tap-min); }
 .effect-panel { display: grid; gap: var(--space-3); }
 .effect-panel p { margin: 0; color: var(--controls-muted); font-size: var(--controls-label-size); line-height: var(--line-body); }
 .effect-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--controls-tab-size); }
 .effect-heading output { font-variant-numeric: tabular-nums; color: var(--controls-accent); }
 .effect-control input, .audio-panel input { width: 100%; min-height: var(--tap-min); margin: 0; accent-color: var(--controls-accent); cursor: pointer; }
-.scene-controls .effect-panel > button { border-color: var(--controls-divider); text-align: center; }
+.scene-controls .effect-panel > button { margin-bottom: var(--world-pill-edge); }
 .scene-audio, .scene-rain { position: relative; }
 .scene-rain { padding-top: var(--space-3); border-top: var(--border-width) solid var(--controls-divider); }
 .audio-panel { display: grid; gap: var(--space-2); font-size: var(--controls-label-size); }
@@ -127,7 +124,6 @@
 }
 
 .settings-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-shrink: 0; }
-.scene-controls .settings-close { display: grid; place-items: center; width: var(--tap-min); padding: 0; flex-shrink: 0; }
 .settings-group > h3 { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-1); color: var(--controls-muted); font: 600 var(--controls-tab-size) / var(--line-heading) var(--font-body); }
 .setting-copy { display: grid; gap: var(--space-1); flex: 1; }
 .setting-copy small { color: var(--controls-muted); font-size: var(--controls-label-size); line-height: var(--line-body); }
@@ -135,18 +131,29 @@
 .cue-control input { margin-left: auto; }
 .room-resident-actions { grid-template-columns: minmax(0, 1fr) auto; align-items: start; padding-top: var(--space-1); }
 .scene-controls .room-resident-actions > button { gap: var(--space-1); padding-inline: var(--space-2); white-space: nowrap; }
-.room-resident-actions > button, .room-letter > button { display: flex; align-items: center; justify-content: center; gap: var(--space-2); border-color: var(--controls-edge); font-size: var(--controls-label-size); }
+.room-resident-actions > button { font-size: var(--controls-label-size); }
+.room-letter > button { font-size: var(--controls-label-size); }
 .scene-residents summary { padding: var(--space-2) 0; color: var(--controls-muted); font-size: var(--controls-label-size); }
-.room-letter { display: grid; gap: var(--space-1); border-bottom: none; padding-bottom: 0; }
-.room-motion button, .effect-panel > button, .audio-panel > button { display: flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.room-letter { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1); border-bottom: none; padding-bottom: 0; }
+.room-letter > :is(h3, label) { grid-column: 1 / -1; }
+.room-about { font-size: var(--controls-label-size); line-height: var(--line-body); color: var(--controls-muted); }
+.room-about[open] { grid-column: 1 / -1; }
+.room-about > summary { display: list-item; min-height: var(--tap-min); align-content: center; cursor: pointer; color: var(--controls-ink); padding-inline: var(--space-2); }
+.room-about p { margin: 0 0 var(--space-2); }
+.room-about a { color: var(--controls-accent); text-underline-offset: var(--space-1); overflow-wrap: anywhere; }
+.room-about a:focus-visible { outline: var(--focus-width) solid var(--controls-accent); outline-offset: var(--focus-offset); }
+.effect-panel > button, .audio-panel > button { display: flex; align-items: center; justify-content: center; gap: var(--space-2); }
 .effect-heading label { display: flex; align-items: center; gap: var(--space-2); }
 .effect-heading label svg { color: var(--controls-muted); }
 .effect-control { padding-top: var(--space-1); border-top: var(--border-width) solid var(--controls-divider); }
 .effect-panel { gap: var(--space-1); }
 .effect-heading output { min-width: var(--tap-min); text-align: right; font-size: var(--controls-label-size); }
 .scene-controls input[type="range"] { appearance: none; background: transparent; }
-.scene-controls input[type="range"]::-webkit-slider-runnable-track { height: var(--controls-track-height); background: var(--controls-track); border-radius: var(--chip-radius); }
+/* The track fills green up to the thumb; --fill is set from the value in controls.ts. */
+.scene-controls input[type="range"]::-webkit-slider-runnable-track { height: var(--controls-track-height); border-radius: var(--chip-radius);
+  background: linear-gradient(90deg, var(--controls-accent) var(--fill, 0%), var(--controls-track) var(--fill, 0%)); }
 .scene-controls input[type="range"]::-moz-range-track { height: var(--controls-track-height); background: var(--controls-track); border-radius: var(--chip-radius); }
+.scene-controls input[type="range"]::-moz-range-progress { height: var(--controls-track-height); background: var(--controls-accent); border-radius: var(--chip-radius); }
 .scene-controls input[type="range"]::-webkit-slider-thumb { appearance: none; width: var(--controls-thumb); height: var(--controls-thumb); margin-top: calc((var(--controls-track-height) - var(--controls-thumb)) / 2); border: var(--border-width) solid var(--controls-bg); border-radius: var(--chip-radius); background: var(--controls-accent); }
 .scene-controls input[type="range"]::-moz-range-thumb { width: var(--controls-thumb); height: var(--controls-thumb); border: var(--border-width) solid var(--controls-bg); border-radius: var(--chip-radius); background: var(--controls-accent); }
 @media (forced-colors: active) {

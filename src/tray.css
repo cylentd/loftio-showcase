@@ -1,22 +1,24 @@
-/* The corner tray tucks its items behind Settings. Width opens on a 0fr→1fr track; items overflow leftward, so they slide out from under the gear. */
+/* The corner tray: the player row stays, the tile row under it tucks away. The row's track opens 0fr→1fr, so the tiles
+   slide out from under the player. No transform on the row: the Settings panel inside it is position: fixed, and a
+   transform on an ancestor would trap it in the tray. overflow: clip does not clip a fixed descendant. */
 .tray-reveal {
-  display: grid; grid-template-columns: 0fr; overflow-x: clip; overflow-y: visible;
-  transition: grid-template-columns var(--motion-gentle) var(--motion-ease);
+  display: grid; grid-template-rows: 0fr; overflow: clip;
+  transition: grid-template-rows var(--motion-gentle) var(--motion-ease);
 }
 .tray-items {
-  min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1);
-  opacity: 0; translate: var(--tray-slide) 0;
-  transition: opacity var(--motion-gentle) var(--motion-ease), translate var(--motion-gentle) var(--motion-ease);
+  min-height: 0; display: flex; align-items: start; justify-content: space-around; gap: var(--space-1);
+  opacity: 0; transition: opacity var(--motion-gentle) var(--motion-ease);
 }
-.scene-actions[data-open="true"] .tray-reveal { grid-template-columns: 1fr; }
-.scene-actions[data-open="true"] .tray-items { opacity: 1; translate: 0 0; }
-.scene-actions .scene-settings { transition: margin var(--motion-gentle) var(--motion-ease), padding var(--motion-gentle) var(--motion-ease), border-color var(--motion-gentle) var(--motion-ease); }
-.scene-actions[data-open="false"] .scene-settings { margin-left: 0; padding-left: 0; border-left-color: transparent; }
+/* data-tiles comes from TrayModel.rows(): none (tucked, player only), settings (tucked, Music off), all (open). */
+.scene-actions:not([data-tiles="none"]) .tray-reveal { grid-template-rows: 1fr; }
+.scene-actions:not([data-tiles="none"]) .tray-items { opacity: 1; }
+/* Tucked tiles can't be pressed, but Tab still reaches them, and keyboard focus brings the row out (tray-model.ts). */
+.scene-actions[data-tiles="none"] .tray-items { pointer-events: none; }
+/* Music off and tucked: a slim bar holding only Settings, as the tray was before it had a player row. */
+.scene-actions[data-tiles="settings"] { width: auto; }
+.scene-actions[data-tiles="settings"] :is(.music-toggle, .postcard-action) { display: none; }
 
-.now-playing {
-  display: flex; align-items: center; margin-right: var(--space-2); padding-right: var(--space-2);
-  border-right: var(--border-width) solid var(--scene-actions-edge);
-}
+.now-playing { display: flex; align-items: center; }
 .now-playing-name {
   display: flex; align-items: center; gap: var(--space-2); padding-inline: var(--space-2);
   max-width: clamp(var(--now-playing-name-min), calc(100vw - var(--tray-fixed)), var(--now-playing-name-max));
@@ -24,7 +26,7 @@
 }
 .now-playing-text { display: grid; gap: var(--space-1); flex: 1; min-width: 0; }
 .now-playing-title { overflow: hidden; text-overflow: ellipsis; }
-.now-playing-name > svg { color: var(--scene-actions-muted); }
+.now-playing-disc > svg { color: var(--scene-actions-muted); }
 .now-playing[data-playing="false"] .now-playing-title { color: var(--scene-actions-muted); }
 
 /* Song position: a wave for the played part, a straight line for the rest, and a transparent slider on top that takes the input. */
@@ -41,11 +43,6 @@
 }
 .song-wave > input:disabled { cursor: default; }
 .song-wave:has(input:focus-visible) { outline: var(--focus-width) solid var(--scene-actions-ink); outline-offset: var(--focus-offset); border-radius: var(--chip-radius); }
-
-/* Narrow phones: the song name needs the icon's room more than the icon does. */
-@media (max-width: 420px) {
-  .now-playing-name > svg { display: none; }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .tray-reveal, .tray-items, .scene-actions .scene-settings { transition: none; }

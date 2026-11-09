@@ -14,6 +14,20 @@ test("the playlist starts on the first track and next wraps around", () => {
   assert.equal(playlist.current.id, "a");
 });
 
+test("a named start track is current at first, next continues in order from it, and nobody is told", () => {
+  const playlist = new Playlist(tracks, "b");
+  let changes = 0;
+  playlist.subscribe(() => { changes += 1; });
+  assert.equal(playlist.current.id, "b");
+  assert.equal(changes, 0);
+  playlist.next();
+  assert.equal(playlist.current.id, "c");
+});
+
+test("an unknown start track falls back to the first", () => {
+  assert.equal(new Playlist(tracks, "missing").current.id, "a");
+});
+
 test("every view hears each change once, and picking the playing track is no change", () => {
   const playlist = new Playlist(tracks);
   const heard: string[] = [];

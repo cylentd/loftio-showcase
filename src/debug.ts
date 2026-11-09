@@ -9,7 +9,7 @@ export function installDebug(shell: HTMLElement, app: Application, scene: Scene,
   makeMeter(shell, app.ticker, () => scene.residents.filter((r) => r.walking).length);
   Object.assign(window, { __grove: {
     snapshot: () => ({ clock: runtime.clock, camera: { x: look.x, y: look.y }, frozen: look.frozen,
-      fidget: runtime.fidget.snapshot(),
+      fidget: runtime.play?.snapshot() ?? null,
       favoriteLighting: { active: scene.favoriteScenery.active },
       lighting: { blend: scene.lighting.timeline.blend, elapsed: scene.lighting.timeline.elapsed, flickers: [...scene.lighting.flickers] },
       residents: scene.residents.map((resident) => ({ id: resident.cast.id, x: resident.pos.x, y: resident.pos.y, home: { ...resident.home }, wanderAfter: resident.wanderAfter, held: resident.held, placed: resident.placed, walking: resident.walking, climbing: resident.climbing, ladderReserved: resident.ladderReserved, depth: resident.root.zIndex, height: resident.height })),

@@ -12,7 +12,7 @@ import { PORTRAIT_LAMPS } from "./portrait-scenery-data";
 const SPROUT_SOFA = TRAVEL_NODES.find(node => node.id === "bed-right")!;
 
 export type Point = { x: number; y: number };
-export type CastMember = { id: string; art: string; home: Point; interest: Point; spot: Point; sizeBias: number };
+export type CastMember = { id: string; art: string; home: Point; interest: Point; spot: Point; sizeBias: number; motion?: 'walk' | 'hop' | 'float' };
 
 // Feet positions in room-desktop.jpg pixels. The room has no easel, kitchen or snack table, so each interest is the
 // nearest thing the art does have, named in the comment.

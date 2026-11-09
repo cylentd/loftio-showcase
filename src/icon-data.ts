@@ -25,4 +25,5 @@ export const ICON_PATHS = {
   download: "M12 3v12 m-5-5 5 5 5-5 M4 15v6h16v-6",
   copy: "M8 8h13v13H8z M16 8V3H3v13h5",
   close: "m6 6 12 12 M18 6 6 18",
+  dice: "M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z M8 8h.01 M16 8h.01 M12 12h.01 M8 16h.01 M16 16h.01",
 } as const;

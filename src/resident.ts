@@ -1,25 +1,25 @@
 import { Container, Sprite, type Texture } from "pixi.js";
 import type { CastMember, Point } from "./cast";
-import { DEPTH, HOP, IDLE, SHADOW } from "./tune";
+import { DEPTH, HOP, IDLE, SHADOW, TURN } from "./tune";
+import { Turn } from "./turn-pose";
 import { PLACEMENT, WANDER } from "./resident-movement-data";
 import { landingPose, residentDepth, residentSeat } from "./resident-movement";
 import { travelRoute } from "./travel-route";
 import { TRAVEL } from "./travel-data";
 import { ladderPose } from "./ladder-pose";
+import { SPACE } from "./personal-space-data";
 import { residentLighting } from "./lighting-model";
 import { seatAvailable } from "./seat-occupancy";
 import { heldPose } from "./held-pose";
 import { ChairBooster } from "./chair-booster";
 import { cloudPose } from "./cloud-pose";
-import { FLOOR_PLAY } from "./floor-play-data";
-import { GRAB } from "./grab-data";
-import { grabState, pullGrab, advanceGrab, grabPose } from "./grab-model";
-import { STACK } from "./stack-data";
 
 type Action = { kind: "hop" | "look" | "wiggle" | "nod" | "press" | "settle"; t: number; dur: number };
 type Palette = { shadow: string; tintFront: string; tintBack: string };
 
 const TAU = Math.PI * 2;
+const WALK_LIFT = 0.02; // Gentle footfall, as a share of displayed height.
+const FLOAT_LIFT = 0.08; // Small float arc; navigation still follows the existing floor route.
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const easeInOut = (t: number) => t * t * (3 - 2 * t);
@@ -36,7 +36,19 @@ export function heightAt(y: number, bias: number): number {
   return lerp(DEPTH.backHeight, DEPTH.frontHeight, t) * bias;
 }
 
+export type CarryPose = { lift: number; sx: number; sy: number; rotation: number };
+/** Extra feel for a held resident that a game feature may attach (lobby play's grab spring). Its pose is combined
+ *  with the carry pose; with none attached, a held resident looks as it always did. */
+export interface CarryStyle {
+  start(caught: boolean, caughtLift: number): void;
+  pull(dx: number, dy: number, height: number): void;
+  pose(dt: number, reduced: boolean): CarryPose;
+}
+/** How poseAt draws a resident a feature placed: share of the shadow lost to air, stretch, lean, depth nudge. */
+export type FreePose = { air: number; sx: number; sy: number; rotation: number; depth?: number; noShadow?: boolean };
+
 export class Resident {
+  carryStyle: CarryStyle | null = null;
   readonly root = new Container();
   private readonly body = new Container();
   private readonly booster = new ChairBooster();
@@ -48,14 +60,16 @@ export class Resident {
   private readonly core: Sprite;
   readonly pos: Point;
   readonly home: Point;
+  /** Set whenever a feature draws this resident (mid-toss, in a pile) and cleared by the room's personal-space pass. */
+  posedByPlay = false;
+  /** A walker's sidestep around others: added to its path, fades back, and is never part of the path itself. */
+  readonly shove: Point = { x: 0, y: 0 };
   wanderAfter = 0;
   at: "home" | "interest" = "home";
   walking = false;
   held = false;
   private carryHeight = 0;
   private carryTime = 0;
-  private grab = grabState();
-  private caughtLift = 0;
   private carryOrigin: Point | null = null;
   private lighting = 0;
   placed = false;
@@ -65,7 +79,7 @@ export class Resident {
   private hopIndex = 0;
   private hopT = 0;
   private facing = 1;
-  private facingShown = 1;
+  private readonly turn = new Turn(1);
   private action: Action | null = null;
   private queued: Action["kind"] | null = null;
   private fidgetIn: number;
@@ -110,42 +124,33 @@ export class Resident {
     this.sprite.tint = residentLighting(mixColour(this.palette.tintBack, this.palette.tintFront, depth), blend);
   }
 
+  /** `caught`: taken out of a feature's play mid-air, so the carry starts from the current lift. */
   pickUp(caught = false): void {
-    this.grab = grabState(caught);
-    this.caughtLift = caught ? this.lift - this.height * PLACEMENT.lift : 0;
+    this.carryStyle?.start(caught, caught ? this.lift - this.height * PLACEMENT.lift : 0);
     this.carryTime = 0;
     this.carryOrigin = { ...this.pos };
     this.carryHeight = this.height;
     this.carrySupportLift = this.supportLift;
+    this.shove.x = this.shove.y = 0;
     this.held = true;
-    this.facingShown = this.facing;
+    this.turn.snap(this.facing);
     this.carriedMotion = { walking: this.walking, paused: this.paused };
     this.walking = this.paused = false;
     this.action = this.queued = null;
   }
 
-  pull(dx: number, dy: number): void { pullGrab(this.grab, dx, dy, this.carryHeight); }
+  pull(dx: number, dy: number): void { this.carryStyle?.pull(dx, dy, this.carryHeight); }
 
-  renderFloorPlay(x: number, y: number, lift: number, vx: number, impact: number): void {
+  /** Draws the resident with its feet at (x, y), lifted `lift` px, at a spot a feature chose (mid-toss, in a pile). */
+  poseAt(x: number, y: number, lift: number, pose: FreePose): void {
     this.carrySupportLift = 0;
+    this.posedByPlay = true;
+    this.shove.x = this.shove.y = 0;
     this.pos.x = x; this.pos.y = y;
     this.carryHeight = heightAt(y, this.cast.sizeBias);
-    const squash = impact * FLOOR_PLAY.squash;
-    const lean = Math.max(-1, Math.min(1, vx / FLOOR_PLAY.leanSpeed)) * FLOOR_PLAY.maxLean;
-    const spring = grabPose(this.grab);
-    this.layout(lift, Math.min(1, lift / this.carryHeight), (1 + squash) * spring.sx, (1 - squash) * spring.sy, lean);
-    this.root.zIndex = residentDepth(this.pos);
-  }
-
-  renderStack(x: number, y: number, lift: number, level: number, age: number, frozen: boolean): void {
-    this.pos.x = x; this.pos.y = y; this.carrySupportLift = 0;
-    this.carryHeight = heightAt(y, this.cast.sizeBias);
-    const t = Math.min(1, age / STACK.wobbleMs);
-    const wobble = frozen ? 0 : Math.sin(t * Math.PI * 2 * STACK.wobbleCycles) * (1 - t);
-    const squash = frozen ? 0 : (1 - t) * STACK.squash;
-    this.layout(lift, 0, 1 + squash, 1 - squash, wobble * STACK.wobble * (level + 1));
-    this.root.zIndex = residentDepth(this.pos) + level * STACK.depthStep;
-    if (level > 0) this.shadow.alpha = this.core.alpha = 0;
+    this.layout(lift, pose.air, pose.sx, pose.sy, pose.rotation);
+    this.root.zIndex = residentDepth(this.pos) + (pose.depth ?? 0);
+    if (pose.noShadow) this.shadow.alpha = this.core.alpha = 0;
   }
 
   putDown(placed: boolean, animate: boolean, now = 0): void {
@@ -167,6 +172,7 @@ export class Resident {
     this.carryOrigin = null;
     this.carriedMotion = null;
     this.held = this.placed = this.walking = this.paused = false;
+    this.shove.x = this.shove.y = 0;
     this.action = this.queued = null;
     this.at = "home";
     Object.assign(this.pos, this.cast.home);
@@ -178,6 +184,22 @@ export class Resident {
     const current = this.carryOrigin ?? this.pos;
     const target = this.walking || this.paused || this.carriedMotion ? this.hops.at(-1) : undefined;
     return target ? [{ ...current }, { x: target.x, y: target.y }] : [{ ...current }];
+  }
+
+  get stopped(): boolean { return this.paused; }
+
+  /** Direction of the current hop in world px, or null when not walking. */
+  get heading(): Point | null {
+    const a = this.hops[this.hopIndex], b = this.hops[this.hopIndex + 1];
+    return this.walking && a && b ? { x: b.x - a.x, y: b.y - a.y } : null;
+  }
+
+  /** A push from the room's personal-space pass. A walker keeps its path and takes the push as a sidestep of at most
+   *  `reach` px in all; anyone else is simply moved. */
+  nudge(dx: number, dy: number, reach: number): void {
+    if (!this.walking) { this.pos.x += dx; this.pos.y += dy; return; }
+    const x = this.shove.x + dx, y = this.shove.y + dy, size = Math.hypot(x, y), k = size > reach ? reach / size : 1;
+    this.shove.x = x * k; this.shove.y = y * k;
   }
 
   get climbing(): boolean { return (this.walking || this.paused) && !!this.hops[this.hopIndex + 1]?.climb; }
@@ -221,7 +243,7 @@ export class Resident {
       this.queued = kind; // played on arrival, so a nod asked for mid-walk still happens
       return;
     }
-    const dur = kind === "nod" ? IDLE.nodMs : kind === "press" || kind === "settle" ? IDLE.pressMs : kind === "look" ? HOP.turnMs * 4 : HOP.durationMs * 1.4;
+    const dur = kind === "nod" ? IDLE.nodMs : kind === "press" || kind === "settle" ? IDLE.pressMs : kind === "look" ? TURN.ms * 4 : HOP.durationMs * 1.4;
     this.action = { kind, t: 0, dur };
     if (kind === "look") this.facing = -this.facing;
   }
@@ -231,16 +253,15 @@ export class Resident {
     this.poseTime = now;
     if (this.held) {
       if (!reduced) this.carryTime += dt;
-      if (!reduced) advanceGrab(this.grab, dt);
       const pose = heldPose(this.carryTime, this.phase, reduced);
-      const spring = grabPose(this.grab, reduced);
-      const catchLift = reduced ? 0 : this.caughtLift * Math.exp(-this.carryTime / GRAB.liftMs);
-      this.layout(this.carryHeight * (PLACEMENT.lift + pose.lift) + catchLift, PLACEMENT.air,
-        pose.sx * spring.sx, pose.sy * spring.sy, pose.rotation + spring.rotation);
+      const extra = this.carryStyle?.pose(dt, reduced) ?? { lift: 0, sx: 1, sy: 1, rotation: 0 };
+      this.layout(this.carryHeight * (PLACEMENT.lift + pose.lift) + extra.lift, PLACEMENT.air,
+        pose.sx * extra.sx, pose.sy * extra.sy, pose.rotation + extra.rotation);
       return;
     }
     if (this.paused) return;
     if (reduced) {
+      this.turn.snap(this.facing);
       this.layout(0, 0);
       return;
     }
@@ -250,10 +271,6 @@ export class Resident {
     let lift = 0;
     let air = 0;
     const h = heightAt(this.pos.y, this.cast.sizeBias);
-
-    // Turning: the sprite narrows through zero, like a paper cut-out spun on its stand.
-    const turnStep = (dt / HOP.turnMs) * 2;
-    this.facingShown += Math.max(-turnStep, Math.min(turnStep, this.facing - this.facingShown));
 
     if (this.walking) {
       ({ sx, sy, rot, lift, air } = this.advanceTravel(dt, h));
@@ -271,6 +288,14 @@ export class Resident {
         this.fidgetIn = lerp(IDLE.fidgetMinMs, IDLE.fidgetMaxMs, this.rand()) * busy;
       }
     }
+
+    // Turning: a squash-hop with the flip hidden at its top (turn-pose.ts). Walking already hops, so only a standing turn adds lift.
+    // Facing is read after the travel step above, which is where a walk changes it.
+    this.turn.face(this.facing);
+    this.turn.advance(dt);
+    const turned = this.turn.pose();
+    sy *= turned.sy;
+    if (!this.walking) lift += turned.lift * h;
 
     const breath = Math.sin((now / IDLE.breathMs) * TAU + this.phase);
     sy *= 1 + IDLE.breath * breath;
@@ -294,6 +319,7 @@ export class Resident {
         this.hopT = 0;
         const end = this.hops[this.hops.length - 1];
         if (end) Object.assign(this.pos, end);
+        this.shove.x = this.shove.y = 0;
         this.action = null;
         if (this.queued) this.play(this.queued);
         this.queued = null;
@@ -305,11 +331,17 @@ export class Resident {
       if (a && b) {
         if (Math.abs(b.x - a.x) > 1) this.facing = Math.sign(b.x - a.x);
         if (b.climb) {
+          this.shove.x = this.shove.y = 0;
           const pose = ladderPose(this.hopT, b.y > a.y);
           this.pos.x = lerp(a.x, b.x, pose.progress);
           this.pos.y = lerp(a.y, b.y, pose.progress);
           sx = pose.sx; sy = pose.sy; lift = pose.lift; rot = pose.rotation;
-        } else ({ sx, sy, rot, lift, air } = this.hopPose(this.hopT, a, b, height, HOP.height, 1));
+        } else {
+          ({ sx, sy, rot, lift, air } = this.hopPose(this.hopT, a, b, height, HOP.height, 1));
+          const fade = Math.exp(-SPACE.decayPerS * dt / SPACE.seconds);
+          this.shove.x *= fade; this.shove.y *= fade;
+          this.pos.x += this.shove.x; this.pos.y += this.shove.y;
+        }
       }
     }
 
@@ -317,6 +349,12 @@ export class Resident {
   }
 
   private hopPose(t: number, a: Point, b: Point, h: number, height: number, travel: number) {
+    if (travel && this.cast.motion && this.cast.motion !== 'hop') {
+      const progress = easeInOut(t);
+      this.pos.x = lerp(a.x, b.x, progress); this.pos.y = lerp(a.y, b.y, progress);
+      const lift = Math.sin(Math.PI * t) * h * (this.cast.motion === 'float' ? FLOAT_LIFT : WALK_LIFT);
+      return { sx: 1, sy: 1, rot: 0, lift, air: this.cast.motion === 'float' ? Math.sin(Math.PI * t) : 0 };
+    }
     let sx = 1;
     let sy = 1;
     let rot = 0;
@@ -377,10 +415,9 @@ export class Resident {
     const base = h / this.sprite.texture.height;
     this.root.position.set(this.pos.x, this.pos.y);
     this.root.zIndex = this.held ? PLACEMENT.heldDepth : this.climbing ? TRAVEL.climbDepth : residentDepth(this.pos, this.walking);
-    this.body.pivot.set(0, 0);
     this.body.position.set(0, -lift - this.supportLift);
     this.body.rotation = rot;
-    this.sprite.scale.set(base * sx * this.facingShown, base * sy);
+    this.sprite.scale.set(base * sx * this.turn.pose().sx, base * sy);
     this.setLighting(this.lighting);
     const shrink = 1 - SHADOW.airShrink * air;
     const footW = h * this.aspect;

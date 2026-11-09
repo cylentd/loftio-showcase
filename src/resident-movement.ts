@@ -59,6 +59,7 @@ export class DragPlacement {
     this.grab = { id, pointer, client, origin: { ...position }, position: { ...position }, offset: { x: position.x - world.x, y: position.y - world.y }, moved: false };
     return true;
   }
+  /** `carryTop` lets a carried resident rise above the room, to reach the top of a tall pile. */
   move(pointer: number, client: Point, world: Point, _scale = 1, carryTop = 0): Point | null {
     const grab = this.grab;
     if (!grab || grab.pointer !== pointer) return null;

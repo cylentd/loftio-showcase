@@ -1,0 +1,166 @@
+/* Create panel (create-form.ts): one question per step, felt figures on chunky raised parchment tiles.
+   Every colour is a --world-* skin token, so Treehouse, Coffee and Beach each draw it in their own materials.
+   Moss green (--world-accent) means chosen; the raised wood edge means pressable. */
+:root {
+  --resident-drawer-width: 600px; /* four ~118px picture cards in a row inside the treehouse frame at 1500 wide */
+  --wizard-card-radius: 22px;
+  --wizard-pick-radius: 16px;
+  --wizard-card-lift: 4px; /* the tile's raised edge; a press sinks it flat */
+  --wizard-hover-lift: 3px;
+  --wizard-ring: 3px; /* the chosen card's moss ring */
+  --wizard-art: 112px; /* felt figure size on a desktop card */
+  --wizard-pick-art: 56px; /* the summary's small pick pictures */
+  --wizard-hop: 320ms; /* the chosen card's hop; PICK_HOLD_MS in create-form.ts waits for it */
+  --wizard-hop-rise: -8px;
+  --wizard-hop-scale: 1.05;
+  --wizard-art-tilt: -5deg; /* the figure leans toward the pointer on hover */
+  --wizard-dot: 10px;
+  --wizard-dot-now: 28px; /* the current step's dot stretches into a pill: shape, not only colour, marks it */
+  --wizard-dot-ring: 2px;
+  --wizard-die: 48px;
+  --wizard-icon: 28px;
+  --wizard-icon-stroke: 2.25;
+  --wizard-make-height: 3.75rem;
+  --wizard-basket-width: 260px;
+  --wizard-basket-friend: 52%; /* of the basket width: the friend sits on the blanket, rim over its feet */
+  --wizard-rock: 3deg;
+  --wizard-rock-duration: 2.6s; /* one slow sway each way: a sleeping baby's basket, not a shake */
+  --wizard-art-shadow: drop-shadow(0 3px 3px color-mix(in srgb, var(--world-ink) 30%, transparent));
+  /* Palette swatches: the catalog's colour words (catalog-data.ts) as paint. */
+  --swatch-blackberry-1: #5e3a6e; --swatch-blackberry-2: #f4e6c8; --swatch-blackberry-3: #d9a441;
+  --swatch-apricot-1: #f2a66b; --swatch-apricot-2: #6f8a3c; --swatch-apricot-3: #d9a441;
+  --swatch-dusty-blue-1: #7d9bb8; --swatch-dusty-blue-2: #f3ead2; --swatch-dusty-blue-3: #b46a3c;
+  --swatch-cocoa-1: #f7efdc; --swatch-cocoa-2: #6b4632; --swatch-cocoa-3: #d98472;
+  --swatch-frost-1: #b9a6d6; --swatch-frost-2: #9fd3cf; --swatch-frost-3: #f3ead2;
+  --swatch-meadow-1: #9caf88; --swatch-meadow-2: #f2d98a; --swatch-meadow-3: #c46a4a;
+}
+.residents-drawer { --world-drawer-width: var(--resident-drawer-width); }
+
+.resident-wizard { gap: var(--space-3); }
+.wizard-step { display: grid; gap: var(--space-4); }
+.wizard-step[hidden], .wizard-picks[hidden], .wizard-basket[hidden], .resident-wizard .world-button[hidden] { display: none; }
+
+/* Heading and progress dots share one row. */
+.wizard-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+/* Headings share the drawer title's serif: a collector's catalogue, not a school worksheet. */
+.wizard-head h3 { margin: 0; font: var(--weight-normal) var(--text-xl) / var(--line-heading) var(--font-heading); color: var(--world-ink); text-wrap: balance; }
+.wizard-head h3:focus { outline: none; }
+.wizard-head h3:focus-visible { outline: var(--focus-width) solid var(--world-accent); outline-offset: var(--focus-offset); border-radius: var(--radius-1); }
+.wizard-dots { display: flex; flex: none; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.wizard-dots li { width: var(--wizard-dot); height: var(--wizard-dot); border: var(--wizard-dot-ring) solid var(--world-accent); border-radius: var(--chip-radius); }
+.wizard-dots [data-state="done"] { background: var(--world-accent); }
+.wizard-dots [data-state="now"] { width: var(--wizard-dot-now); background: var(--world-accent); }
+
+/* Picture cards */
+.wizard-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.wizard-cards[data-field="creature"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.wizard-card, .wizard-pick {
+  position: relative; display: grid; justify-items: center; align-content: start; gap: var(--space-1);
+  min-width: var(--tap-min); min-height: var(--tap-min); padding: var(--space-3) var(--space-2) var(--space-2);
+  border: var(--border-width) solid var(--world-edge); border-radius: var(--wizard-card-radius);
+  background: linear-gradient(var(--world-paper), var(--world-paper-sunk)); color: var(--world-ink); font: inherit; cursor: pointer;
+  box-shadow: 0 var(--wizard-card-lift) 0 var(--world-edge), 0 calc(2 * var(--wizard-card-lift)) var(--space-3) color-mix(in srgb, var(--world-ink) 16%, transparent);
+  transition: transform var(--motion-ui) var(--motion-ease), box-shadow var(--motion-ui) var(--motion-ease), background-color var(--motion-ui) var(--motion-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.wizard-card .wizard-art { width: 100%; max-width: var(--wizard-art); aspect-ratio: 1; object-fit: contain; filter: var(--wizard-art-shadow);
+  transition: rotate var(--motion-ui) var(--motion-ease-hop), scale var(--motion-ui) var(--motion-ease-hop); user-select: none; }
+.wizard-label { font-size: var(--text-lg); font-weight: var(--weight-strong); line-height: var(--line-tight); text-align: center; }
+@media (hover: hover) {
+  .wizard-card:hover:not(:disabled), .wizard-pick:hover:not(:disabled) { transform: translateY(calc(-1 * var(--wizard-hover-lift)));
+    box-shadow: 0 calc(var(--wizard-card-lift) + var(--wizard-hover-lift)) 0 var(--world-edge), 0 calc(3 * var(--wizard-card-lift)) var(--space-4) color-mix(in srgb, var(--world-ink) 20%, transparent); }
+  .wizard-card:hover:not(:disabled) .wizard-art { rotate: var(--wizard-art-tilt); scale: var(--wizard-hop-scale); }
+}
+.wizard-card:active:not(:disabled), .wizard-pick:active:not(:disabled) { transform: translateY(var(--wizard-card-lift)); box-shadow: 0 0 0 var(--world-edge); }
+.wizard-card[aria-pressed="true"] {
+  border-color: var(--world-accent); background: linear-gradient(var(--world-paper), var(--world-selected));
+  box-shadow: 0 0 0 var(--wizard-ring) var(--world-accent), 0 var(--wizard-card-lift) 0 var(--wizard-ring) var(--world-accent-edge);
+}
+.wizard-card.is-picked { animation: wizard-hop var(--wizard-hop) var(--motion-ease-hop); }
+@keyframes wizard-hop { 45% { transform: translateY(var(--wizard-hop-rise)) scale(var(--wizard-hop-scale)); } }
+.wizard-card:disabled, .wizard-pick:disabled { cursor: default; opacity: var(--controls-rest-opacity); }
+.wizard-card[aria-pressed="true"]:disabled { opacity: 1; }
+:is(.wizard-card, .wizard-pick):focus-visible { outline: var(--focus-width) solid var(--world-accent); outline-offset: calc(var(--focus-offset) + var(--wizard-ring)); }
+
+/* Swatches: three wedges of the palette's paint under a soft felt highlight. */
+.wizard-swatch { display: block; border-radius: 50%; aspect-ratio: 1;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--world-paper) 45%, transparent), transparent 45%),
+    conic-gradient(var(--swatch-1) 0 33.3%, var(--swatch-2) 0 66.6%, var(--swatch-3) 0);
+  box-shadow: inset 0 0 0 var(--world-lip) color-mix(in srgb, var(--world-ink) 22%, transparent), 0 var(--world-pill-edge) 0 var(--world-edge); }
+.wizard-card .wizard-swatch { width: 78%; max-width: calc(0.82 * var(--wizard-art)); margin-block: var(--space-2); }
+[data-palette="blackberry"] { --swatch-1: var(--swatch-blackberry-1); --swatch-2: var(--swatch-blackberry-2); --swatch-3: var(--swatch-blackberry-3); }
+[data-palette="apricot"] { --swatch-1: var(--swatch-apricot-1); --swatch-2: var(--swatch-apricot-2); --swatch-3: var(--swatch-apricot-3); }
+[data-palette="dusty-blue"] { --swatch-1: var(--swatch-dusty-blue-1); --swatch-2: var(--swatch-dusty-blue-2); --swatch-3: var(--swatch-dusty-blue-3); }
+[data-palette="cocoa"] { --swatch-1: var(--swatch-cocoa-1); --swatch-2: var(--swatch-cocoa-2); --swatch-3: var(--swatch-cocoa-3); }
+[data-palette="frost"] { --swatch-1: var(--swatch-frost-1); --swatch-2: var(--swatch-frost-2); --swatch-3: var(--swatch-frost-3); }
+[data-palette="meadow"] { --swatch-1: var(--swatch-meadow-1); --swatch-2: var(--swatch-meadow-2); --swatch-3: var(--swatch-meadow-3); }
+/* Any palette: a wheel of one paint from every set, because Loftio may choose any of them. */
+.wizard-swatch[data-palette="any"] { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--world-paper) 45%, transparent), transparent 45%),
+  conic-gradient(var(--swatch-blackberry-1), var(--swatch-apricot-1), var(--swatch-meadow-2), var(--swatch-meadow-1), var(--swatch-frost-2), var(--swatch-dusty-blue-1), var(--swatch-frost-1), var(--swatch-blackberry-1)); }
+/* Any palette is the way out of the choice, so it runs the full row as a slim card. */
+.wizard-cards[data-field="palette"] .wizard-card:last-child { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: var(--space-3); padding-block: var(--space-2); }
+.wizard-cards[data-field="palette"] .wizard-card:last-child .wizard-swatch { width: var(--wizard-pick-art); margin: 0; }
+
+/* The die: a round wood token, the same carving as the drawer's close button. */
+.wizard-die, .wizard-dice-face { display: grid; place-items: center; border-radius: 50%; color: var(--world-on-accent);
+  background: radial-gradient(circle at 50% 35%, var(--world-wood-light), var(--world-wood-dark)); box-shadow: 0 var(--world-pill-edge) 0 var(--world-wood-dark); }
+.wizard-die .control-icon, .wizard-dice-face .control-icon { width: var(--wizard-icon); height: var(--wizard-icon); stroke-width: var(--wizard-icon-stroke); }
+.wizard-card .wizard-die, .wizard-pick .wizard-die { aspect-ratio: 1; width: 70%; }
+
+/* Summary: the back of a designer-toy box. One sunk panel holds the four picks as a spec row (picture, name,
+   then what it is), then Bring to life, with the small print under it. */
+.wizard-picks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); padding: var(--space-3);
+  border: var(--border-width) solid var(--world-edge); border-radius: var(--wizard-card-radius); background: var(--world-paper-sunk);
+  box-shadow: inset 0 var(--wizard-ring) var(--space-2) color-mix(in srgb, var(--world-ink) 10%, transparent); }
+.wizard-pick { grid-template-rows: var(--wizard-pick-art) auto auto; align-content: start; gap: var(--space-1);
+  border-radius: var(--wizard-pick-radius); padding: var(--space-3) var(--space-1) var(--space-2); background: var(--world-paper); }
+.wizard-pick .wizard-art { width: var(--wizard-pick-art); height: var(--wizard-pick-art); object-fit: contain; filter: var(--wizard-art-shadow); }
+.wizard-pick .wizard-label { font: var(--weight-normal) var(--text-lg) / var(--line-tight) var(--font-heading); }
+.wizard-part { color: var(--world-muted); font-size: var(--text-sm); line-height: var(--line-tight); letter-spacing: var(--tracking-label); }
+/* An old pick from outside the cards (a moth, a snail) has no figure: its name fills the picture slot instead. */
+.wizard-named { display: grid; place-items: center; width: 100%; padding-inline: var(--space-1); border: var(--border-width) dashed var(--world-edge);
+  border-radius: var(--wizard-pick-radius); font: var(--weight-normal) var(--text-base) / var(--line-tight) var(--font-heading); text-align: center; overflow-wrap: anywhere; }
+.wizard-pick .wizard-named { width: 100%; filter: none; }
+.wizard-pick.is-named > .wizard-label { visibility: hidden; }
+.resident-wizard .wizard-make { width: 100%; min-height: var(--wizard-make-height); font-size: var(--text-xl); font-weight: var(--weight-strong); }
+/* The ticket question and Out of build tickets: sunk cards where Bring to life was, so nothing looks pressable but dead. */
+.wizard-confirm, .wizard-out { display: grid; gap: var(--space-2); justify-items: center; padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--world-edge); border-radius: var(--wizard-card-radius); background: var(--world-paper-sunk);
+  text-align: center; text-wrap: balance; }
+.wizard-confirm[hidden], .wizard-out[hidden] { display: none; }
+.wizard-confirm p, .wizard-out p { margin: 0; }
+.wizard-confirm p { font-size: var(--text-lg); }
+.wizard-confirm-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
+.wizard-out .wizard-out-title { font: var(--weight-normal) var(--text-xl) / var(--line-tight) var(--font-heading); }
+.resident-form .wizard-notice { margin-top: calc(-1 * var(--space-2)); font-size: var(--text-sm); text-align: center; text-wrap: balance; }
+.wizard-notice[hidden] { display: none; }
+.wizard-step .resident-failure:empty { margin-bottom: calc(-1 * var(--space-4)); }
+
+/* Waiting: the friend rides in the basket, which sways slowly while it is made. */
+.wizard-basket { justify-self: center; width: min(100%, var(--wizard-basket-width)); transform-origin: 50% 90%;
+  animation: wizard-rock var(--wizard-rock-duration) ease-in-out infinite alternate; }
+.wizard-basket .wizard-art { display: block; width: var(--wizard-basket-friend); aspect-ratio: 1; margin-inline: auto; object-fit: contain; }
+@keyframes wizard-rock { from { rotate: calc(-1 * var(--wizard-rock)); } to { rotate: var(--wizard-rock); } }
+
+/* Back and the dice: under the cards, pinned to the sheet's bottom edge while the cards scroll. */
+.wizard-bar { position: sticky; bottom: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding-block: var(--space-3) var(--space-1); background: linear-gradient(transparent, var(--world-paper) var(--space-3)); }
+/* Step 1 has no Back: Surprise me, the blind-box pull, takes the whole bar. */
+.wizard-bar.is-first .wizard-dice { flex: 1; justify-content: center; }
+.wizard-back .control-icon { width: var(--controls-icon); height: var(--controls-icon); }
+.resident-wizard .wizard-dice { margin-inline-start: auto; padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1); font-weight: var(--weight-strong); font-size: var(--text-lg); }
+.wizard-dice-face { width: var(--wizard-die); height: var(--wizard-die); }
+.wizard-dice.is-rolling .wizard-dice-face { animation: wizard-roll var(--wizard-hop) var(--motion-ease-hop); }
+@keyframes wizard-roll { to { rotate: 1turn; scale: var(--wizard-hop-scale); } }
+
+@media (max-width: 700px) {
+  :root { --wizard-art: 76px; } /* three rows end above the bar and the fourth peeks, so a phone shows there is more */
+  .wizard-cards, .wizard-cards[data-field="creature"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wizard-card { padding-block: var(--space-2) var(--space-1); }
+  .wizard-picks { grid-template-columns: repeat(2, minmax(0, 1fr)); } /* four in a row leaves ~70px a tile: names ran past the edge */
+}
+@media (prefers-reduced-motion: reduce) {
+  .wizard-card.is-picked, .wizard-dice.is-rolling .wizard-dice-face, .wizard-basket { animation: none; }
+  .wizard-card, .wizard-pick, .wizard-card .wizard-art { transition: none; }
+  .wizard-card:hover:not(:disabled) .wizard-art { rotate: none; scale: none; }
+}

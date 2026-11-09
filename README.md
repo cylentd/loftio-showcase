@@ -21,5 +21,8 @@ This repo is exported from Loftio's private repo by `scripts/export_showcase.py`
 ## Credits
 
 - Rain: [Soft rain.WAV by barkenov](https://freesound.org/people/barkenov/sounds/640655/), CC0.
+- Stacking sound: [Squish pop by pixelcrusher](https://pixabay.com/sound-effects/squish-pop-256410/), Pixabay Content License (`public/audio/sfx/README.md`).
 - Font: [Nunito](https://github.com/googlefonts/nunito), SIL Open Font License (`public/fonts/OFL.txt`).
 - Music, art and code: © Cylent Labs. All rights reserved.
+
+The code is shared for portfolio purposes: read it, learn from it, ask about it. For licensing or collaboration, reach out through [github.com/cylentd](https://github.com/cylentd).

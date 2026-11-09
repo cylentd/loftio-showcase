@@ -54,6 +54,23 @@ test("Puff's floating letter is off by default and its visibility is saved indep
   assert.deepEqual(settings.values(), { particles: 150, leaves: 150, lights: 20 });
 });
 
+test("the Music tile's choice defaults to showing the player and survives reload (QA, 2026-11-06)", () => {
+  const saved = storage();
+  const settings = new SceneSettings(saved);
+  assert.equal(settings.showPlayer, true);
+  settings.setPlayer(false);
+  assert.equal(new SceneSettings(saved).showPlayer, false);
+  settings.setPlayer(true);
+  assert.equal(new SceneSettings(saved).showPlayer, true);
+  assert.deepEqual(settings.values(), { particles: 150, leaves: 150, lights: 20 }, "the choice leaves the effects alone");
+});
+
+test("a malformed saved Music choice falls back to showing the player", () => {
+  for (const player of ['"no"', "0", "null", "[]"]) {
+    assert.equal(new SceneSettings(storage(`{"player":${player}}`)).showPlayer, true, player);
+  }
+});
+
 test("wander defaults on, favorites default off, and both persist without resetting effects", () => {
   const saved = storage();
   const settings = new SceneSettings(saved);

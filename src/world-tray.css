@@ -1,0 +1,140 @@
+/* The music tray (one board: player row over Music, Postcard and Settings tiles), the resident's name tag, and the postcard's photo arrows.
+   Same DOM and behaviour in every room: each skin sets --skin-tag, --capsule-disc, --tray-base, --tray-tuft
+   and --tray-label-ink in its theme block (world-ui.css for Treehouse, world-skins.css for Coffee and Beach).
+   tray-model.ts still decides tucked or open; this file only draws the two states. */
+:root {
+  --tray-cell: 4.75rem; /* one tile plus its one-word label; "Settings" fits with room to breathe */
+  --tray-pad: var(--space-2);
+  --tray-knob-size: 3.25rem; /* chunky round tile, as on the concept board; over the 44 px minimum target */
+  --tray-knob-icon: 1.5rem;
+  --tray-label-size: 0.8125rem; /* one word per tile, so one step larger than the old two-line labels */
+  --tray-label-room: 1.5rem; /* one label line under a tile, plus the tile's raised edge */
+  --tray-tuft-size: 2.5rem;
+  --tray-width: 22rem; /* fits "Paper Cranes and Coffee", the longest title, beside the disc, play and next; three tiles spread under it */
+  --tray-divide: var(--space-4); /* from the player row to the tiles; the divider is drawn halfway (--space-2) */
+  --tray-corner: var(--space-3); /* tight to the corner, so on desktop the tucked bar sits below the residents' feet */
+  --tray-radius: var(--space-5);
+  --capsule-disc-size: 2.5rem;
+  --capsule-disc-radius: 50%;
+  /* A record: grooves, a coloured label, a spindle hole. Skins with a record set --capsule-disc: var(--disc-record). */
+  --disc-label: var(--world-edge);
+  --disc-record: radial-gradient(circle, var(--world-ink) 0 6%, var(--disc-label) 7% 26%, var(--world-ink) 27% 30%, transparent 31%),
+    repeating-radial-gradient(circle, var(--world-ink) 0 2px, color-mix(in srgb, var(--world-ink) 78%, var(--world-paper)) 2px 3px);
+  --tray-knob: radial-gradient(circle at 50% 32%, var(--world-paper), var(--world-paper-sunk));
+  --tray-knob-raise: 0 var(--world-pill-edge) 0 var(--world-edge), 0 var(--space-1) var(--space-2) color-mix(in srgb, var(--world-ink) 35%, transparent), inset 0 var(--border-width) 0 var(--world-paper);
+  --tray-board-shadow: 0 var(--space-2) var(--space-5) color-mix(in srgb, var(--world-ink) 45%, transparent), inset 0 var(--world-lip) 0 color-mix(in srgb, var(--world-paper) 35%, transparent), inset 0 calc(-1 * var(--world-lip)) 0 color-mix(in srgb, var(--world-ink) 30%, transparent);
+  --skin-on-tag: var(--world-paper);
+  /* Dialogue (concept board column 1): uneven corners keep the hand-made feel of the old oval */
+  --world-bubble-radius: 2.25rem 2.5rem 2.25rem 2.625rem / 2rem 2.25rem 2.375rem 2.125rem;
+  --world-bubble-tag-inset: var(--space-4); /* the tag starts just inside the bubble's top-left curve */
+  --world-bubble-tag-rise: 65%; /* of the tag's own height above the bubble's top edge; the rest overlaps it */
+}
+
+/* ---------- Layout: one board. The player is its top row; Music, Postcard and Settings sit under a thin divider ---------- */
+.scene-actions {
+  display: flex; flex-direction: column; align-items: stretch; gap: 0;
+  width: min(var(--tray-width), calc(100vw - 2 * var(--tray-corner)));
+  bottom: max(var(--tray-corner), env(safe-area-inset-bottom)); right: max(var(--tray-corner), env(safe-area-inset-right));
+  padding: var(--space-1) var(--tray-pad); border: var(--border-width) solid var(--world-wood-dark); border-radius: var(--tray-radius);
+  background: var(--tray-base); box-shadow: var(--tray-board-shadow); color: var(--tray-label-ink);
+}
+/* Leaf (or sprig) tufts on the board's top corners */
+.scene-actions::before {
+  content: ""; position: absolute; pointer-events: none; height: var(--tray-tuft-size);
+  inset: calc(-1 * var(--tray-tuft-size) / 2) calc(-1 * var(--tray-tuft-size) / 3) auto;
+  background: var(--tray-tuft) left top / var(--tray-tuft-size) no-repeat, var(--tray-tuft-end) right top / var(--tray-tuft-size) no-repeat;
+  filter: drop-shadow(0 var(--world-lip) var(--world-lip) color-mix(in srgb, var(--world-ink) 40%, transparent));
+}
+/* The divider is painted, and the space under it is the tiles' own margin: a collapsed 0fr row keeps its padding and
+   border, but not its content, so this way the tucked board is exactly the player row. */
+.scene-actions .tray-items {
+  background: linear-gradient(color-mix(in srgb, var(--tray-label-ink) 30%, transparent), color-mix(in srgb, var(--tray-label-ink) 30%, transparent)) center var(--space-2) / 100% var(--border-width) no-repeat;
+}
+.scene-actions :is(.music-toggle, .postcard-action, .scene-settings) { margin: var(--tray-divide) 0 var(--tray-label-room); }
+.scene-actions .scene-settings { padding: 0; border: 0; }
+/* Music turned off: no player row, so no divider over the tiles. */
+.scene-actions[data-music="false"] .tray-items { background: none; }
+.scene-actions[data-music="false"] :is(.music-toggle, .postcard-action, .scene-settings) { margin-top: var(--space-1); }
+/* Music turned off: the player is gone, not just hidden from sight, so Tab skips it. */
+.scene-actions[data-music="false"] .now-playing { display: none; }
+
+/* ---------- Tiles: round, raised, cream; one-word labels under them in live text ---------- */
+.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary, .room-audio) {
+  border-radius: 50%; color: var(--world-ink); background: var(--tray-knob); box-shadow: var(--tray-knob-raise);
+  transition: transform var(--world-duration) var(--motion-ease), box-shadow var(--world-duration) var(--motion-ease);
+}
+.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary) { width: var(--tray-knob-size); height: var(--tray-knob-size); }
+.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary) svg { width: var(--tray-knob-icon); height: var(--tray-knob-icon); }
+.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary, .room-audio):hover { background: var(--world-paper); }
+/* Pressed in: while pressed, while Settings is open, and while Music is off (the player is hidden). */
+.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary, .room-audio):active,
+.scene-actions .music-toggle[aria-pressed="false"],
+.scene-actions .scene-settings[open] > summary { transform: translateY(var(--world-press)); box-shadow: inset 0 var(--world-lip) var(--space-1) color-mix(in srgb, var(--world-ink) 30%, transparent); background: var(--world-paper-sunk); }
+.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary)::after,
+.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary):is(:hover, :focus-visible)::after,
+.scene-actions .scene-settings[open] > summary::after {
+  content: attr(data-label);
+  visibility: visible; top: calc(100% + var(--world-pill-edge) + var(--space-1)); bottom: auto; left: 50%; right: auto; translate: -50% 0;
+  width: var(--tray-cell); max-width: none; padding: 0; border: 0; background: none; box-shadow: none;
+  color: var(--tray-label-ink); font: var(--weight-strong) var(--tray-label-size) / var(--line-tight) var(--font-body); text-align: center; text-wrap: balance;
+}
+
+/* ---------- Player row: disc, song and progress, raised play knob, next. It draws on the board, so its ink is the board's ---------- */
+.scene-actions .now-playing {
+  --scene-actions-ink: var(--tray-label-ink); --scene-actions-muted: var(--tray-label-ink);
+  --scene-actions-edge: color-mix(in srgb, var(--tray-label-ink) 35%, transparent); --scene-actions-hover: color-mix(in srgb, var(--tray-label-ink) 14%, transparent);
+  gap: var(--space-1); margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: var(--tray-label-ink);
+}
+.scene-actions .now-playing-name { flex: 1; min-width: 0; max-width: none; padding-inline: 0 var(--space-1); gap: var(--space-2); font-weight: var(--weight-strong); }
+.scene-actions .now-playing-disc > svg {
+  display: block; flex-shrink: 0; width: var(--capsule-disc-size); height: var(--capsule-disc-size);
+  color: transparent; border-radius: var(--capsule-disc-radius); background: var(--capsule-disc);
+  filter: drop-shadow(0 var(--world-lip) var(--world-lip) color-mix(in srgb, var(--world-ink) 45%, transparent));
+}
+.scene-actions .music-next:hover { background: var(--scene-actions-hover); }
+
+/* Phones: the tray spans most of the width even tucked, so Residents rides just above it, tucked or open.
+   Without anchor positioning, residents/styles.css keeps its fixed lift above the bottom controls. */
+@supports (anchor-name: --a) {
+  @media (max-width: 700px) {
+    .scene-actions { anchor-name: --scene-tray; }
+    /* Half a tuft: the leaf or flower on the board's corner rises that far above it */
+    body .residents-trigger { position-anchor: --scene-tray; bottom: calc(anchor(top) + var(--tray-tuft-size) / 2); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-actions, .scene-actions :is(.now-playing, .music-toggle, .postcard-action, .scene-settings > summary, .room-audio) { transition: none; }
+  .scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary, .room-audio):active,
+  .scene-actions .music-toggle[aria-pressed="false"], .scene-actions .scene-settings[open] > summary { transform: none; }
+}
+
+/* ---------- Dialogue: a name tag sitting above the bubble's top-left, its lower edge on the bubble ---------- */
+/* The bubble is a soft, slightly uneven pillow rather than an oval, so its top-left has an edge for the tag to sit on. */
+.bubble[data-name] { border-radius: var(--world-bubble-radius); }
+.bubble[data-name]::before {
+  position: absolute; top: 0; left: var(--world-bubble-tag-inset); translate: 0 calc(-1 * var(--world-bubble-tag-rise));
+  padding: var(--space-1) var(--space-4); border: var(--world-lip) solid var(--bubble-bg); border-radius: var(--chip-radius);
+  background: var(--skin-tag); color: var(--skin-on-tag);
+  font: var(--weight-strong) var(--text-base) / var(--line-tight) var(--font-body);
+  box-shadow: 0 var(--world-pill-edge) 0 color-mix(in srgb, var(--skin-tag) 60%, var(--world-ink)), inset 0 var(--border-width) 0 color-mix(in srgb, var(--skin-on-tag) 30%, transparent);
+}
+
+/* ---------- Postcard: the border arrows sit on the photo's left and right edges ---------- */
+@supports (anchor-name: --a) {
+  .postcard-image { anchor-name: --postcard-photo; }
+  /* Static, so the dialog is the arrows' containing block and the photo (outside the toolbar) can anchor them.
+     The status line is anchored to the photo's bottom edge, where it sat before. */
+  .postcard-toolbar { position: static; }
+  .postcard-feedback { position-anchor: --postcard-photo; right: anchor(right); bottom: calc(anchor(bottom) + var(--space-2)); }
+  .postcard-preview .postcard-choice:not(.postcard-caption-choice) > .postcard-cycle {
+    position: absolute; position-anchor: --postcard-photo; top: anchor(center); z-index: 1;
+    border: var(--world-lip) solid color-mix(in srgb, var(--skin-tag) 60%, var(--world-ink)); border-radius: 50%;
+    color: var(--skin-on-tag); background: radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--skin-tag) 75%, var(--world-paper)), var(--skin-tag));
+    box-shadow: 0 var(--world-pill-edge) 0 color-mix(in srgb, var(--skin-tag) 60%, var(--world-ink)), 0 var(--space-1) var(--space-2) color-mix(in srgb, var(--world-ink) 40%, transparent);
+  }
+  .postcard-preview .postcard-choice:not(.postcard-caption-choice) > .postcard-cycle:first-child { left: anchor(left); translate: calc(-1 * var(--space-3)) -50%; }
+  .postcard-preview .postcard-choice:not(.postcard-caption-choice) > .postcard-cycle:last-child { right: anchor(right); translate: var(--space-3) -50%; }
+  .postcard-preview .postcard-choice:not(.postcard-caption-choice) > .postcard-cycle:hover { background: var(--skin-tag); }
+  .postcard-preview .postcard-choice:not(.postcard-caption-choice) > .postcard-cycle .control-icon { stroke-width: var(--world-close-stroke); }
+}

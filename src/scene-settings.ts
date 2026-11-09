@@ -12,6 +12,8 @@ export class SceneSettings {
   private cue = false;
   private wandering = true;
   private favorites = false;
+  /** The dock's Music tile: whether the board shows the player row. Display only; it never starts or stops sound. */
+  private player = true;
   private lightingMode: LightingMode = "cycle";
   private readonly listeners = new Set<() => void>();
 
@@ -30,6 +32,7 @@ export class SceneSettings {
       this.cue = record.cue === true;
       this.wandering = record.wander !== false;
       this.favorites = record.favorites === true;
+      this.player = record.player !== false;
       if (LIGHTING_MODES.includes(record.lighting as LightingMode)) this.lightingMode = record.lighting as LightingMode;
       this.glow.restore(record, this.lightingMode);
     } catch {}
@@ -39,6 +42,7 @@ export class SceneSettings {
   get showCue(): boolean { return this.cue; }
   get wander(): boolean { return this.wandering; }
   get showFavorites(): boolean { return this.favorites; }
+  get showPlayer(): boolean { return this.player; }
   get(key: EffectKey): number { return key === "lights" ? this.glow.get(this.lightingMode) : this.current[key]; }
   values(): EffectValues { return { ...this.current, lights: this.get("lights") }; }
   subscribe(listener: () => void): void { this.listeners.add(listener); }
@@ -76,6 +80,12 @@ export class SceneSettings {
     this.changed();
   }
 
+  setPlayer(shown: boolean): void {
+    if (this.player === shown) return;
+    this.player = shown;
+    this.changed();
+  }
+
   setLighting(mode: LightingMode): void {
     if (!LIGHTING_MODES.includes(mode) || this.lightingMode === mode) return;
     this.lightingMode = mode;
@@ -89,7 +99,7 @@ export class SceneSettings {
   }
 
   private changed(): void {
-    try { this.storage?.setItem(SCENE_STORAGE_KEY, JSON.stringify({ ...this.values(), lampGlows: this.glow.values(), cue: this.cue, wander: this.wandering, favorites: this.favorites, lighting: this.lightingMode })); } catch {}
+    try { this.storage?.setItem(SCENE_STORAGE_KEY, JSON.stringify({ ...this.values(), lampGlows: this.glow.values(), cue: this.cue, wander: this.wandering, favorites: this.favorites, player: this.player, lighting: this.lightingMode })); } catch {}
     for (const listener of this.listeners) listener();
   }
 }

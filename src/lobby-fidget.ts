@@ -6,14 +6,16 @@ import { heightAt, type Resident } from "./resident";
 import type { Scene } from "./scene";
 import type { Look } from "./look";
 import { ResidentStacks } from "./resident-stacks";
+import { grabStyle } from "./grab-style";
+import type { StackSounds } from "./sfx";
 
 /** Floor positions own depth; independent height supplies the little hops. */
 export class LobbyFidget {
   private flights = new Map<Resident, FloorBody>();
   private stackable = new Set<Resident>();
   readonly stacks: ResidentStacks;
-  constructor(private scene: Scene, private look: Look) {
-    this.stacks = new ResidentStacks(scene, (r, v) => this.throwResident(r, v, false), (r, now) => this.land(r, now));
+  constructor(private scene: Scene, private look: Look, sound?: StackSounds) {
+    this.stacks = new ResidentStacks(scene, (r, v) => this.throwResident(r, v, false), (r, now) => this.land(r, now), sound);
   }
 
   private view() {
@@ -40,6 +42,7 @@ export class LobbyFidget {
   }
 
   catch(resident: Resident, now = 0): boolean {
+    grabStyle(resident);
     this.stackable.delete(resident);
     return this.flights.delete(resident) || this.stacks.detach(resident, now);
   }
@@ -60,7 +63,7 @@ export class LobbyFidget {
 
   update(dt: number, now: number): void {
     if (this.look.frozen) { this.reset(now, false); this.stacks.update(0, true); return; }
-    if (!this.flights.size) { this.stacks.update(dt, false); return; }
+    if (!this.flights.size) { this.stacks.update(dt, false, now); return; }
     this.stacks.update(0, false);
     const bodies = new Map(this.flights), view = this.view();
     for (const resident of this.scene.residents) {
@@ -93,11 +96,15 @@ export class LobbyFidget {
       this.draw(resident, b);
       if (b.asleep) { this.land(resident, now); this.flights.delete(resident); }
     }
-    this.stacks.update(dt, false);
+    this.stacks.update(dt, false, now);
   }
 
   private draw(resident: Resident, b: FloorBody): void {
-    resident.renderFloorPlay(b.x, b.y, b.z, b.vx, b.impact);
+    const squash = b.impact * P.squash;
+    const lean = Math.max(-1, Math.min(1, b.vx / P.leanSpeed)) * P.maxLean;
+    const spring = grabStyle(resident).spring();
+    resident.poseAt(b.x, b.y, b.z, { air: Math.min(1, b.z / heightAt(b.y, resident.cast.sizeBias)),
+      sx: (1 + squash) * spring.sx, sy: (1 - squash) * spring.sy, rotation: lean });
   }
 
   snapshot() { return { flights: [...this.flights].map(([resident, b]) => ({ id: resident.cast.id, ...b })), stacks: this.stacks.snapshot() }; }

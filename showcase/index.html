@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Loftio</title>
+    <meta name="description" content="A cozy treehouse loft where little residents wander, nap and keep you company. Rain, lamplight and lo-fi music." />
+    <meta name="theme-color" content="#2a1c14" />
+    <!-- Link previews. Crawlers need absolute URLs; og-card.jpg is captured by scripts/capture_og.py. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://loftio.cylentlabs.com/" />
+    <meta property="og:title" content="Loftio" />
+    <meta property="og:description" content="A cozy treehouse loft where little residents wander, nap and keep you company. Rain, lamplight and lo-fi music." />
+    <meta property="og:image" content="https://loftio.cylentlabs.com/brand/og-card.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The glowing Loftio sign with vines and a lantern, over a blurred treehouse loft." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="./brand/sprout-icon.png" />
+    <link rel="stylesheet" href="../src/intro.css" />
+  </head>
+  <body>
+    <div id="grove-intro" class="grove-intro" role="status" aria-live="polite">
+      <div class="grove-intro-sign">
+        <img src="./brand/grove-sign.webp" width="1520" height="537" alt="" fetchpriority="high" />
+        <div class="grove-intro-shade" aria-hidden="true"></div>
+        <div class="grove-intro-vine" aria-hidden="true"></div>
+        <div class="grove-intro-glow" aria-hidden="true"></div>
+        <div class="grove-intro-name" hidden></div>
+      </div>
+      <p class="grove-intro-status"></p>
+      <p class="grove-intro-hint" hidden></p>
+      <button class="grove-intro-retry" type="button" hidden></button>
+    </div>
+    <main id="grove" class="grove">
+      <div id="scroller" class="scroller">
+        <div id="world" class="world"></div>
+      </div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

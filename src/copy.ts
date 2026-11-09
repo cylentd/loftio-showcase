@@ -42,8 +42,22 @@ export const PANEL = {
 export const METER_LABEL = "Frame rate";
 export const ROOM_AUDIO = { enable: "Enable room sound", mute: "Mute room sound", blocked: "Your browser needs a tap to start music and rain." };
 export const SCENE_LABEL = "The loft on a rainy night. Six residents are home.";
+export const ABOUT = {
+  title: "About Loftio",
+  description: "A treehouse loft where six little residents keep you company.",
+  maker: "Made by Cylent Labs.",
+  music: "Music by Cylent Labs.",
+  rain: "Rain: ",
+  recording: "Soft rain.WAV by barkenov",
+  source: "https://freesound.org/people/barkenov/sounds/640655/",
+  license: " (CC0).",
+  sounds: "Stacking sound: ",
+  soundsPack: "Squish pop by pixelcrusher",
+  soundsSource: "https://pixabay.com/sound-effects/squish-pop-256410/",
+  soundsLicense: " (Pixabay).",
+};
 export const LOOK = {
-  controls: "Scene controls",
+  controls: "Settings",
   drag: "Center view",
   swipe: "Center view",
   keyboard: "Look around with arrow keys. Home to centre.",
@@ -65,6 +79,8 @@ export const MUSIC = {
   },
   track: "Track",
   next: "Next track",
+  chooseSong: "Choose a song",
+  songList: "Songs",
   nowPlaying: "Now playing",
   position: "Song position",
   positionText: (at: string, length: string) => `${at} of ${length}`,
@@ -95,7 +111,7 @@ export const SCENE_SETTINGS = {
 
 export const RESIDENT_CONTROLS = {
   title: "Residents",
-  help: "Flick sideways to slide, or upward for a higher toss. Slowly lower a resident onto a friend's head to make a plush pile, up to six high. Grab any resident back out, or knock the pile over with a fling. Keyboard: Space to pick up or place; S to stack with a nearby friend; Enter to flick; arrows to move; Page Up / Down to change floors; Escape to cancel. Shift moves in smaller steps. Still keeps play paused.",
+  help: "Drag residents onto the floor, either loft, the pink lounge, the cream ottoman, or the puzzle table and its chairs. Keyboard: Space to pick up or place; arrows to move; Page Up / Down to change floors; Escape to cancel. Shift moves in smaller steps.",
   reset: "Everyone home",
   picked: "picked up. Arrow keys move; Space places; Escape cancels.",
   placed: "placed in the room.",
@@ -124,5 +140,10 @@ export const SETTINGS_NAV = { title: "Room settings", close: "Close settings", r
 export const FAVORITES = { toggle: "Show all favorite spots", help: "Hold a resident to softly light their favorite corner.", labels: { sprout: "The upstairs teal sofa", hoodie: "The chair at the puzzle table", puff: "The rain window", chomper: "The warm lantern", slime: "The upstairs reading sofa", burger: "The books and lamp" } as Record<string, string> };
 export const POSTCARD = { save: "Make postcard", working: "Making postcard", title: "Your postcard", close: "Close preview", alt: "Your arranged loft in a keepsake postcard frame", download: "Download PNG", downloaded: "Download started", copy: "Copy image", copying: "Copying image", copied: "Image copied", copyError: "Clipboard unavailable. Use Download PNG, or allow clipboard access and try again.", error: "Couldn't make this view. Try again.", help: "Keep just the scene, or add a little note.", showCaption: "Add a caption", signature: "Loftio", caption: "Loftio / A rainy evening", greetings: ["Wish you were here.", "Stay a little longer.", "Rain can wait.", "Your quiet corner.", "No hurry here.", "A small, soft pause."], captionChoice: "Caption", borderChoice: "Border", previousCaption: "Previous caption", nextCaption: "Next caption", previousBorder: "Previous border", nextBorder: "Next border", borders: { storybook: "Paper", quilt: "Film", airmail: "Borderless" }, stamp: "LOFTIO", postmark: "GROVE", post: "POST", file: "loftio-postcard.png" };
 export const SCENE_ACTIONS = { label: "Scene actions" };
+/** The dock's three tiles: the word under each tile, and its accessible name, which must contain that word. */
+export const TRAY = {
+  music: { label: "Music", name: "Music player", help: "Show or hide the music player" },
+  postcard: { label: "Postcard", name: POSTCARD.save },
+  settings: { label: "Settings", name: LOOK.controls },
+};
 export const INTRO = { name: "Loftio", pageTitle: "Loftio", loading: "Opening the loft…", error: "The loft couldn't load. Please try again.", retry: "Try again", hint: "Click to enter", hintTouch: "Tap to enter", cleanupMs: 1600 };
-export const FIDGET_COPY = { thrown: "is off! Catch them to play again.", stacked: "joined the pile. Grab a resident to take them back out." };

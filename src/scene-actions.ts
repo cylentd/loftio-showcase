@@ -1,24 +1,44 @@
 import "./tray.css";
-import { SCENE_ACTIONS } from "./copy";
+import { SCENE_ACTIONS, TRAY } from "./copy";
+import { icon } from "./icons";
 import { TRAY_HOVER_REACH_PX, TRAY_PEEK_MS } from "./tray-data";
 import { TrayModel, nearTray } from "./tray-model";
+import type { SceneSettings } from "./scene-settings";
 
-/** The corner tray. Everything but Settings tucks behind it and comes out on entry, near a mouse, on a tap or on keyboard focus. */
-export function mountSceneActions(items: HTMLElement[]): { peek(): void } {
+/** The Music tile: a toggle that shows or hides the player pill. */
+function musicTile(toggle: () => void): HTMLButtonElement {
+  const button = document.createElement("button"); button.type = "button"; button.className = "music-toggle room-action";
+  button.setAttribute("aria-label", TRAY.music.name); button.title = TRAY.music.help; button.dataset.label = TRAY.music.label;
+  button.append(icon("note"));
+  button.addEventListener("click", toggle);
+  return button;
+}
+
+/** The corner tray: one board with the player on its top row and the Music, Postcard and Settings tiles under it.
+ *  Tucked, only the player row shows; the tile row comes out on entry, near a mouse, on a tap or on keyboard focus.
+ *  With Music turned off there is no player row, so a tucked board is a slim bar holding only Settings.
+ *  The Music choice is saved with the other scene settings; it only shows or hides the row, never plays sound. */
+export function mountSceneActions(player: HTMLElement, postcard: HTMLElement, settings: Pick<SceneSettings, "showPlayer" | "setPlayer">): { peek(): void } {
   const group = document.createElement("div"); group.className = "scene-actions";
   group.setAttribute("role", "group"); group.setAttribute("aria-label", SCENE_ACTIONS.label);
   const reveal = document.createElement("div"); reveal.className = "tray-reveal";
   const inner = document.createElement("div"); inner.className = "tray-items";
-  inner.append(...items); reveal.append(inner);
-  const settings = document.querySelector<HTMLDetailsElement>(".scene-settings")!;
-  group.append(reveal, settings);
+  const tray = new TrayModel(TRAY_PEEK_MS, settings.showPlayer);
+  const music = musicTile(() => { settings.setPlayer(tray.toggleMusic()); render(); });
+  postcard.dataset.label = TRAY.postcard.label;
+  const panel = document.querySelector<HTMLDetailsElement>(".scene-settings")!;
+  panel.querySelector<HTMLElement>("summary")!.dataset.label = TRAY.settings.label;
+  inner.append(music, postcard, panel); reveal.append(inner);
+  group.append(player, reveal);
   document.body.append(group);
 
-  const tray = new TrayModel(TRAY_PEEK_MS);
   let timer = 0, swallowClick = false;
   const render = () => {
     const now = performance.now();
     group.dataset.open = String(tray.isOpen(now));
+    group.dataset.music = String(tray.musicShown);
+    group.dataset.tiles = tray.rows(now).tiles;
+    music.setAttribute("aria-pressed", String(tray.musicShown));
     clearTimeout(timer);
     const wait = tray.msUntilPeekEnds(now);
     if (wait !== null) timer = window.setTimeout(render, wait);
@@ -47,7 +67,8 @@ export function mountSceneActions(items: HTMLElement[]): { peek(): void } {
     if (!swallowClick) return;
     swallowClick = false; event.preventDefault(); event.stopPropagation();
   }, true);
-  settings.addEventListener("toggle", () => { tray.held = settings.open; render(); });
+  // Settings, or the disc's song list, holds the tray out while open. toggle does not bubble, so listen in the capture phase.
+  group.addEventListener("toggle", () => { tray.held = panel.open || group.querySelector(":popover-open") !== null; render(); }, true);
   render();
   return { peek() { tray.peek(performance.now()); render(); } };
 }

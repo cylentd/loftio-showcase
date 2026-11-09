@@ -26,7 +26,14 @@ export const HOP = {
   squash: { x: 1.16, y: 0.82 }, // crouch and landing
   stretch: { x: 0.9, y: 1.12 }, // in the air
   lean: 0.12, // radians, forward into the hop
-  turnMs: 180, // flipping to face the other way
+};
+
+/** Turning around: a quick squash-hop with the flip hidden at its top, so the flat edge of the art never shows (owner's pick, 2026-11-08). */
+export const TURN = {
+  ms: 420, // one turn, start to settled; 220 was too fast to see (owner, 2026-11-08)
+  minWidth: 0.6, // narrowest the body gets, as a share of full width; under ~0.5 it starts to read as a card edge
+  stretch: 0.08, // taller by this share at the narrowest point, so the body keeps its volume
+  hop: 0.06, // apex lift, in resident heights; a hop while standing, about a fifth of a walking hop
 };
 
 export const IDLE = {
