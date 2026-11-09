@@ -6,8 +6,12 @@ import { indexedStore } from '../builder/indexed-store';
 import { requestJournal } from '../builder/journal';
 import { buildTickets } from '../builder/tickets';
 import { inspectImage } from '../builder/image-inspection';
-import { LOCAL_DATABASE_NAME } from '../builder/constants';
-import { usesLocalWorker } from '../builder/local-mode';
+import { LOCAL_DATABASE_NAME, ONLINE_DATABASE_NAME, ONLINE_JOURNAL_KEY, ONLINE_REGISTRY_KEY, ONLINE_TICKET_KEY } from '../builder/constants';
+import { builderMode, type BuilderMode } from '../builder/local-mode';
+import { utcDay } from '../builder/utc-day';
+import { onlineApi } from '../builder/online-api';
+import { turnstileTokens } from '../builder/turnstile-client';
+import { VISITOR_DAILY_CAP } from '../builder/server/online-config';
 import { worldButton } from '../world-ui';
 import type { Scene } from '../scene';
 import type { Runtime } from '../runtime';
@@ -22,14 +26,32 @@ import { residentChrome, arrivalReveal, renderResidents } from './view-parts';
 
 const BASKET_MARGIN = 16; // px from the screen edge and the Residents button; matches --space-4
 
-function session(local: boolean) {
+const NAMES = {
+  local: { registry: 'loftio-residents-v1', tickets: 'loftio-build-tickets-v1', journal: 'loftio-builder-local-pending-v1' },
+  online: { registry: ONLINE_REGISTRY_KEY, tickets: ONLINE_TICKET_KEY, journal: ONLINE_JOURNAL_KEY },
+  mock: { registry: 'loftio-residents-mock-v1', tickets: 'loftio-build-tickets-mock-v1', journal: 'loftio-builder-mock-pending-v1' },
+};
+
+// A visible Turnstile challenge shows here, in the Create panel: the drawer is a modal dialog, so the page behind it is inert.
+const challenge = document.createElement('div'); challenge.className = 'turnstile-challenge';
+
+function builderApi(mode: BuilderMode) {
+  if (mode === 'local') return localApi({ durable: true });
+  if (mode === 'online') return onlineApi({ getToken: turnstileTokens({ siteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY, host: () => challenge }) });
+  return mockApi();
+}
+
+function session(mode: BuilderMode) {
   const storage = { getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value) };
-  const registry = residentRegistry(storage, () => crypto.randomUUID(), local ? 'loftio-residents-v1' : 'loftio-residents-mock-v1');
-  const ticketKey = local ? 'loftio-build-tickets-v1' : 'loftio-build-tickets-mock-v1';
+  const names = NAMES[mode];
+  const registry = residentRegistry(storage, () => crypto.randomUUID(), names.registry);
+  const ticketKey = names.tickets;
   const tickets = buildTickets(storage, ticketKey);
-  const builder = createBuilder({ api: local ? localApi({ durable: true }) : mockApi(),
-    store: local ? indexedStore(indexedDB, LOCAL_DATABASE_NAME) : indexedStore(), inspect: inspectImage,
-    journal: requestJournal(storage, local ? 'loftio-builder-local-pending-v1' : 'loftio-builder-mock-pending-v1'),
+  // Online visitors get a daily allowance, topped up once per UTC day.
+  if (mode === 'online') tickets.refillDaily(VISITOR_DAILY_CAP, utcDay(new Date()));
+  const builder = createBuilder({ api: builderApi(mode),
+    store: mode === 'mock' ? indexedStore() : indexedStore(indexedDB, mode === 'local' ? LOCAL_DATABASE_NAME : ONLINE_DATABASE_NAME), inspect: inspectImage,
+    journal: requestJournal(storage, names.journal),
     tickets, newId: () => crypto.randomUUID(), now: () => new Date(),
   }, { creature: 'bunny', personality: 'sleepy', signatureDetail: 'none', palette: null });
   return { registry, builder, tickets, ticketKey };
@@ -50,13 +72,13 @@ function restore(current: ReturnType<typeof session>, adapter: ReturnType<typeof
 }
 
 export function installResidents(scene: Scene, runtime: Runtime, overlay: Overlay, controls: ReturnType<typeof installResidentControls>) {
-  const local = usesLocalWorker(location.search, location.hostname, import.meta.env.VITE_LOCAL_WORKER_HOST);
+  const mode = builderMode(location.search, location.hostname, { workerHost: import.meta.env.VITE_LOCAL_WORKER_HOST, mode: import.meta.env.VITE_BUILDER_MODE });
   const chrome = residentChrome();
   let current: ReturnType<typeof session>;
-  try { current = session(local); } catch { chrome.error.textContent = COPY.loadFailure; return () => {}; }
+  try { current = session(mode); } catch { chrome.error.textContent = COPY.loadFailure; return () => {}; }
   const { registry, builder, tickets, ticketKey } = current;
-  // Test tickets only where images are free placeholders; real builds wait for Plus or single tickets.
-  const form = residentForm(builder, local, local ? undefined : () => tickets.grant(1)); chrome.panels[2]!.append(form.form);
+  // Test tickets only where images are free placeholders; real builds (local, online) never get them.
+  const form = residentForm(builder, mode, mode === 'mock' ? () => tickets.grant(1) : undefined); chrome.panels[2]!.append(form.form, challenge);
   // Another tab spent or added a ticket: show the new count here too.
   addEventListener('storage', event => { if (event.key === ticketKey) render(); });
   const failure = (error: unknown) => { chrome.error.textContent = error instanceof Error ? error.message : COPY.actionFailure; overlay.announce(chrome.error.textContent); };

@@ -13,3 +13,12 @@ export const LOCAL_DATABASE_NAME = 'loftio-builder-local';
 export const LOCAL_API_PREFIX = '/loftio-builder-api';
 export const LOCAL_POLL_INTERVAL_MS = 1500;
 export const LOCAL_POLL_LIMIT = 420;
+// Cloudflare Turnstile explicit-render script (developers.cloudflare.com/turnstile, client-side rendering).
+export const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+// A token normally arrives within seconds; a visible challenge needs time for a person, so allow a minute.
+export const TURNSTILE_TIMEOUT_MS = 60_000;
+// Online mode keeps its own browser storage, apart from mock and local.
+export const ONLINE_DATABASE_NAME = 'loftio-builder-online';
+export const ONLINE_REGISTRY_KEY = 'loftio-residents-online-v1';
+export const ONLINE_TICKET_KEY = 'loftio-build-tickets-online-v1';
+export const ONLINE_JOURNAL_KEY = 'loftio-builder-online-pending-v1';

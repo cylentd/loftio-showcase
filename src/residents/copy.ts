@@ -10,8 +10,12 @@ export const RESIDENT_COPY = {
   reconnect: 'Reconnect', retryPreparation: 'Retry preparation',
   loadFailure: 'Could not load residents. Your saved data has been preserved.',
   actionFailure: 'Could not finish that change. Your saved resident is still available.',
-  mock: 'Preview mode: the result is sample art and won’t match your design.',
-  local: 'Uses Codex allowance. Closing this drawer keeps it running.',
+  // The Create form's notice, per builder mode.
+  notice: {
+    mock: 'Preview mode: the result is sample art and won’t match your design.',
+    local: 'Uses Codex allowance. Closing this drawer keeps it running.',
+    online: 'Each resident is a brand-new image, drawn just for you. Stay on this page until it arrives.',
+  },
   original: 'Download original PNG',
   ticketNote: (left: number) => ['Uses 1 build ticket ·', left, 'left'].join(' '),
   outOfTickets: 'Out of build tickets',

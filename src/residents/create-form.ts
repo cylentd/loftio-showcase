@@ -1,4 +1,5 @@
 import type { createBuilder } from '../builder/controller';
+import type { BuilderMode } from '../builder/local-mode';
 import { curatedOptions } from '../builder/curated';
 import type { SelectionField } from '../builder/selections';
 import { icon } from '../icons';
@@ -49,8 +50,10 @@ function stepSection(title: string, index: number, uid: string) {
 }
 
 /** grant adds a test ticket; passed in mock mode only, where images are free placeholders. */
-export function residentForm(builder: ReturnType<typeof createBuilder>, local: boolean, grant?: () => void) {
+export function residentForm(builder: ReturnType<typeof createBuilder>, mode: BuilderMode, grant?: () => void) {
   const uid = `resident-wizard-${formCount++}`;
+  // Only the local worker can reattach to a request; elsewhere a failed build's button starts a new one.
+  const action = (state: ReturnType<typeof builder.state>) => createAction({ ...state, resumable: mode === 'local' });
   const wizard = createWizard(builder, Math.random);
   const form = document.createElement('form'); form.className = 'resident-form resident-wizard';
   const cards: { button: HTMLButtonElement; field: SelectionField; value: string | null }[] = [];
@@ -79,7 +82,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, local: b
     button.addEventListener('click', () => { wizard.goTo(index); show(true); }); picks.append(button); return button;
   });
   const basket = document.createElement('div'); basket.className = 'wizard-basket reveal-basket'; basket.setAttribute('aria-hidden', 'true');
-  const notice = document.createElement('p'); notice.className = 'wizard-notice'; notice.textContent = local ? RESIDENT_COPY.local : RESIDENT_COPY.mock;
+  const notice = document.createElement('p'); notice.className = 'wizard-notice'; notice.textContent = RESIDENT_COPY.notice[mode];
   // The failure sits directly above the button that answers it: on a phone the drawer is scrolled to the button.
   const failure = document.createElement('p'); failure.className = 'resident-failure'; failure.setAttribute('role', 'alert');
   const submit = worldButton(RESIDENT_COPY.create, () => {}); submit.type = 'submit'; submit.classList.add('world-primary', 'wizard-make');
@@ -138,7 +141,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, local: b
   // A submit that would spend a ticket only opens the question; Use 1 ticket is the one way to start.
   form.addEventListener('submit', event => {
     event.preventDefault();
-    if (!createAction(builder.state()).confirmBeforeCreate) { void wizard.make(); return; }
+    if (!action(builder.state()).confirmBeforeCreate) { void wizard.make(); return; }
     if (confirming) return;
     confirming = true; armed = false; update(); question.focus({ preventScroll: true });
     // Centred, so the answer buttons clear the Back bar pinned to the bottom of a phone sheet.
@@ -166,14 +169,14 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, local: b
     // While waiting, the basket is the whole card: a started resident always finishes, so nothing to press.
     back.disabled = busy; dice.disabled = busy; back.hidden = generating || wizard.step === 0;
     submit.disabled = busy; notice.hidden = generating;
-    const action = createAction(state); submit.textContent = action.label;
-    if (failure.textContent !== action.failure) failure.textContent = action.failure;
-    const asking = confirming && action.confirmBeforeCreate;
+    const shown = action(state); submit.textContent = shown.label;
+    if (failure.textContent !== shown.failure) failure.textContent = shown.failure;
+    const asking = confirming && shown.confirmBeforeCreate;
     if (state.tickets) question.textContent = RESIDENT_COPY.confirmBuild(state.tickets);
     confirm.hidden = !asking; yes.disabled = busy || !armed; no.disabled = busy;
-    submit.hidden = generating || action.outOfTickets || asking; out.hidden = !action.outOfTickets;
+    submit.hidden = generating || shown.outOfTickets || asking; out.hidden = !shown.outOfTickets;
     if (grantButton) grantButton.disabled = busy;
-    ticketNote.textContent = action.ticketNote; ticketNote.hidden = generating || asking || !action.ticketNote; // the question already says it
+    ticketNote.textContent = shown.ticketNote; ticketNote.hidden = generating || asking || !shown.ticketNote; // the question already says it
   }
   show(false); return { form, update };
 }

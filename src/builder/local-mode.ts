@@ -6,3 +6,12 @@ export function usesLocalWorker(search: string, hostname: string, workerHost: st
   if (mode === 'mock') return false;
   return !!workerHost && hostname === workerHost;
 }
+
+export type BuilderMode = 'local' | 'online' | 'mock';
+
+// Online is chosen by the build (VITE_BUILDER_MODE) only; no URL value can switch it on.
+export function builderMode(search: string, hostname: string, env: { workerHost?: string; mode?: string }): BuilderMode {
+  if (usesLocalWorker(search, hostname, env.workerHost)) return 'local';
+  if (new URLSearchParams(search).get('mode') === 'mock') return 'mock';
+  return env.mode === 'online' ? 'online' : 'mock';
+}

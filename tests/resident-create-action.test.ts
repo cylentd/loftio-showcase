@@ -13,6 +13,15 @@ test('a failed Create names the one action its button takes, per failure kind', 
   assert.equal(createAction({ status: 'generating', error: null }).label, RESIDENT_COPY.create);
 });
 
+test('a builder that cannot resume never offers Reconnect: the click is a new paid build, so it asks first', () => {
+  for (const kind of ['network', 'preparation']) {
+    const action = createAction({ ...failed(kind), tickets: 2, resumable: false });
+    assert.equal(action.label, RESIDENT_COPY.create, kind);
+    assert.equal(action.confirmBeforeCreate, true, kind);
+    assert.equal(createAction({ ...failed(kind), tickets: 0, resumable: false }).outOfTickets, true, kind);
+  }
+});
+
 test('Create button labels are single actions read from the keyed copy, never slash pairs', () => {
   const labels = new Set(['network', 'preparation', 'storage'].map(kind => createAction(failed(kind)).label));
   for (const label of labels) {

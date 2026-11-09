@@ -1,7 +1,8 @@
 import type { BuilderState } from '../builder/controller.ts';
 import { RESIDENT_COPY } from './copy.ts';
 
-type ActionState = { status: BuilderState['status']; error: { kind: string; message: string } | null; tickets?: number | null };
+// resumable: the builder's API can reattach to a request (local mode). Without it, every click is a new paid build.
+type ActionState = { status: BuilderState['status']; error: { kind: string; message: string } | null; tickets?: number | null; resumable?: boolean };
 
 // The button names the one thing a click does for this failure; the click itself is unchanged.
 const RECOVERY_LABELS: Partial<Record<string, string>> = { network: RESIDENT_COPY.reconnect, preparation: RESIDENT_COPY.retryPreparation };
@@ -11,7 +12,7 @@ const RECOVERY_LABELS: Partial<Record<string, string>> = { network: RESIDENT_COP
  *  With no tickets the out-of-tickets panel takes the button's place, unless the click collects an image
  *  already paid for (Reconnect, Retry preparation). */
 export function createAction(state: ActionState) {
-  const recovery = state.status === 'failed' && state.error ? RECOVERY_LABELS[state.error.kind] : undefined;
+  const recovery = state.status === 'failed' && state.error && state.resumable !== false ? RECOVERY_LABELS[state.error.kind] : undefined;
   const tickets = state.tickets ?? null;
   const outOfTickets = tickets === 0 && state.status !== 'generating' && !recovery;
   // The panel or the count already says it; a stale 'tickets' failure would contradict a fresh ticket.

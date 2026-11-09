@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/loftio-builder-api/:path*", "destination": "/api/loftio-builder-api/:path*" }
+  ],
+  "functions": {
+    "api/loftio-builder-api/generate.mjs": {
+      "maxDuration": 300,
+      "includeFiles": "api/_references/**"
+    }
+  }
+}

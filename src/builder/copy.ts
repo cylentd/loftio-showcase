@@ -30,7 +30,8 @@ export const COPY = {
   opaque: 'Opaque background',
   checkerboard: 'Possible baked-in checkerboard',
   margins: 'Subject may be cropped or empty',
-  network: 'Connection lost. Your saved residents are unchanged. Reconnect to continue.',
+  // No action named here: the button below says what a click does (Reconnect locally, a new build online).
+  network: 'Connection lost. Your saved residents are unchanged.',
   storage: 'Could not save or load residents. Browser storage may be unavailable or full.',
   corrupt: 'The image could not be decoded.',
   preparation: 'Your image is saved. Retry preparing its preview without creating another image.',
@@ -42,7 +43,18 @@ export const COPY = {
   tickets: 'You’re out of build tickets. Each new image uses one.',
   conflict: 'This request ID already belongs to different selections.',
   method: 'Use POST for generation.',
+  human: 'We couldn’t confirm you’re a person. Refresh the page and try again.',
   usage: (used: number, cap: number) => [used, 'of', cap, 'mock attempts this session'].join(' '),
+};
+
+export const ONLINE_COPY = {
+  ...COPY,
+  mockNotice: 'Real AI art, a few builds a day for every visitor.',
+  generating: 'Creating your resident… This can take a minute.',
+  revealed: 'Your resident is ready. Keep it or try another.',
+  previewAlt: 'Generated Loftio resident',
+  cap: 'Loftio is out of magic for today. Come back tomorrow.',
+  usage: (used: number, cap: number) => [used, 'of', cap, 'builds used today'].join(' '),
 };
 
 export const LOCAL_COPY = {

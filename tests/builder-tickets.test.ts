@@ -76,6 +76,66 @@ test('mock and local tickets are kept apart by storage key', () => {
   assert.equal(buildTickets(storage, 'loftio-build-tickets-v1').count(), 1);
 });
 
+// Online mode: the store tops up to a cap once per UTC day.
+
+test('refillDaily tops a new store up to the cap', () => {
+  const tickets = buildTickets(memory());
+  tickets.refillDaily(3, '2026-11-08');
+  assert.equal(tickets.count(), 3);
+});
+
+test('refillDaily runs once per day key: spent tickets stay spent until the next day', () => {
+  const tickets = buildTickets(memory());
+  tickets.refillDaily(3, '2026-11-08');
+  tickets.spend('a');
+  tickets.spend('b');
+  tickets.refillDaily(3, '2026-11-08');
+  assert.equal(tickets.count(), 1);
+  tickets.refillDaily(3, '2026-11-09');
+  assert.equal(tickets.count(), 3);
+});
+
+test('refillDaily never exceeds the cap, and never takes tickets away', () => {
+  const tickets = buildTickets(memory());
+  tickets.refillDaily(3, '2026-11-08');
+  tickets.refillDaily(3, '2026-11-09');
+  assert.equal(tickets.count(), 3);
+  tickets.grant(5);
+  tickets.refillDaily(3, '2026-11-10');
+  assert.equal(tickets.count(), 8);
+});
+
+test('the daily refill is remembered across reloads and tabs', () => {
+  const storage = memory();
+  const first = buildTickets(storage);
+  first.refillDaily(3, '2026-11-08');
+  first.spend('a');
+  const reloaded = buildTickets(storage);
+  reloaded.refillDaily(3, '2026-11-08');
+  assert.equal(reloaded.count(), 2);
+  assert.equal(first.count(), 2);
+});
+
+test('a ledger saved before daily refills existed still loads, refills, and keeps its open requests', () => {
+  const storage = memory('{"version":1,"balance":0,"open":["old"]}');
+  const tickets = buildTickets(storage);
+  assert.equal(tickets.count(), 0);
+  tickets.refillDaily(3, '2026-11-08');
+  assert.equal(tickets.count(), 3);
+  tickets.refund('old');
+  assert.equal(tickets.count(), 4);
+  assert.equal(buildTickets(storage).count(), 4);
+});
+
+test('a refill keeps open requests refundable', () => {
+  const tickets = buildTickets(memory());
+  tickets.refillDaily(3, '2026-11-08');
+  tickets.spend('a');
+  tickets.refillDaily(3, '2026-11-09');
+  tickets.refund('a');
+  assert.equal(tickets.count(), 4);
+});
+
 // Controller: a ticket is spent when Create dispatches a new request.
 
 const selections = { creature: 'moth', personality: 'bookworm', signatureDetail: 'reading-glasses', palette: null };

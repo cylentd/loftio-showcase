@@ -6,18 +6,24 @@ import { inspectImage } from './image-inspection.ts';
 import { element, fields, prepareForm, render } from './render.ts';
 import { SURPRISE } from './catalog-data.ts';
 import { localApi } from './local-api.ts';
-import { COPY, LOCAL_COPY } from './copy.ts';
-import { LOCAL_DATABASE_NAME } from './constants.ts';
+import { COPY, LOCAL_COPY, ONLINE_COPY } from './copy.ts';
+import { LOCAL_DATABASE_NAME, ONLINE_DATABASE_NAME, ONLINE_JOURNAL_KEY } from './constants.ts';
 import { requestJournal } from './journal.ts';
-import { usesLocalWorker } from './local-mode.ts';
+import { builderMode } from './local-mode.ts';
+import { onlineApi } from './online-api.ts';
+import { turnstileTokens } from './turnstile-client.ts';
 
-const local = usesLocalWorker(location.search, location.hostname, import.meta.env.VITE_LOCAL_WORKER_HOST);
-const copy = local ? LOCAL_COPY : COPY;
+const mode = builderMode(location.search, location.hostname, { workerHost: import.meta.env.VITE_LOCAL_WORKER_HOST, mode: import.meta.env.VITE_BUILDER_MODE });
+const local = mode === 'local';
+const copy = local ? LOCAL_COPY : mode === 'online' ? ONLINE_COPY : COPY;
+const storage = { getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value) };
+const api = local ? localApi({ durable: true })
+  : mode === 'online' ? onlineApi({ getToken: turnstileTokens({ siteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY }) }) : mockApi();
 
 const builder = createBuilder({
-  api: local ? localApi({ durable: true }) : mockApi(),
-  ...(local ? { journal: requestJournal({ getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) }) } : {}),
-  store: local ? indexedStore(indexedDB, LOCAL_DATABASE_NAME) : indexedStore(), inspect: inspectImage,
+  api,
+  ...(local ? { journal: requestJournal(storage) } : mode === 'online' ? { journal: requestJournal(storage, ONLINE_JOURNAL_KEY) } : {}),
+  store: local ? indexedStore(indexedDB, LOCAL_DATABASE_NAME) : mode === 'online' ? indexedStore(indexedDB, ONLINE_DATABASE_NAME) : indexedStore(), inspect: inspectImage,
   newId: () => crypto.randomUUID(), now: () => new Date(),
 }, { creature: SURPRISE, personality: SURPRISE, signatureDetail: SURPRISE, palette: null });
 
