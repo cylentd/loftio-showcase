@@ -1,6 +1,6 @@
 import { LOOK, SETTINGS_NAV } from "./copy";
 import { icon } from "./icons";
-import { containFocus } from './world-ui';
+import { containFocus, dismissOnBackdrop } from './world-ui';
 export type ControlSection = keyof typeof SETTINGS_NAV.tabs;
 
 export function controlPanel(section: ControlSection): HTMLElement {
@@ -50,7 +50,7 @@ function fillSliders(panel: HTMLElement): void {
   panel.addEventListener("focusin", sync);
 }
 
-export function mountControls(toolbar: HTMLElement): void {
+export function mountControls(toolbar: HTMLDialogElement): void {
   const existing = [...toolbar.childNodes];
   const { heading, tabs, panels } = navigation();
   const header = document.createElement("header"); header.className = "settings-header world-header";
@@ -61,6 +61,7 @@ export function mountControls(toolbar: HTMLElement): void {
   for (const item of existing) if (item instanceof HTMLButtonElement) item.classList.add("world-button");
   motion.append(...existing); panels[0]!.append(motion);
   toolbar.append(header, tabs, ...panels);
+  toolbar.setAttribute("aria-label", SETTINGS_NAV.title);
   fillSliders(toolbar);
   const menu = document.createElement("details");
   menu.className = "scene-settings";
@@ -69,16 +70,21 @@ export function mountControls(toolbar: HTMLElement): void {
   toggle.title = LOOK.controls;
   toggle.append(icon("settings"));
   menu.append(toggle, toolbar);
-  containFocus(toolbar, () => { menu.open = false; toggle.focus(); });
-  menu.addEventListener('toggle', () => { if (menu.open) close.focus(); });
-  close.addEventListener("click", () => { menu.open = false; toggle.focus(); });
+  containFocus(toolbar, () => toolbar.close());
+  dismissOnBackdrop(toolbar);
+  menu.addEventListener('toggle', () => {
+    if (menu.open) {
+      if (!toolbar.open) toolbar.showModal();
+      close.focus();
+    } else if (toolbar.open) toolbar.close();
+  });
+  toolbar.addEventListener('close', () => {
+    menu.open = false;
+    if (!document.querySelector('dialog:modal')) toggle.focus();
+  });
+  close.addEventListener("click", () => toolbar.close());
   document.body.append(menu);
   document.addEventListener("pointerdown", (event) => {
     if (!menu.contains(event.target as Node)) menu.open = false;
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !menu.open) return;
-    menu.open = false;
-    toggle.focus();
   });
 }

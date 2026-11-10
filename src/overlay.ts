@@ -96,7 +96,7 @@ export class Overlay {
 
   arrive(id: string, upstairs = false): void { this.say(id, upstairs ? LOFT_ARRIVAL : ARRIVALS[id]); }
 
-  private say(id: string, line = LINES[id]): void {
+  say(id: string, line = LINES[id]): void {
     if (!line) return;
     this.bubbleFor = id;
     this.bubble.textContent = line;

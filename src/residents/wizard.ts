@@ -1,5 +1,5 @@
 import { SURPRISE } from '../builder/catalog-data.ts';
-import { CURATED } from '../builder/curated.ts';
+import { CURATED, catalogOptions } from '../builder/curated.ts';
 import type { SelectionField } from '../builder/selections.ts';
 
 /** One question per step, in this order; the step after the last field is the summary. */
@@ -22,8 +22,17 @@ export function createWizard(builder: Picker, rng: () => number) {
   return {
     get step() { return step; },
     get field() { return field(); },
+    get options() {
+      const current = field(); if (!current) return [];
+      return catalogOptions(current);
+    },
     chosen: (target: SelectionField) => picked.has(target),
     choose,
+    pickForMe() {
+      const current = field(); if (!current) return;
+      const options = catalogOptions(current);
+      choose(options[Math.min(options.length - 1, Math.floor(rng() * options.length))]!.id);
+    },
     /** The dice: surprise for friend, feeling and extra; colours have no surprise value, so it draws a real palette. */
     surprise() {
       const palettes = CURATED.palette;

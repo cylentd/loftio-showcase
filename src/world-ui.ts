@@ -1,5 +1,20 @@
 import { icon } from './icons';
 import type { ICON_PATHS } from './icon-data';
+import './world-modal.css';
+
+export function dismissOnBackdrop(dialog: HTMLDialogElement): void {
+  const outside = (event: MouseEvent) => {
+    const box = dialog.getBoundingClientRect();
+    return event.target === dialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom);
+  };
+  let pressedOutside = false;
+  dialog.addEventListener('pointerdown', event => { pressedOutside = outside(event); });
+  dialog.addEventListener('pointercancel', () => { pressedOutside = false; });
+  dialog.addEventListener('click', event => {
+    if (pressedOutside && outside(event)) dialog.close();
+    pressedOutside = false;
+  });
+}
 
 export function worldButton(label: string, action: () => void): HTMLButtonElement {
   const button = document.createElement('button');
@@ -19,6 +34,7 @@ export function worldDrawer(title: string, closeLabel: string) {
   header.append(heading, close);
   const content = document.createElement('div'); content.className = 'world-content';
   dialog.append(header, content); document.body.append(dialog);
+  containFocus(dialog, () => dialog.close());
   let trigger: HTMLElement | null = null;
   dialog.addEventListener('close', () => trigger?.focus());
   return { dialog, content, open(from: HTMLElement) { trigger = from; if (!dialog.open) dialog.showModal(); } };
@@ -50,7 +66,7 @@ export function containFocus(container: HTMLElement, close: () => void) {
     if (event.key === 'Escape') { event.preventDefault(); close(); return; }
     if (event.key !== 'Tab') return;
     const items = [...container.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select, summary, [tabindex="0"]')]
-      .filter(item => item.getClientRects().length > 0);
+      .filter(item => item.tabIndex >= 0 && !item.matches(':disabled') && item.getClientRects().length > 0 && getComputedStyle(item).visibility === 'visible');
     const first = items[0], last = items.at(-1);
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }

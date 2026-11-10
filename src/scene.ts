@@ -25,7 +25,7 @@ export function seeded(seed: number): () => number {
   };
 }
 
-export async function makeScene(settings: SceneSettings, renderer: Renderer, previous?: { residents: Resident[]; dot: Texture; lighting: Lighting }) {
+export async function makeScene(settings: SceneSettings, renderer: Renderer, previous?: { residents: Resident[]; dot: Texture; lighting: Lighting; puff: Resident }) {
   const roomUrl = activeRoom === "portrait" ? portraitRoomUrl : desktopRoomUrl;
   const nightUrl = activeRoom === "portrait" ? roomUrl : LIGHTING.artUrl;
   const urls = [...new Set([roomUrl, nightUrl, ...CAST.map((c) => c.art)])];
@@ -53,7 +53,7 @@ export async function makeScene(settings: SceneSettings, renderer: Renderer, pre
   world.addChild(new Sprite(roomTexture), ambience.back, foliage.root, favoriteScenery.root, cast);
   if (activeRoom === "desktop") world.addChild(couch);
   world.addChild(letter, ambience.front);
-  const puff = residents.find((r) => r.cast.id === "puff")!;
+  const puff = previous?.puff ?? residents.find((r) => r.cast.id === "puff")!;
   return { world, cast, residents, ambience, foliage, letter, puff, props, favoriteScenery, lighting, dot };
 }
 export type Scene = Awaited<ReturnType<typeof makeScene>>;

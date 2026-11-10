@@ -46,13 +46,13 @@ test("resolution keeps concrete choices and fills them from the catalog", () => 
   assert.deepEqual(resolved.palette.colors, ["blackberry purple", "warm cream", "honey gold"]);
 });
 
-test("surprise and an omitted palette resolve to concrete catalog entries before rendering", () => {
-  const draws = [0.99, 0.5, 0.25, 0.75];
+test("surprise traits become invention directives while an omitted palette draws once", () => {
+  const draws = [0.75];
   const rng = () => draws.shift() ?? 0;
   const resolved = resolveSelections({ creature: SURPRISE, personality: SURPRISE, signatureDetail: SURPRISE, palette: null }, rng);
-  assert.equal(resolved.creature.id, CATALOG.creatures.at(-1)?.id);
-  assert.equal(resolved.personality.id, CATALOG.personalities[Math.floor(0.5 * CATALOG.personalities.length)]?.id);
-  assert.equal(resolved.signatureDetail.id, CATALOG.signatureDetails[Math.floor(0.25 * CATALOG.signatureDetails.length)]?.id);
+  assert.equal(resolved.creature.id, "invented-creature");
+  assert.equal(resolved.personality.id, "invented-personality");
+  assert.equal(resolved.signatureDetail.id, "invented-detail");
   assert.equal(resolved.palette.id, CATALOG.palettes[Math.floor(0.75 * CATALOG.palettes.length)]?.id);
   assert.equal(draws.length, 0);
 });

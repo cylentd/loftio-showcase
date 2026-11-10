@@ -1,7 +1,7 @@
 import { PROMPT_TEMPLATE } from "./prompt-template.ts";
 import type { ResolvedSelections } from "./selections.ts";
 
-export const PROMPT_VERSION = "v4.1";
+export const PROMPT_VERSION = "v4.2";
 
 /**
  * Positive references sent with every render, per the v4 reference policy. The approved-assets roster sheet is for

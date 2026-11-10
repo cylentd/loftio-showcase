@@ -21,7 +21,7 @@ test('persisted mock residents retain complete generation metadata', async () =>
   const records = await saved();
   assert.equal(records.length, 1);
   assert.deepEqual(readSavedCharacters(records), records);
-  assert.equal(records[0]?.generation.promptVersion, 'v4.1');
+  assert.equal(records[0]?.generation.promptVersion, 'v4.2');
   assert.equal(records[0]?.parentId, null);
 });
 

@@ -1,8 +1,8 @@
-// Runtime image prompt v4.1: the v4 handoff template (RUNTIME-IMAGE-PROMPT.template.md) plus David's 2026-11-05
+// Runtime image prompt v4.2: the v4 handoff template (RUNTIME-IMAGE-PROMPT.template.md) plus David's 2026-11-05
 // clarification under "User's creative selections". Any wording change bumps PROMPT_VERSION in prompt.ts, because kept
 // residents record the version they were made with.
 
-export const PROMPT_TEMPLATE = `# Loftio Character Builder — Runtime Image Prompt v4.1
+export const PROMPT_TEMPLATE = `# Loftio Character Builder — Runtime Image Prompt v4.2
 
 Create **one** original resident for Loftio, a cozy, whimsical world of lovable collectible creatures.
 
@@ -13,7 +13,7 @@ Create **one** original resident for Loftio, a cozy, whimsical world of lovable 
 - Signature detail: {{signature_detail}}
 - Color palette: {{resolved_palette}}
 
-Interpret these selections creatively. They express intent, not anatomical assembly instructions.
+Interpret these selections creatively. They express intent, not anatomical assembly instructions. When a selection asks you to invent, decide that trait yourself beyond the preset catalog while preserving every explicit selection. The style references and image requirements still apply.
 
 Create a whimsical companion inspired by the creature, not a realistic animal made cute. Simplify biological anatomy and surface detail. Tactile craftsmanship should support appealing forms, not dominate them with realistic skin, fur, or anatomical detail.
 

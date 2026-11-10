@@ -55,6 +55,17 @@ test("a touch on the open tray keeps it out after the peek; a mouse press does n
   assert.equal(mouse.isOpen(PEEK + 1), false);
 });
 
+test("visible player controls act on the first press even while the tray is tucked", () => {
+  for (const touch of [false, true]) {
+    const tray = new TrayModel(PEEK);
+    assert.equal(tray.isOpen(0), false);
+    assert.equal(tray.press(0, touch, true), false, "the first player press must not be swallowed");
+    assert.equal(tray.isOpen(1), true, "the tray remains accessible on touch");
+    tray.pressOutside();
+    assert.equal(tray.isOpen(1), false);
+  }
+});
+
 test("a press outside does not cut the entry peek short", () => {
   const tray = new TrayModel(PEEK);
   tray.peek(0);
@@ -109,6 +120,19 @@ test("with Music off, a tucked board is a slim bar holding only Settings (QA, 20
 test("the tray starts with the saved Music choice", () => {
   assert.equal(new TrayModel(PEEK, false).musicShown, false);
   assert.equal(new TrayModel(PEEK, true).musicShown, true);
+});
+
+test("mobile actions stay open after idle and outside presses, with Music on or off", () => {
+  const tray = new TrayModel(PEEK);
+  tray.alwaysOpen = true;
+  tray.pressOutside();
+  assert.deepEqual(tray.rows(PEEK), { player: true, tiles: "all" });
+  assert.equal(tray.press(PEEK, true), false, "visible mobile actions respond on the first tap");
+  tray.toggleMusic();
+  tray.pressOutside();
+  assert.deepEqual(tray.rows(PEEK), { player: false, tiles: "all" });
+  tray.alwaysOpen = false;
+  assert.deepEqual(tray.rows(PEEK), { player: false, tiles: "settings" });
 });
 
 test("each dock tile's accessible name contains its visible label", () => {

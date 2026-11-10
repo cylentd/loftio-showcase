@@ -6,7 +6,7 @@ export function aboutCorner(): HTMLDetailsElement {
   const summary = document.createElement("summary");
   summary.textContent = ABOUT.title;
   details.append(summary);
-  for (const text of [ABOUT.description, ABOUT.maker, ABOUT.music]) {
+  for (const text of [ABOUT.description, ABOUT.maker, ABOUT.music, ABOUT.rainCurrent]) {
     const paragraph = document.createElement("p");
     paragraph.textContent = text;
     details.append(paragraph);

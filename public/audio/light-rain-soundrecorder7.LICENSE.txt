@@ -1,0 +1,18 @@
+Light Rain by soundrecorder7
+Source: https://freesound.org/people/soundrecorder7/sounds/167034/
+License: CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Audio: light-rain-soundrecorder7.mp3
+Downloaded from the Freesound high-quality MP3 preview:
+https://cdn.freesound.org/previews/167/167034_2328971-hq.mp3
+Unmodified. Approved for Loftio by the owner on 2026-11-09.
+SHA-256: e96de7229dd13c42798e8bdad265123d4e1d1377135c9c54c829fe4c7cd3ed55
+
+Playback derivative: light-rain-normalized.wav
+Same recording with fixed +21 dB gain, decoded to stereo 44.1 kHz
+16-bit PCM WAV; no compression, limiting, trimming or added sounds.
+Original measured mean -47.5 dBFS, peak -22.7 dBFS.
+Derivative measured mean -26.5 dBFS, peak -1.7 dBFS.
+Rebuild from the repository root with:
+ffmpeg -y -i game/public/audio/light-rain-soundrecorder7.mp3 -af volume=21dB -map_metadata -1 -c:a pcm_s16le game/public/audio/light-rain-normalized.wav

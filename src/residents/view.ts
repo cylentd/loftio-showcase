@@ -23,6 +23,9 @@ import { residentForm } from './create-form';
 import { createAction } from './create-action';
 import { arrivalSpot, openSpot, sceneResidents } from './scene-adapter';
 import { residentChrome, arrivalReveal, renderResidents } from './view-parts';
+import { CAST } from '../cast';
+import { originalLineup } from './original-lineup';
+import { originalResidents } from './original-scene';
 
 const BASKET_MARGIN = 16; // px from the screen edge and the Residents button; matches --space-4
 
@@ -45,6 +48,7 @@ function session(mode: BuilderMode) {
   const storage = { getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value) };
   const names = NAMES[mode];
   const registry = residentRegistry(storage, () => crypto.randomUUID(), names.registry);
+  const originals = originalLineup(storage, CAST.map(member => member.id), names.registry + '-originals');
   const ticketKey = names.tickets;
   const tickets = buildTickets(storage, ticketKey);
   // Online visitors get a daily allowance, topped up once per UTC day.
@@ -54,7 +58,7 @@ function session(mode: BuilderMode) {
     journal: requestJournal(storage, names.journal),
     tickets, newId: () => crypto.randomUUID(), now: () => new Date(),
   }, { creature: 'bunny', personality: 'sleepy', signatureDetail: 'none', palette: null });
-  return { registry, builder, tickets, ticketKey };
+  return { registry, originals, builder, tickets, ticketKey };
 }
 
 function restore(current: ReturnType<typeof session>, adapter: ReturnType<typeof sceneResidents>, failure: (error: unknown) => void) {
@@ -77,6 +81,7 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   let current: ReturnType<typeof session>;
   try { current = session(mode); } catch { chrome.error.textContent = COPY.loadFailure; return () => {}; }
   const { registry, builder, tickets, ticketKey } = current;
+  const originals = originalResidents(scene, runtime, overlay, controls, current.originals);
   // Test tickets only where images are free placeholders; real builds (local, online) never get them.
   const form = residentForm(builder, mode, mode === 'mock' ? () => tickets.grant(1) : undefined); chrome.panels[2]!.append(form.form, challenge);
   // Online the image arrives through this page and the ticket is already spent, so leaving mid-build asks first.
@@ -106,8 +111,10 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
     const entries = registry.list(); const ready = entries.some(entry => entry.arrival === 'waiting'); basket.hidden = !ready;
     // Chosen once when the basket appears, so it doesn't follow residents as they wander.
     basketSpot = ready ? basketSpot ?? openSpot(scene) : null;
-    chrome.trigger.textContent = ready ? COPY.title + ' · ' + COPY.ready : COPY.title;
-    renderResidents(chrome.panels, state, entries, id => { try { adapter.remove(id); } catch (error) { failure(error); } }, reveal);
+    chrome.trigger.setAttribute('aria-label', ready ? COPY.title + ' · ' + COPY.ready : COPY.title);
+    chrome.trigger.title = ready ? COPY.ready : COPY.title;
+    renderResidents(chrome.panels, state, entries, id => { try { adapter.remove(id); } catch (error) { failure(error); } }, reveal,
+      current.originals.list(), (id, inRoom) => { try { originals.setInRoom(id, inRoom); render(); } catch (error) { failure(error); } });
   }
   builder.subscribe(render); render(); restore(current, adapter, failure);
   return () => {

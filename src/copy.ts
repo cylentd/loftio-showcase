@@ -41,15 +41,16 @@ export const PANEL = {
 
 export const METER_LABEL = "Frame rate";
 export const ROOM_AUDIO = { enable: "Enable room sound", mute: "Mute room sound", blocked: "Your browser needs a tap to start music and rain." };
-export const SCENE_LABEL = "The loft on a rainy night. Six residents are home.";
+export const SCENE_LABEL = "The loft on a rainy night.";
 export const ABOUT = {
   title: "About Loftio",
-  description: "A treehouse loft where six little residents keep you company.",
+  description: "A treehouse loft where you choose who keeps you company.",
   maker: "Made by Cylent Labs.",
   music: "Music by Cylent Labs.",
-  rain: "Rain: ",
-  recording: "Soft rain.WAV by barkenov",
-  source: "https://freesound.org/people/barkenov/sounds/640655/",
+  rainCurrent: "Natural rain ambience.",
+  rain: "Rain recording: ",
+  recording: "Light Rain by soundrecorder7",
+  source: "https://freesound.org/people/soundrecorder7/sounds/167034/",
   license: " (CC0).",
   sounds: "Stacking sound: ",
   soundsPack: "Squish pop by pixelcrusher",
@@ -72,7 +73,8 @@ export const MUSIC = {
     slow: "Slow Afternoon Light",
     save: "The Quiet Save Point",
     lanterns: "Lanterns in the Rain",
-    tea: "Tea and Tiny Books",
+    library: "Seven AM Library",
+    window: "Pages by the Window",
     aisles: "Midnight Aisles",
     treehouse: "Treehouse After Dark",
     hideaway: "The Lamp-Lit Hideaway",

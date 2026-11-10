@@ -35,12 +35,16 @@ class LobbyPlay implements ResidentPlay {
     const velocity = mayFling ? flick(this.samples, time, scale) : null;
     if (velocity) { this.fidget.throwResident(resident, velocity); return FIDGET_COPY.thrown; }
     // Stack targeting uses the visible feet before floor-placement snapping.
-    if (moved && this.fidget.stacks.tryPlace(resident)) return FIDGET_COPY.stacked;
+    const placement = moved ? this.fidget.stacks.tryPlace(resident) : null;
+    if (placement) return placement === "full" ? FIDGET_COPY.stackBlocked : FIDGET_COPY.stacked;
     return null;
   }
 
   key(resident: Resident, key: string, mayFling: boolean): string | null {
-    if (key.toLowerCase() === "s") return this.fidget.stacks.tryPlace(resident, true) ? FIDGET_COPY.stacked : null;
+    if (key.toLowerCase() === "s") {
+      const placement = this.fidget.stacks.tryPlace(resident, true);
+      return placement === "full" ? FIDGET_COPY.stackBlocked : placement ? FIDGET_COPY.stacked : null;
+    }
     if (key === "Enter" && mayFling) {
       this.fidget.throwResident(resident, { x: FLOOR_PLAY.keyboardX, y: FLOOR_PLAY.keyboardY });
       return FIDGET_COPY.thrown;
@@ -57,10 +61,10 @@ class LobbyPlay implements ResidentPlay {
 }
 
 /** The game entry's feature: turns on lobby play, the pile-fitting camera and the help that explains them. */
-export function installLobbyPlay({ scene, runtime, look, settings, audio }: RoomContext): { ready: () => void } {
+export function installLobbyPlay({ scene, runtime, look, overlay, settings, audio }: RoomContext): { ready: () => void } {
   // Stacking sounds follow the room's mute and wake when the intro hands over (a user gesture has passed by then).
   const sfx = browserSfx(() => audio.playing);
-  const fidget = new LobbyFidget(scene, look, sfx);
+  const fidget = new LobbyFidget(scene, look, sfx, resident => overlay.say(resident.cast.id, FIDGET_COPY.stackFull));
   const auto = new AutoStacker(lobbyAutoHost(scene, fidget.stacks), seeded(AUTO_STACK.seed));
   // Residents stack themselves only when they wander and motion is not paused or reduced: the gates wander and Still use.
   const play = new LobbyPlay(fidget, auto, () => settings.wander && !look.frozen);

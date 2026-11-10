@@ -61,6 +61,7 @@ export function installSceneSettings(settings: SceneSettings, openLetter: (trigg
   controlText(read, "letter", SCENE_SETTINGS.readCue);
   read.addEventListener("click", () => {
     const menu = read.closest<HTMLDetailsElement>(".scene-settings")!;
+    read.closest<HTMLDialogElement>(".scene-controls")!.close();
     menu.open = false;
     openLetter(menu.querySelector<HTMLElement>(":scope > summary")!);
   });

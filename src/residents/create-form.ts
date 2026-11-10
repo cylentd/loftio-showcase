@@ -1,6 +1,5 @@
 import type { createBuilder } from '../builder/controller';
 import type { BuilderMode } from '../builder/local-mode';
-import { curatedOptions } from '../builder/curated';
 import type { SelectionField } from '../builder/selections';
 import { icon } from '../icons';
 import { worldButton } from '../world-ui';
@@ -8,6 +7,7 @@ import { RESIDENT_COPY, WIZARD_COPY } from './copy';
 import { createAction } from './create-action';
 import { pickTile, type PickTile } from './pick-tile';
 import { SUMMARY_STEP, WIZARD_FIELDS, createWizard } from './wizard';
+import { questionPicker } from './question-picker';
 import './wizard.css';
 
 const PICK_HOLD_MS = 320; // the chosen card's hop (--wizard-hop in styles.css) plays out before the next question
@@ -20,7 +20,7 @@ let formCount = 0;
 function picture(tile: PickTile): HTMLElement {
   if (tile.kind === 'image') { const img = document.createElement('img'); img.className = 'wizard-art'; img.src = tile.src; img.alt = ''; img.draggable = false; return img; }
   const art = document.createElement('span');
-  if (tile.kind === 'die') { art.className = 'wizard-art wizard-die'; art.append(icon('dice')); }
+  if (tile.kind === 'die') { art.className = 'wizard-art wizard-die'; art.append(icon('effects')); }
   if (tile.kind === 'swatch') { art.className = 'wizard-art wizard-swatch'; art.dataset.palette = tile.palette; }
   if (tile.kind === 'text') { art.className = 'wizard-art wizard-named'; art.textContent = tile.label; }
   return art;
@@ -33,6 +33,7 @@ function label(text: string, className = 'wizard-label') {
 function card(field: SelectionField, id: string | null) {
   const tile = pickTile(field, id);
   const button = document.createElement('button'); button.type = 'button'; button.className = 'wizard-card';
+  button.setAttribute('aria-label', tile.label);
   button.append(picture(tile), label(tile.label)); return button;
 }
 
@@ -62,15 +63,11 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
 
   const steps = WIZARD_FIELDS.map((field, index) => {
     const { section, heading } = stepSection(WIZARD_COPY.steps[index]!, index, uid);
-    const grid = document.createElement('div'); grid.className = 'wizard-cards'; grid.dataset.field = field;
-    const ids: (string | null)[] = curatedOptions(field).map(option => option.id);
-    if (field === 'palette') ids.push(null);
-    for (const id of ids) {
-      const button = card(field, id);
-      button.addEventListener('click', () => pick(field, id, button));
-      cards.push({ button, field, value: id }); grid.append(button);
-    }
-    section.append(grid); return { section, heading };
+    const picker = questionPicker(field, uid, {
+      card, pick, pickForMe,
+    });
+    picker.grid.setAttribute('aria-label', WIZARD_COPY.choices(WIZARD_COPY.parts[index]!));
+    cards.push(...picker.cards); section.append(picker.root); return { section, heading, picker };
   });
 
   // The summary: a designer-toy box card holding the four picks (each jumps back to its question), the basket
@@ -111,7 +108,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const bar = document.createElement('div'); bar.className = 'wizard-bar';
   const back = worldButton(WIZARD_COPY.back, () => { wizard.back(); show(true); }); back.classList.add('wizard-back'); back.prepend(icon('previous'));
   const dice = worldButton('', () => roll()); dice.classList.add('wizard-dice');
-  const face = document.createElement('span'); face.className = 'wizard-dice-face'; face.append(icon('dice'));
+  const face = document.createElement('span'); face.className = 'wizard-dice-face'; face.append(icon('effects'));
   const diceLabel = document.createElement('span'); diceLabel.textContent = WIZARD_COPY.surprise; dice.append(face, diceLabel);
   bar.append(back, dice);
   form.append(...steps.map(step => step.section), summary.section, bar);
@@ -128,12 +125,17 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     pending = true; dice.classList.add('is-rolling');
     setTimeout(() => { dice.classList.remove('is-rolling'); pending = false; wizard.surprise(); show(true); }, hold());
   }
+  function pickForMe(button: HTMLButtonElement) {
+    if (pending || button.disabled) return;
+    pending = true; button.classList.add('is-picked');
+    setTimeout(() => { button.classList.remove('is-picked'); pending = false; wizard.pickForMe(); show(true); }, hold());
+  }
   function show(focus: boolean) {
     const current = wizard.step;
     confirming = false; // leaving the summary drops an open question; the picks may change
     steps.forEach((step, index) => { step.section.hidden = index !== current; });
     summary.section.hidden = current !== SUMMARY_STEP;
-    dice.hidden = current === SUMMARY_STEP;
+    dice.hidden = current === SUMMARY_STEP || wizard.field === 'palette';
     // The first question has nothing to go back to: Surprise me takes the whole bar instead of leaving a hole.
     bar.classList.toggle('is-first', current === 0);
     update();
@@ -160,6 +162,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     // A card shows as picked only after the user picked on that step, though the builder always holds a value.
     if (!pending) for (const { button, field, value } of cards) button.setAttribute('aria-pressed', String(wizard.chosen(field) && state.selections[field] === value));
     for (const { button } of cards) button.disabled = busy;
+    steps[wizard.step]?.picker.update(wizard.options, busy);
     WIZARD_FIELDS.forEach((field, index) => {
       const tile = pickTile(field, state.selections[field]); const button = pickButtons[index]!;
       button.classList.toggle('is-named', tile.kind === 'text');

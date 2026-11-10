@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-// ../Github/loftio/game/src/builder/server/online-config.ts
+// game/src/builder/server/online-config.ts
 var CAP_KEY_TTL_SECONDS = 172800;
 var IMAGE_SIZE = "1024x1024";
 var OPENAI_EDITS_URL = "https://api.openai.com/v1/images/edits";
@@ -22,11 +22,11 @@ var ENV = {
 	turnstileSecret: "TURNSTILE_SECRET_KEY",
 	visitorSalt: "LOFTIO_VISITOR_SALT"
 };
-// ../Github/loftio/game/src/builder/utc-day.ts
+// game/src/builder/utc-day.ts
 var DAY_LENGTH = 10;
 /** The UTC calendar day a daily allowance or cap counts against, as "YYYY-MM-DD". */
 var utcDay = (date) => date.toISOString().slice(0, DAY_LENGTH);
-// ../Github/loftio/game/src/builder/server/caps.ts
+// game/src/builder/server/caps.ts
 function createCaps({ store, now, globalCap = 25, visitorCap = 3 }) {
 	async function bump(key) {
 		const count = await store.incr(key, CAP_KEY_TTL_SECONDS);
@@ -100,7 +100,7 @@ function upstashStore({ url, token, fetcher = fetch }) {
 		}
 	};
 }
-// ../Github/loftio/game/src/builder/provider.ts
+// game/src/builder/provider.ts
 var ProviderError = class extends Error {
 	kind;
 	constructor(kind, message) {
@@ -205,7 +205,25 @@ var CATALOG = {
 		])
 	]
 };
-// ../Github/loftio/game/src/builder/selections.ts
+// game/src/builder/surprise-data.ts
+var CREATIVE_SURPRISE = {
+	creature: {
+		id: "invented-creature",
+		label: "Original creature",
+		prompt: "Invent an original creature or whimsical object-inspired companion beyond the preset catalog. Respect all explicit selections; make one coherent, lovable Loftio resident, not an existing named character."
+	},
+	personality: {
+		id: "invented-personality",
+		label: "Original personality",
+		prompt: "Invent a distinctive personality beyond the preset moods. Respect all explicit selections, including a deliberately absent accessory; convey personality through expression, pose and form."
+	},
+	signatureDetail: {
+		id: "invented-detail",
+		label: "Original detail",
+		prompt: "Invent an unexpected signature detail beyond the preset accessories. Respect all explicit selections and integrate the detail into the character; no held objects or scenery."
+	}
+};
+// game/src/builder/selections.ts
 var GROUPS = {
 	creature: CATALOG.creatures,
 	personality: CATALOG.personalities,
@@ -246,17 +264,17 @@ function pick(group, id, rng) {
 	if (!chosen) throw new Error(`unknown catalog id: ${id}`);
 	return chosen;
 }
-/** Resolves surprise and an omitted palette into concrete catalog entries. Call only on validated selections. */
+/** Call only on validated selections. Palette omission retains its automatic catalog choice. */
 function resolveSelections(selections, rng) {
 	return {
-		creature: pick(CATALOG.creatures, selections.creature, rng),
-		personality: pick(CATALOG.personalities, selections.personality, rng),
-		signatureDetail: pick(CATALOG.signatureDetails, selections.signatureDetail, rng),
+		creature: selections.creature === "surprise" ? CREATIVE_SURPRISE.creature : pick(CATALOG.creatures, selections.creature, rng),
+		personality: selections.personality === "surprise" ? CREATIVE_SURPRISE.personality : pick(CATALOG.personalities, selections.personality, rng),
+		signatureDetail: selections.signatureDetail === "surprise" ? CREATIVE_SURPRISE.signatureDetail : pick(CATALOG.signatureDetails, selections.signatureDetail, rng),
 		palette: pick(CATALOG.palettes, selections.palette, rng)
 	};
 }
-// ../Github/loftio/game/src/builder/prompt-template.ts
-var PROMPT_TEMPLATE = `# Loftio Character Builder — Runtime Image Prompt v4.1
+// game/src/builder/prompt-template.ts
+var PROMPT_TEMPLATE = `# Loftio Character Builder — Runtime Image Prompt v4.2
 
 Create **one** original resident for Loftio, a cozy, whimsical world of lovable collectible creatures.
 
@@ -267,7 +285,7 @@ Create **one** original resident for Loftio, a cozy, whimsical world of lovable 
 - Signature detail: {{signature_detail}}
 - Color palette: {{resolved_palette}}
 
-Interpret these selections creatively. They express intent, not anatomical assembly instructions.
+Interpret these selections creatively. They express intent, not anatomical assembly instructions. When a selection asks you to invent, decide that trait yourself beyond the preset catalog while preserving every explicit selection. The style references and image requirements still apply.
 
 Create a whimsical companion inspired by the creature, not a realistic animal made cute. Simplify biological anatomy and surface detail. Tactile craftsmanship should support appealing forms, not dominate them with realistic skin, fur, or anatomical detail.
 
@@ -297,8 +315,8 @@ Use the **original-six sheet as a world/style reference** and the **exploratory 
 
 Create a delightful, original Loftio resident that someone would want as their own companion. Favor emotional appeal and cohesive individuality over mechanical novelty. **Generate exactly one character image.**
 `;
-// ../Github/loftio/game/src/builder/prompt.ts
-var PROMPT_VERSION = "v4.1";
+// game/src/builder/prompt.ts
+var PROMPT_VERSION = "v4.2";
 var REFERENCE_IDS = [{
 	id: "loftio-original-six",
 	role: "style",
@@ -318,7 +336,7 @@ function renderPrompt(resolved) {
 	};
 	return PROMPT_TEMPLATE.replace(/\{\{(\w+)\}\}/g, (match, name) => slots[name] ?? match);
 }
-// ../Github/loftio/game/src/builder/png.ts
+// game/src/builder/png.ts
 var SIGNATURE = [
 	137,
 	80,
@@ -378,7 +396,7 @@ function crc32(bytes) {
 	for (const byte of bytes) crc = (CRC_TABLE[(crc ^ byte) & 255] ?? 0) ^ crc >>> 8;
 	return (crc ^ 4294967295) >>> 0;
 }
-// ../Github/loftio/game/src/builder/copy.ts
+// game/src/builder/copy.ts
 var COPY = {
 	title: "Meet a new resident",
 	intro: "Choose a few sparks of personality. Keep the ones you love.",
@@ -433,7 +451,7 @@ var COPY = {
 };
 ({ ...COPY });
 ({ ...COPY });
-// ../Github/loftio/game/src/builder/server/generate-handler.ts
+// game/src/builder/server/generate-handler.ts
 var failure$1 = (status, kind, message) => Response.json({
 	ok: false,
 	error: {
@@ -557,14 +575,14 @@ function createGenerateHandler(options) {
 	const session = new GenerateSession(options);
 	return (request) => session.handle(request);
 }
-// ../Github/loftio/game/src/builder/server/online-copy.ts
+// game/src/builder/server/online-copy.ts
 var ONLINE_COPY = {
 	human: "We couldn't confirm you're a person. Refresh the page and try again.",
 	globalCap: "Loftio is out of magic for today. Come back tomorrow.",
 	visitorCap: `You've made 3 residents today. Come back tomorrow for more.`,
 	unconfigured: "The online builder isn't set up yet."
 };
-// ../Github/loftio/game/src/builder/server/online-handler.ts
+// game/src/builder/server/online-handler.ts
 var HTTP_BAD_REQUEST$1 = 400;
 var HTTP_FORBIDDEN = 403;
 var HTTP_METHOD_NOT_ALLOWED = 405;
@@ -668,7 +686,7 @@ async function visitorKeyFor(ip, salt) {
 	const digest = await crypto.subtle.digest("SHA-256", bytes);
 	return Array.from(new Uint8Array(digest), (byte) => byte.toString(HEX_RADIX).padStart(2, "0")).join("");
 }
-// ../Github/loftio/game/src/builder/server/openai-provider.ts
+// game/src/builder/server/openai-provider.ts
 var SAFETY_CODES = ["moderation_blocked", "content_policy_violation"];
 var HTTP_BAD_REQUEST = 400;
 var PROVIDER_ID = "openai-images";
@@ -760,7 +778,7 @@ function openaiProvider(options) {
 		generate
 	};
 }
-// ../Github/loftio/game/src/builder/server/turnstile-verify.ts
+// game/src/builder/server/turnstile-verify.ts
 var TURNSTILE_TOKEN_MAX_LENGTH = 2048;
 function turnstileVerifier(options) {
 	const { secret, fetcher = fetch, expectedHostname } = options;
@@ -786,7 +804,7 @@ function turnstileVerifier(options) {
 		}
 	};
 }
-// ../Github/loftio/game/src/builder/server/vercel-entry.ts
+// game/src/builder/server/vercel-entry.ts
 var nodeProcess = globalThis.process;
 var HTTP_UNAVAILABLE = 503;
 var REQUIRED_ENV = [

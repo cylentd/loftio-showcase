@@ -2,3 +2,4 @@
 export const TRAY_PEEK_MS = 4000;
 /** How close a mouse must come to the tucked tray to bring it out: about one tap target, so the corner reacts before the pointer arrives. */
 export const TRAY_HOVER_REACH_PX = 48;
+export const TRAY_MOBILE_QUERY = "(max-width: 700px)";

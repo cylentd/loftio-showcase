@@ -1,5 +1,5 @@
 import './styles.css';
-import { worldButton, worldDrawer } from '../world-ui';
+import { dismissOnBackdrop, worldButton, worldDrawer } from '../world-ui';
 import { controlText } from '../settings-components';
 import { FOCUS_CARD_IDS, MAX_FOCUS_CARDS, focusCards, type FocusCards } from './cards';
 import { FOCUS_COPY as COPY } from './copy';
@@ -9,7 +9,8 @@ import { FOCUS_COPY as COPY } from './copy';
 const FIRST_ASK_DELAY_MS = 3000;
 
 function picker(cards: FocusCards) {
-  const drawer = worldDrawer(COPY.title, COPY.close); drawer.dialog.classList.add('focus-drawer');
+  const drawer = worldDrawer(COPY.title, COPY.close); drawer.dialog.classList.add('focus-drawer', 'world-modal');
+  dismissOnBackdrop(drawer.dialog);
   const intro = document.createElement('p'); intro.className = 'focus-intro'; intro.textContent = COPY.intro;
   const grid = document.createElement('div'); grid.className = 'focus-cards';
   grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', COPY.title);
@@ -53,6 +54,7 @@ export function installFocusCards(settingsRoom: HTMLElement | null, shell: HTMLE
     const opener = worldButton(COPY.open, () => {
       const menu = opener.closest<HTMLDetailsElement>('details');
       if (menu) menu.open = false;
+      opener.closest<HTMLDialogElement>('dialog')?.close();
       view.open(menu?.querySelector<HTMLElement>(':scope > summary') ?? opener);
     });
     // DESIGN.md: settings pair an icon with words. The leaf: what the cards grow in the room.

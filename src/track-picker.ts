@@ -23,7 +23,7 @@ function songRow(track: Track): HTMLButtonElement {
 export function makeTrackPicker<T extends Track>(playlist: Playlist<T>, onPick: () => void): { disc: HTMLButtonElement; list: HTMLElement } {
   const tracks = playlist.all;
   const picker = new TrackPicker(tracks.length);
-  const disc = document.createElement("button"); disc.type = "button"; disc.className = "now-playing-disc";
+  const disc = document.createElement("button"); disc.type = "button"; disc.className = "now-playing-disc room-action";
   disc.setAttribute("aria-label", MUSIC.chooseSong); disc.title = MUSIC.chooseSong;
   disc.setAttribute("aria-haspopup", "menu"); disc.setAttribute("aria-controls", LIST_ID); disc.setAttribute("aria-expanded", "false");
   disc.append(icon("note"));

@@ -3,6 +3,7 @@ export interface TrayRows { player: boolean; tiles: "none" | "settings" | "all" 
 
 /** Whether the corner tray is out. It tucks behind Settings unless something gives it a reason to show. */
 export class TrayModel {
+  alwaysOpen = false;
   hovering = false;
   focused = false;
   /** Settings or the disc's song list is open, so the tray stays out under it. */
@@ -22,15 +23,15 @@ export class TrayModel {
 
   peek(now: number): void { this.peekUntil = now + this.peekMs; }
   isOpen(now: number): boolean {
-    return now < this.peekUntil || this.hovering || this.focused || this.held || this.pinned;
+    return this.alwaysOpen || now < this.peekUntil || this.hovering || this.focused || this.held || this.pinned;
   }
   msUntilPeekEnds(now: number): number | null { return now < this.peekUntil ? this.peekUntil - now : null; }
 
-  /** A press on the tucked tray only opens it and returns true. A touch on the open tray keeps it out, since touch has no hover. */
-  press(now: number, touch: boolean): boolean {
+  /** A tucked tray press reveals tiles; visible player controls still act immediately. Touch keeps the tray open. */
+  press(now: number, touch: boolean, playerControl = false): boolean {
     const wasOpen = this.isOpen(now);
     if (!wasOpen || touch) this.pinned = true;
-    return !wasOpen;
+    return !wasOpen && !playerControl;
   }
   pressOutside(): void { this.pinned = false; }
   /** The Music tile: hide or show the player pill. Returns the new choice. */

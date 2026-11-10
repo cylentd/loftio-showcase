@@ -1,0 +1,21 @@
+.world-modal { --modal-width: 760px; --modal-height: 680px; --modal-sheet-height: 80dvh; }
+:is(.residents-drawer, .resident-reveal, .scene-controls, .postcard-preview, .focus-drawer).world-modal {
+  position: fixed; inset: var(--world-inset); margin: auto;
+  width: min(var(--modal-width), calc(100vw - 2 * var(--world-inset)));
+  max-width: calc(100vw - 2 * var(--world-inset)); height: min(var(--modal-height), calc(100dvh - 2 * var(--world-inset)));
+  max-height: calc(100dvh - 2 * var(--world-inset)); padding: var(--space-4);
+  border-radius: var(--world-radius); overscroll-behavior: contain;
+}
+.world-modal::backdrop { background: var(--color-scene-scrim); }
+.world-modal.scene-controls:not([open]) { display: none; }
+.world-modal .world-header { flex-shrink: 0; padding-inline: 0; }
+.world-modal .world-header .world-close { position: static; flex-shrink: 0; }
+.world-modal.postcard-preview .postcard-viewport { flex: 1; min-height: 0; max-height: none; }
+@media (max-width: 700px) {
+  :is(.residents-drawer, .resident-reveal, .scene-controls, .postcard-preview, .focus-drawer).world-modal {
+    inset: auto 0 0; margin: 0; width: 100%; max-width: none;
+    height: min(var(--modal-height), var(--modal-sheet-height)); max-height: var(--modal-sheet-height);
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    border-radius: var(--world-radius) var(--world-radius) 0 0;
+  }
+}

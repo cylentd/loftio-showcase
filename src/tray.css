@@ -16,7 +16,7 @@
 .scene-actions[data-tiles="none"] .tray-items { pointer-events: none; }
 /* Music off and tucked: a slim bar holding only Settings, as the tray was before it had a player row. */
 .scene-actions[data-tiles="settings"] { width: auto; }
-.scene-actions[data-tiles="settings"] :is(.music-toggle, .postcard-action) { display: none; }
+.scene-actions[data-tiles="settings"] :is(.residents-trigger, .music-toggle, .postcard-action) { display: none; }
 
 .now-playing { display: flex; align-items: center; }
 .now-playing-name {

@@ -1,4 +1,4 @@
-/* The music tray (one board: player row over Music, Postcard and Settings tiles), the resident's name tag, and the postcard's photo arrows.
+/* The music tray (one board: tiles expand above the anchored player row), the resident's name tag, and the postcard's photo arrows.
    Same DOM and behaviour in every room: each skin sets --skin-tag, --capsule-disc, --tray-base, --tray-tuft
    and --tray-label-ink in its theme block (world-ui.css for Treehouse, world-skins.css for Coffee and Beach).
    tray-model.ts still decides tucked or open; this file only draws the two states. */
@@ -13,6 +13,7 @@
   --tray-width: 22rem; /* fits "Paper Cranes and Coffee", the longest title, beside the disc, play and next; three tiles spread under it */
   --tray-divide: var(--space-4); /* from the player row to the tiles; the divider is drawn halfway (--space-2) */
   --tray-corner: var(--space-3); /* tight to the corner, so on desktop the tucked bar sits below the residents' feet */
+  --tray-tooltip-layer: 1;
   --tray-radius: var(--space-5);
   --capsule-disc-size: 2.5rem;
   --capsule-disc-radius: 50%;
@@ -30,9 +31,9 @@
   --world-bubble-tag-rise: 65%; /* of the tag's own height above the bubble's top edge; the rest overlaps it */
 }
 
-/* ---------- Layout: one board. The player is its top row; Music, Postcard and Settings sit under a thin divider ---------- */
+/* ---------- Layout: one board. The player stays at the bottom; tiles expand upward ---------- */
 .scene-actions {
-  display: flex; flex-direction: column; align-items: stretch; gap: 0;
+  display: flex; flex-direction: column-reverse; align-items: stretch; gap: 0;
   width: min(var(--tray-width), calc(100vw - 2 * var(--tray-corner)));
   bottom: max(var(--tray-corner), env(safe-area-inset-bottom)); right: max(var(--tray-corner), env(safe-area-inset-right));
   padding: var(--space-1) var(--tray-pad); border: var(--border-width) solid var(--world-wood-dark); border-radius: var(--tray-radius);
@@ -50,28 +51,29 @@
 .scene-actions .tray-items {
   background: linear-gradient(color-mix(in srgb, var(--tray-label-ink) 30%, transparent), color-mix(in srgb, var(--tray-label-ink) 30%, transparent)) center var(--space-2) / 100% var(--border-width) no-repeat;
 }
-.scene-actions :is(.music-toggle, .postcard-action, .scene-settings) { margin: var(--tray-divide) 0 var(--tray-label-room); }
+.scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings) { margin: var(--tray-divide) 0 var(--tray-label-room); }
 .scene-actions .scene-settings { padding: 0; border: 0; }
+.scene-actions .residents-trigger { padding: 0; border: 0; }
 /* Music turned off: no player row, so no divider over the tiles. */
 .scene-actions[data-music="false"] .tray-items { background: none; }
-.scene-actions[data-music="false"] :is(.music-toggle, .postcard-action, .scene-settings) { margin-top: var(--space-1); }
+.scene-actions[data-music="false"] :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings) { margin-top: var(--space-1); }
 /* Music turned off: the player is gone, not just hidden from sight, so Tab skips it. */
 .scene-actions[data-music="false"] .now-playing { display: none; }
 
 /* ---------- Tiles: round, raised, cream; one-word labels under them in live text ---------- */
-.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary, .room-audio) {
+.scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings > summary, .room-audio) {
   border-radius: 50%; color: var(--world-ink); background: var(--tray-knob); box-shadow: var(--tray-knob-raise);
   transition: transform var(--world-duration) var(--motion-ease), box-shadow var(--world-duration) var(--motion-ease);
 }
-.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary) { width: var(--tray-knob-size); height: var(--tray-knob-size); }
-.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary) svg { width: var(--tray-knob-icon); height: var(--tray-knob-icon); }
-.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary, .room-audio):hover { background: var(--world-paper); }
+.scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings > summary) { width: var(--tray-knob-size); height: var(--tray-knob-size); }
+.scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings > summary) svg { width: var(--tray-knob-icon); height: var(--tray-knob-icon); }
+.scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings > summary, .room-audio):hover { background: var(--world-paper); }
 /* Pressed in: while pressed, while Settings is open, and while Music is off (the player is hidden). */
-.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary, .room-audio):active,
+.scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings > summary, .room-audio):active,
 .scene-actions .music-toggle[aria-pressed="false"],
 .scene-actions .scene-settings[open] > summary { transform: translateY(var(--world-press)); box-shadow: inset 0 var(--world-lip) var(--space-1) color-mix(in srgb, var(--world-ink) 30%, transparent); background: var(--world-paper-sunk); }
-.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary)::after,
-.scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary):is(:hover, :focus-visible)::after,
+.scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings > summary)::after,
+.scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings > summary):is(:hover, :focus-visible)::after,
 .scene-actions .scene-settings[open] > summary::after {
   content: attr(data-label);
   visibility: visible; top: calc(100% + var(--world-pill-edge) + var(--space-1)); bottom: auto; left: 50%; right: auto; translate: -50% 0;
@@ -92,20 +94,21 @@
   filter: drop-shadow(0 var(--world-lip) var(--world-lip) color-mix(in srgb, var(--world-ink) 45%, transparent));
 }
 .scene-actions .music-next:hover { background: var(--scene-actions-hover); }
+.scene-actions .now-playing .room-action::after { z-index: var(--tray-tooltip-layer); }
+.scene-actions .now-playing-disc::after { left: 0; right: auto; }
 
-/* Phones: the tray spans most of the width even tucked, so Residents rides just above it, tucked or open.
-   Without anchor positioning, residents/styles.css keeps its fixed lift above the bottom controls. */
-@supports (anchor-name: --a) {
-  @media (max-width: 700px) {
-    .scene-actions { anchor-name: --scene-tray; }
-    /* Half a tuft: the leaf or flower on the board's corner rises that far above it */
-    body .residents-trigger { position-anchor: --scene-tray; bottom: calc(anchor(top) + var(--tray-tuft-size) / 2); }
+@media (max-width: 700px) {
+  .scene-actions {
+    --tray-knob-size: var(--tap-min);
+    --tray-divide: var(--space-2);
+    --tray-label-room: var(--space-5);
   }
+  .scene-actions[data-music="false"] { --tray-label-room: var(--space-6); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .scene-actions, .scene-actions :is(.now-playing, .music-toggle, .postcard-action, .scene-settings > summary, .room-audio) { transition: none; }
-  .scene-actions :is(.music-toggle, .postcard-action, .scene-settings > summary, .room-audio):active,
+  .scene-actions :is(.residents-trigger, .music-toggle, .postcard-action, .scene-settings > summary, .room-audio):active,
   .scene-actions .music-toggle[aria-pressed="false"], .scene-actions .scene-settings[open] > summary { transform: none; }
 }
 

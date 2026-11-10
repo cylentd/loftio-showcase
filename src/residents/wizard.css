@@ -3,9 +3,10 @@
    Moss green (--world-accent) means chosen; the raised wood edge means pressable. */
 :root {
   --resident-drawer-width: 600px; /* four ~118px picture cards in a row inside the treehouse frame at 1500 wide */
+  --wizard-catalog-art: 88px;
   --wizard-card-radius: 22px;
   --wizard-pick-radius: 16px;
-  --wizard-card-lift: 4px; /* the tile's raised edge; a press sinks it flat */
+  --wizard-card-lift: 2px; /* the tile's raised edge; a press sinks it flat */
   --wizard-hover-lift: 3px;
   --wizard-ring: 3px; /* the chosen card's moss ring */
   --wizard-art: 112px; /* felt figure size on a desktop card */
@@ -36,8 +37,11 @@
 }
 .residents-drawer { --world-drawer-width: var(--resident-drawer-width); }
 
-.resident-wizard { gap: var(--space-3); }
-.wizard-step { display: grid; gap: var(--space-4); }
+.residents-drawer .world-content:has(> [role="tabpanel"]:not([hidden]) > .resident-wizard) { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.residents-drawer .world-content:has(> [role="tabpanel"]:not([hidden]) > .resident-wizard) > .world-tabs { flex-shrink: 0; }
+.residents-drawer [role="tabpanel"]:not([hidden]):has(> .resident-wizard) { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.resident-wizard { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr) auto; gap: var(--space-3); }
+.wizard-step { display: grid; align-content: start; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: var(--space-2); gap: var(--space-4); scrollbar-width: thin; scrollbar-color: var(--world-edge) transparent; }
 .wizard-step[hidden], .wizard-picks[hidden], .wizard-basket[hidden], .resident-wizard .world-button[hidden] { display: none; }
 
 /* Heading and progress dots share one row. */
@@ -54,6 +58,7 @@
 /* Picture cards */
 .wizard-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 .wizard-cards[data-field="creature"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.wizard-options { display: grid; gap: var(--space-3); }
 .wizard-card, .wizard-pick {
   position: relative; display: grid; justify-items: center; align-content: start; gap: var(--space-1);
   min-width: var(--tap-min); min-height: var(--tap-min); padding: var(--space-3) var(--space-2) var(--space-2);
@@ -106,6 +111,8 @@
   background: radial-gradient(circle at 50% 35%, var(--world-wood-light), var(--world-wood-dark)); box-shadow: 0 var(--world-pill-edge) 0 var(--world-wood-dark); }
 .wizard-die .control-icon, .wizard-dice-face .control-icon { width: var(--wizard-icon); height: var(--wizard-icon); stroke-width: var(--wizard-icon-stroke); }
 .wizard-card .wizard-die, .wizard-pick .wizard-die { aspect-ratio: 1; width: 70%; }
+.wizard-random { grid-template-rows: var(--wizard-art) auto; }
+.wizard-card.wizard-random .wizard-die { align-self: center; width: var(--wizard-pick-art); color: var(--world-muted); background: var(--world-paper-sunk); border: var(--border-width) solid var(--world-edge); box-shadow: none; }
 
 /* Summary: the back of a designer-toy box. One sunk panel holds the four picks as a spec row (picture, name,
    then what it is), then Bring to life, with the small print under it. */
@@ -143,8 +150,8 @@
 @keyframes wizard-rock { from { rotate: calc(-1 * var(--wizard-rock)); } to { rotate: var(--wizard-rock); } }
 
 /* Back and the dice: under the cards, pinned to the sheet's bottom edge while the cards scroll. */
-.wizard-bar { position: sticky; bottom: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-  padding-block: var(--space-3) var(--space-1); background: linear-gradient(transparent, var(--world-paper) var(--space-3)); }
+.wizard-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding-block: var(--space-3) var(--space-1); background: var(--world-paper); }
 /* Step 1 has no Back: Surprise me, the blind-box pull, takes the whole bar. */
 .wizard-bar.is-first .wizard-dice { flex: 1; justify-content: center; }
 .wizard-back .control-icon { width: var(--controls-icon); height: var(--controls-icon); }
@@ -153,6 +160,10 @@
 .wizard-dice.is-rolling .wizard-dice-face { animation: wizard-roll var(--wizard-hop) var(--motion-ease-hop); }
 @keyframes wizard-roll { to { rotate: 1turn; scale: var(--wizard-hop-scale); } }
 
+@media (min-width: 701px) {
+  .wizard-options { --wizard-art: var(--wizard-catalog-art); }
+  .wizard-options .wizard-cards:not([data-field="palette"]) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
 @media (max-width: 700px) {
   :root { --wizard-art: 76px; } /* three rows end above the bar and the fourth peeks, so a phone shows there is more */
   .wizard-cards, .wizard-cards[data-field="creature"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }

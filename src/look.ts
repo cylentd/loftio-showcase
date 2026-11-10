@@ -67,8 +67,8 @@ export class Look {
   }
 
   private controls(): void {
-    const toolbar = document.createElement("div");
-    toolbar.className = "scene-controls world-frame";
+    const toolbar = document.createElement("dialog");
+    toolbar.className = "scene-controls world-frame world-modal";
     const look = this.lookButton;
     controlText(look, "look", innerWidth <= PHONE_MAX ? LOOK.swipe : LOOK.drag);
     look.setAttribute("aria-label", LOOK.keyboard);

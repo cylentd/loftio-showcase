@@ -9,10 +9,10 @@ test('a curated pick shows its felt figure', () => {
   assert.deepEqual(pickTile('signatureDetail', 'none'), { kind: 'image', src: 'builder/detail-none.webp', label: 'None' });
 });
 
-test('a saved pick outside the curated set shows its name as a text tile, never a blank picture', () => {
-  assert.deepEqual(pickTile('creature', 'moth'), { kind: 'text', label: 'Moth' });
-  assert.deepEqual(pickTile('personality', 'bookworm'), { kind: 'text', label: 'Bookish' });
-  assert.deepEqual(pickTile('signatureDetail', 'sweater'), { kind: 'text', label: 'Oversized sweater' });
+test('full-catalog picks show their felt figures while retired ids remain readable', () => {
+  assert.deepEqual(pickTile('creature', 'moth'), { kind: 'image', src: 'builder/creature-moth.webp', label: 'Moth' });
+  assert.deepEqual(pickTile('personality', 'bookworm'), { kind: 'image', src: 'builder/personality-bookworm.webp', label: 'Bookish' });
+  assert.deepEqual(pickTile('signatureDetail', 'sweater'), { kind: 'image', src: 'builder/detail-sweater.webp', label: 'Oversized sweater' });
   assert.deepEqual(pickTile('creature', 'retired-id'), { kind: 'text', label: 'retired-id' });
 });
 

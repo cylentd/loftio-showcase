@@ -82,6 +82,7 @@ export function sceneResidents(scene: Scene, runtime: Runtime, overlay: Overlay,
       const index = scene.residents.findIndex(resident => resident.cast.id === id);
       if (index < 0 || !id.startsWith('resident:')) return;
       registry.remove(id);
+      controls.forget(scene.residents[index]!);
       const [resident] = scene.residents.splice(index, 1); resident!.root.destroy({ children: true });
       overlay.removeResident(id); changed();
     },

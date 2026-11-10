@@ -2,6 +2,7 @@ import { POSTCARD } from "./copy";
 import { icon } from "./icons";
 import { PostcardDesign } from "./postcard-design";
 import { postcardChoices, type PostcardChoice } from "./postcard-choices";
+import { containFocus, dismissOnBackdrop } from "./world-ui";
 
 function action(label: string, name: "close" | "copy" | "download"): HTMLButtonElement {
   const button = document.createElement("button"); button.type = "button"; button.className = "btn";
@@ -21,10 +22,11 @@ export function previewPostcard(blob: Blob, initial: PostcardDesign, render: (de
   let url = URL.createObjectURL(blob);
   let design = initial;
   let rendering = false;
-  const dialog = document.createElement("dialog"); dialog.className = "postcard-preview"; dialog.setAttribute("aria-labelledby", "postcard-title");
-  const header = document.createElement("header"); header.className = "postcard-header";
+  const dialog = document.createElement("dialog"); dialog.className = "postcard-preview world-frame world-modal"; dialog.setAttribute("aria-labelledby", "postcard-title");
+  const header = document.createElement("header"); header.className = "postcard-header world-header";
   const title = document.createElement("h2"); title.id = "postcard-title"; title.textContent = POSTCARD.title;
   const close = action(POSTCARD.close, "close"); close.classList.add("postcard-close"); close.addEventListener("click", () => dialog.close());
+  close.classList.add("world-button", "world-close");
   close.replaceChildren(icon("close")); close.setAttribute("aria-label", POSTCARD.close); close.title = POSTCARD.close;
   header.append(title, close);
   const image = document.createElement("img"); image.src = url; image.alt = POSTCARD.alt; image.className = "postcard-image";
@@ -65,15 +67,13 @@ export function previewPostcard(blob: Blob, initial: PostcardDesign, render: (de
   }
   footer.append(download, copy); toolbar.append(choices.element, footer, status);
   dialog.append(header, viewport, toolbar, caption); document.body.append(dialog);
+  containFocus(dialog, () => dialog.close());
   const leave = () => dialog.close();
   addEventListener("pagehide", leave);
   dialog.addEventListener("close", () => {
     URL.revokeObjectURL(url); removeEventListener("pagehide", leave); dialog.remove(); trigger.focus();
   }, { once: true });
-  dialog.addEventListener("click", (event) => {
-    const bounds = dialog.getBoundingClientRect();
-    if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) dialog.close();
-  });
+  dismissOnBackdrop(dialog);
   document.querySelector<HTMLDetailsElement>(".scene-settings")!.open = false;
   dialog.showModal();
 }

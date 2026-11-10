@@ -41,7 +41,7 @@
 .world-drawer::backdrop { background: var(--color-scene-scrim); }
 /* Carved frame, shared by the Residents drawer and the settings panel:
    grain on the border box, parchment on the padding box, a dark lip between them. */
-.world-frame {
+.world-frame, .world-modal.world-frame {
   overflow: visible; border: var(--world-carved) solid transparent;
   background: linear-gradient(var(--world-paper), var(--world-paper)) padding-box,
     repeating-linear-gradient(var(--world-grain-angle), var(--world-wood) 0, var(--world-wood-light) var(--world-grain), var(--world-wood) calc(2 * var(--world-grain)), var(--world-wood-dark) calc(3 * var(--world-grain)), var(--world-wood) calc(4 * var(--world-grain))) border-box;
@@ -101,7 +101,6 @@
 .postcard-preview { border: var(--world-frame) solid var(--world-wood); }
 .postcard-footer .btn { width: auto; padding-inline: var(--space-3); }
 .postcard-footer .btn span { display: inline; }
-body:has(.scene-settings[open]) .residents-trigger { visibility: hidden; }
 .bubble { background: var(--world-paper); color: var(--world-ink); border-color: var(--world-edge); }
 .bubble::before { content: attr(data-name); display: block; color: var(--world-accent); font-weight: var(--weight-strong); }
 @media (max-width: 700px) {

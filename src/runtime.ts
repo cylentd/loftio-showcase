@@ -43,6 +43,8 @@ export class Runtime {
 
   update(delta: number, render = true): void {
     const { world, cast, residents, ambience, foliage, letter, puff, lighting } = this.scene;
+    letter.visible = this.settings.showCue && residents.includes(puff);
+    this.overlay.setCueVisible(letter.visible);
     const dt = motionStep(delta, { still: this.look.still, reduced: this.look.frozen, hidden: document.hidden, scene: true });
     this.clock += dt;
     lighting.update(dt, this.settings.lighting, this.look.frozen, this.clock, render);
@@ -83,7 +85,7 @@ export class Runtime {
 
   private approachMessage(): boolean {
     const { residents, puff } = this.scene;
-    if (!this.foregroundCarrier(puff.cast.id) || puff.held) { this.messageTrip = false; return false; }
+    if (!residents.includes(puff) || !this.foregroundCarrier(puff.cast.id) || puff.held) { this.messageTrip = false; return false; }
     if (puff.walking && (this.messageTrip || puff.climbing)) return false;
     if (!puff.walking && Math.hypot(puff.pos.x - PORTRAIT_MESSAGE_SPOT.x, puff.pos.y - PORTRAIT_MESSAGE_SPOT.y) <= 2) { this.messageTrip = false; return false; }
     if (!puff.walking && residents.filter(resident => resident.walking).length >= ROUTINE.maxMoving) return false;

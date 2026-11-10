@@ -78,8 +78,6 @@ async function start(intro: ReturnType<typeof installIntro>, features: readonly 
   const applySettings = () => {
     runtime.syncWander();
     runtime.update(0);
-    scene.letter.visible = settings.showCue;
-    overlay.setCueVisible(settings.showCue);
   };
   settings.subscribe(applySettings);
   installSceneSettings(settings, (trigger) => overlay.open(trigger));
@@ -88,8 +86,9 @@ async function start(intro: ReturnType<typeof installIntro>, features: readonly 
   const favorites = new FavoriteSpots(worldEl, look, settings, overlay, scene.favoriteScenery);
   const syncRoom = installRoomResize({ app, scene, runtime, settings, favorites, shell, scroller, applySettings });
   installPostcard(app);
-  const tray = mountSceneActions(makeNowPlaying(roomAudio, () => look.frozen), document.querySelector<HTMLElement>(".postcard-action")!, settings);
   const updateResidents = installResidents(scene, runtime, overlay, residentControls);
+  const tray = mountSceneActions(makeNowPlaying(roomAudio, () => look.frozen), document.querySelector<HTMLElement>(".postcard-action")!, settings,
+    document.querySelector<HTMLElement>('.residents-trigger')!);
   const installed = features.map((feature) => feature({ shell, app, scene, runtime, look, overlay, settings, audio: roomAudio }));
   if (params.has("debug")) installDebug(shell, app, scene, runtime, look);
   runtime.update(0);

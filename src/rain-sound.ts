@@ -1,13 +1,13 @@
 import { Soundtrack } from "./audio-model";
 import { RAIN_SOUND as COPY } from "./copy";
-import { RAIN_AUDIO } from "./rain-audio-data";
+import { RAIN_AUDIO, RAIN_SOURCE } from "./rain-audio-data";
 import { controlPanel } from "./controls";
 import { controlText } from "./settings-components";
 
 export function installRainSound(): Soundtrack {
   const audio = document.createElement("audio");
   audio.preload = "none"; audio.loop = true; audio.volume = RAIN_AUDIO.volume;
-  audio.src = import.meta.env.BASE_URL + "audio/Soft_Rain_barkenov_normalized.mp3";
+  audio.src = import.meta.env.BASE_URL + RAIN_SOURCE;
   const details = document.createElement("section");
   details.className = "scene-rain";
   const summary = document.createElement("h3");

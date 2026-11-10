@@ -13,7 +13,10 @@ type Release = (resident: Resident, velocity: { x: number; y: number }) => void;
 
 export class ResidentStacks {
   private piles: Pile<Resident>[] = [];
-  constructor(private scene: Scene, private release: Release, private land: (resident: Resident, now: number) => void, private sound?: StackSounds) {}
+  private elapsed = 0;
+  private now = 0;
+  private nextLimitNotice = 0;
+  constructor(private scene: Scene, private release: Release, private land: (resident: Resident, now: number) => void, private sound?: StackSounds, private onFull?: (resident: Resident) => void) {}
 
   contains(r: Resident): boolean { return this.piles.some(p => p.members.includes(r)); }
   /** Residents in the pile `r` stands in, or 0. */
@@ -24,7 +27,7 @@ export class ResidentStacks {
     return this.scene.residents.filter(r => {
       if (r === resident || r.walking || r.climbing) return false;
       const pile = this.piles.find(p => p.members.includes(r));
-      if (pile) return pile.members.at(-1) === r && pile.members.length < STACK.maxResidents;
+      if (pile) return pile.members.at(-1) === r;
       return !r.held && r.seatSupport.lift === 0 && r.pos.y >= PLACEMENT.back && r.pos.y <= PLACEMENT.front;
     });
   }
@@ -36,18 +39,36 @@ export class ResidentStacks {
 
   tryLand(resident: Resident, previous: FloorBody, current: FloorBody, moving: Set<Resident>): boolean {
     const tops = this.tops(resident).filter(r => !moving.has(r));
-    const id = airborneStack(previous, current, this.candidates(tops));
+    const id = airborneStack(previous, current, this.candidates(tops), true);
     const target = tops.find(r => r.cast.id === id);
+    if (target && this.rejectFull(resident, target)) return true;
     return target ? this.attach(resident, target) : false;
   }
 
-  tryPlace(resident: Resident, keyboard = false): boolean {
+  tryPlace(resident: Resident, keyboard = false): "stacked" | "full" | null {
     const tops = this.tops(resident), candidates = this.candidates(tops);
     const foot = { x: resident.pos.x, y: resident.pos.y - resident.lift };
     const nearest = keyboard ? candidates.filter(c => Math.hypot(c.x - foot.x, c.y - resident.pos.y) <= STACK.keyboardReach)
-      .sort((a, b) => Math.hypot(a.x - foot.x, a.y - resident.pos.y) - Math.hypot(b.x - foot.x, b.y - resident.pos.y))[0]?.id : chooseStack(foot, candidates);
+      .sort((a, b) => Math.hypot(a.x - foot.x, a.y - resident.pos.y) - Math.hypot(b.x - foot.x, b.y - resident.pos.y))[0]?.id : chooseStack(foot, candidates, true);
     const target = tops.find(r => r.cast.id === nearest);
-    return target ? this.attach(resident, target) : false;
+    if (!target) return null;
+    if (this.rejectFull(resident, target)) return "full";
+    return this.attach(resident, target) ? "stacked" : null;
+  }
+
+  private rejectFull(resident: Resident, target: Resident): boolean {
+    const pile = this.piles.find(p => p.members.includes(target));
+    if (!pile || pile.members.length < STACK.maxResidents) return false;
+    const side = resident.pos.x < target.pos.x ? -1 : 1;
+    const clearance = (resident.height * resident.aspect + target.height * target.aspect) / 2 + STACK.minTarget;
+    Object.assign(resident.pos, { x: target.pos.x + side * clearance, y: target.pos.y });
+    this.land(resident, this.now);
+    pile.age = 0;
+    if (this.elapsed >= this.nextLimitNotice) {
+      this.nextLimitNotice = this.elapsed + STACK.limitReminderMs;
+      this.onFull?.(target);
+    }
+    return true;
   }
 
   private attach(resident: Resident, target: Resident): boolean {
@@ -105,7 +126,9 @@ export class ResidentStacks {
     this.piles = this.piles.filter(p => p.members.length);
   }
 
-  update(dt: number, frozen: boolean, now = 0): void {
+  update(dt: number, frozen: boolean, now = this.now): void {
+    this.now = now;
+    if (!frozen) this.elapsed += dt;
     if (!frozen) this.dissolve(dt, now);
     for (const pile of this.piles) {
       if (!frozen) pile.age += dt;

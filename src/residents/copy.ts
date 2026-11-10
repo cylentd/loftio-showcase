@@ -1,10 +1,10 @@
 export const RESIDENT_COPY = {
-  title: 'Residents', close: 'Close', tabs: ['In the loft', 'Saved', 'Create'],
-  welcome: 'Welcome home', later: 'Save for later', remove: 'Remove from loft',
+  title: 'Residents', close: 'Close', tabs: ['In the loft', 'Collection', 'Create'],
+  welcome: 'Welcome home', invite: 'Invite in', later: 'Save for later', remove: 'Send home',
   ready: 'Someone’s arrived.', reveal: 'Open travelling basket', skip: 'Skip arrival',
   greeting: 'A little place to call home.', empty: 'Your saved residents will be here.',
-  originals: 'The original six are always at home.',
-  capacity: 'The loft has room for 12 created residents alongside the original six. Remove one from the loft to make space; its image stays saved.',
+  emptyLoft: 'The loft is quiet. Invite someone in from your collection.',
+  capacity: 'The loft has room for 12 created residents. Send one home to make space; they stay in your collection.',
   create: 'Bring to life',
   // Shown while a resident is being made. Online the image arrives through this page, so leaving it loses the image.
   creating: {
@@ -35,6 +35,8 @@ export const RESIDENT_COPY = {
 /** The Create panel's picture-card steps, in step order, then the summary card. Card labels come from the catalog.
  *  Tone (David, 2026-11-07): a designer-toy collectible for all ages, plain and never babyish. */
 export const WIZARD_COPY = {
+  pickForMe: 'Pick for me',
+  choices: (part: string) => part + ' choices',
   steps: ['Choose a creature', 'Pick a mood', 'Add a signature detail', 'Choose a palette'],
   parts: ['Creature', 'Mood', 'Detail', 'Palette'], // the summary's caption under each pick, in step order
   summary: 'Your design',

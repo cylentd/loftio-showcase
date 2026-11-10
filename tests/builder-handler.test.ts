@@ -57,7 +57,7 @@ test("one Create is one provider call that returns one image and its full record
   assert.equal(body.generation.requestId, "r1");
   assert.deepEqual(body.generation.userSelections, selections);
   assert.equal(body.generation.resolvedSelections.palette.colors.length, 3);
-  assert.equal(body.generation.promptVersion, "v4.1");
+  assert.equal(body.generation.promptVersion, "v4.2");
   assert.equal(body.generation.providerId, "fake");
   assert.equal(body.generation.modelId, "fake-model");
   assert.equal(body.generation.attempts, 1);
@@ -68,12 +68,16 @@ test("one Create is one provider call that returns one image and its full record
 });
 
 test("surprise choices come back resolved, never as surprise", async () => {
-  const { handle } = handlerWith(["ok"]);
+  const { handle, calls } = handlerWith(["ok"]);
   const all = { creature: SURPRISE, personality: SURPRISE, signatureDetail: SURPRISE, palette: null };
   const body = await (await handle(post({ requestId: "r2", selections: all }))).json();
   const resolved = body.generation.resolvedSelections;
   for (const field of ["creature", "personality", "signatureDetail", "palette"]) assert.notEqual(resolved[field].id, SURPRISE);
   assert.deepEqual(body.generation.userSelections, all);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0]!.prompt, /Invent an original creature/);
+  assert.match(calls[0]!.prompt, /Invent a distinctive personality/);
+  assert.match(calls[0]!.prompt, /Invent an unexpected signature detail/);
 });
 
 test("a repeated request id is answered once, whether it arrives during or after the first", async () => {

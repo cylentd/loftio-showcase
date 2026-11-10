@@ -14,8 +14,8 @@ export class LobbyFidget {
   private flights = new Map<Resident, FloorBody>();
   private stackable = new Set<Resident>();
   readonly stacks: ResidentStacks;
-  constructor(private scene: Scene, private look: Look, sound?: StackSounds) {
-    this.stacks = new ResidentStacks(scene, (r, v) => this.throwResident(r, v, false), (r, now) => this.land(r, now), sound);
+  constructor(private scene: Scene, private look: Look, sound?: StackSounds, onFull?: (resident: Resident) => void) {
+    this.stacks = new ResidentStacks(scene, (r, v) => this.throwResident(r, v, false), (r, now) => this.land(r, now), sound, onFull);
   }
 
   private view() {

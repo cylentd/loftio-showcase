@@ -25,7 +25,7 @@ test("the prompt carries the whimsical-not-realistic clarification and asks for 
 });
 
 test("the prompt version is recorded and moves past the v4 package it extends", () => {
-  assert.equal(PROMPT_VERSION, "v4.1");
+  assert.equal(PROMPT_VERSION, "v4.2");
 });
 
 test("only the style and range sheets are positive references; roster and diagnostics never are", () => {

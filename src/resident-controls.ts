@@ -27,6 +27,12 @@ class ResidentControls {
     this.menu();
   }
 
+  forget(resident: Resident): void {
+    if (this.held?.resident === resident) this.cancel();
+    this.runtime.play?.catch(resident, this.runtime.clock);
+    resident.putDown(true, false, this.runtime.clock);
+  }
+
   bind(resident: Resident): void {
     const button = this.overlay.residentButton(resident.cast.id);
     button.classList.add("resident-hit");

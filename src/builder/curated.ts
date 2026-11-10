@@ -3,6 +3,7 @@
 // Icons are sliced from the art sheets by scripts/slice_builder_icons.py into public/builder.
 import { CATALOG, type CatalogOption } from './catalog-data.ts';
 import type { SelectionField } from './selections.ts';
+import { POPULAR_CREATURES } from './picker-order.ts';
 
 export const CURATED = {
   creature: ['bunny', 'cat', 'puppy', 'fox', 'frog', 'penguin', 'tiny-dragon', 'little-ghost'],
@@ -15,6 +16,20 @@ const GROUPS: Record<SelectionField, readonly CatalogOption[]> = {
   creature: CATALOG.creatures, personality: CATALOG.personalities, signatureDetail: CATALOG.signatureDetails, palette: CATALOG.palettes,
 };
 const ICON_PREFIX: Partial<Record<SelectionField, string>> = { creature: 'creature', personality: 'personality', signatureDetail: 'detail' };
+
+export function catalogOptions(field: SelectionField): CatalogOption[] {
+  return [...GROUPS[field]];
+}
+
+export function hasMoreOptions(field: SelectionField): boolean {
+  return GROUPS[field].length > CURATED[field].length;
+}
+
+export function orderedPickerOptions(field: SelectionField, options: readonly CatalogOption[]): CatalogOption[] {
+  const preferred = field === 'creature' ? POPULAR_CREATURES : CURATED[field];
+  const ranks = new Map<string, number>(preferred.map((id, index) => [id, index]));
+  return [...options].sort((left, right) => (ranks.get(left.id) ?? preferred.length) - (ranks.get(right.id) ?? preferred.length));
+}
 
 /** The curated catalog entries for one step, in card order. */
 export function curatedOptions(field: SelectionField): CatalogOption[] {

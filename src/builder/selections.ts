@@ -1,8 +1,9 @@
 import { CATALOG, SURPRISE, type CatalogOption, type PaletteOption } from "./catalog-data.ts";
+import { CREATIVE_SURPRISE } from "./surprise-data.ts";
 
 /** What the user picked: catalog ids, `surprise`, or a null palette ("Loftio chooses"). */
 export type UserSelections = { creature: string; personality: string; signatureDetail: string; palette: string | null };
-/** What the prompt is built from: every choice concrete. */
+/** Prompt inputs: catalog choices or model-invention directives, not invented metadata. */
 export type ResolvedSelections = {
   creature: CatalogOption;
   personality: CatalogOption;
@@ -44,12 +45,12 @@ function pick<T extends CatalogOption>(group: readonly T[], id: string | null, r
   return chosen;
 }
 
-/** Resolves surprise and an omitted palette into concrete catalog entries. Call only on validated selections. */
+/** Call only on validated selections. Palette omission retains its automatic catalog choice. */
 export function resolveSelections(selections: UserSelections, rng: Rng): ResolvedSelections {
   return {
-    creature: pick(CATALOG.creatures, selections.creature, rng),
-    personality: pick(CATALOG.personalities, selections.personality, rng),
-    signatureDetail: pick(CATALOG.signatureDetails, selections.signatureDetail, rng),
+    creature: selections.creature === SURPRISE ? CREATIVE_SURPRISE.creature : pick(CATALOG.creatures, selections.creature, rng),
+    personality: selections.personality === SURPRISE ? CREATIVE_SURPRISE.personality : pick(CATALOG.personalities, selections.personality, rng),
+    signatureDetail: selections.signatureDetail === SURPRISE ? CREATIVE_SURPRISE.signatureDetail : pick(CATALOG.signatureDetails, selections.signatureDetail, rng),
     palette: pick(CATALOG.palettes, selections.palette, rng),
   };
 }
