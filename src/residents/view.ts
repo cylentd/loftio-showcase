@@ -92,6 +92,7 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   const adapter = sceneResidents(scene, runtime, overlay, controls, registry, () => render());
   const showArrival = arrivalReveal(chrome, {
     welcome: async (entry, saved, skip) => { await adapter.add(entry, saved, true, skip); render(); },
+    rename: (id, name) => registry.rename(id, name),
     later: id => { registry.defer(id); render(); }, failure,
   });
   const reveal = (entry: ResidentEntry) => {

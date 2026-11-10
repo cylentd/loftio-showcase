@@ -8,6 +8,7 @@ import type { ResidentEntry } from './registry';
 import { RESIDENT_COPY as COPY } from './copy';
 import { icon } from '../icons';
 import type { OriginalEntry } from './original-lineup';
+import { arrivalNameField } from './name-field';
 
 // In the loft: the house; Saved: a kept letter; Create: a new leaf. Same stroke family as Settings.
 const TAB_ICONS = ['room', 'letter', 'leaf'] as const;
@@ -54,7 +55,7 @@ export function renderResidents(panels: HTMLElement[], state: BuilderState, entr
   }
   for (const entry of entries) {
     const saved = state.kept.find(item => item.id === entry.savedId); if (!saved) continue;
-    const card = () => rosterCard(entry.id, saved.resolvedSelections.creature.label, imageSource(saved.image), entry.inRoom,
+    const card = () => rosterCard(entry.id, entry.name ?? saved.resolvedSelections.creature.label, imageSource(saved.image), entry.inRoom,
       entry.inRoom ? () => remove(entry.id) : () => reveal(entry));
     if (entry.inRoom) panels[0]!.append(card());
     panels[1]!.append(card());
@@ -70,6 +71,7 @@ export function renderResidents(panels: HTMLElement[], state: BuilderState, entr
 
 export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbacks: {
   welcome(entry: ResidentEntry, saved: SavedCharacter, skip: boolean): Promise<void>;
+  rename(id: string, name: string): void;
   later(id: string): void; failure(error: unknown): void;
 }) {
   const arrival = worldDrawer(COPY.ready, COPY.close); arrival.dialog.classList.add('resident-reveal', 'world-modal');
@@ -84,17 +86,30 @@ export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbac
     const greeting = document.createElement('p'); greeting.textContent = COPY.greeting;
     const error = document.createElement('p'); error.setAttribute('role', 'alert');
     const failed = (failure: unknown) => { error.textContent = failure instanceof Error ? failure.message : COPY.actionFailure; callbacks.failure(failure); };
-    const welcome = worldButton(COPY.welcome, () => {
-      if (joining) return; joining = true; welcome.disabled = true;
-      void callbacks.welcome(entry, saved, skip).then(() => arrival.dialog.close()).catch(failed)
-        .finally(() => { joining = false; welcome.disabled = false; });
+    const form = document.createElement('form'); form.className = 'resident-arrival-form';
+    const naming = arrivalNameField(entry);
+    const welcome = document.createElement('button'); welcome.type = 'submit';
+    welcome.textContent = COPY.welcome; welcome.className = 'world-button world-primary';
+    const persist = () => {
+      const name = naming.read(); if (name === null) return null;
+      callbacks.rename(entry.id, name); return { ...entry, name };
+    };
+    form.addEventListener('submit', event => {
+      event.preventDefault(); if (joining) return;
+      try {
+        const named = persist(); if (!named) return;
+        joining = true; naming.input.disabled = welcome.disabled = later.disabled = true;
+        void callbacks.welcome(named, saved, skip).then(() => arrival.dialog.close()).catch(failed)
+          .finally(() => { joining = false; naming.input.disabled = welcome.disabled = later.disabled = false; });
+      } catch (failure) { failed(failure); }
     });
-    welcome.classList.add('world-primary');
     const later = worldButton(COPY.later, () => {
-      try { callbacks.later(entry.id); arrival.dialog.close(); } catch (failure) { failed(failure); }
+      if (joining) return;
+      try { if (!persist()) return; callbacks.later(entry.id); arrival.dialog.close(); } catch (failure) { failed(failure); }
     });
     const skipButton = worldButton(COPY.skip, () => { skip = true; image.classList.remove('arrival-peek'); skipButton.hidden = true; });
-    arrival.content.replaceChildren(basket, greeting, error, welcome, later, skipButton);
+    form.append(naming.field, error, welcome, later, skipButton);
+    arrival.content.replaceChildren(basket, greeting, form);
     if (saved.image.mime === 'image/webp') {
       const original = document.createElement('a'); original.href = saved.image.originalUrl; original.download = 'loftio-resident.png'; original.textContent = COPY.original;
       arrival.content.append(original);

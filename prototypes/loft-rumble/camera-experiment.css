@@ -1,0 +1,11 @@
+#camera-tools{--lab-bg:#20352f;--lab-ink:#f4eddb;--lab-edge:#b4a17b;--lab-gap:8px;--lab-radius:10px;--lab-width:270px;position:fixed;right:var(--lab-gap);bottom:var(--lab-gap);z-index:100;width:var(--lab-width);max-width:calc(100vw - var(--lab-gap)*2);font:12px/1.4 Nunito,system-ui,sans-serif;color:var(--lab-ink);background:var(--lab-bg);border:1px solid var(--lab-edge);border-radius:var(--lab-radius);box-shadow:0 4px 20px #0004}
+#camera-tools:not([open]){width:auto}
+#camera-tools summary{padding:var(--lab-gap) calc(var(--lab-gap)*1.5);cursor:pointer;font-weight:800;min-height:36px}
+#camera-tools .camera-controls{padding:0 var(--lab-gap) var(--lab-gap);display:grid;gap:var(--lab-gap)}
+#camera-tools label{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:var(--lab-gap)}
+#camera-tools select,#camera-tools button{font:inherit;color:var(--lab-ink);background:var(--lab-bg);border:1px solid var(--lab-edge);border-radius:var(--lab-radius);min-width:0;min-height:36px;padding:4px 6px}
+#camera-tools input{accent-color:var(--lab-edge);width:100%;min-width:0}
+#camera-tools input[type=checkbox]{width:auto;justify-self:start}
+#camera-tools .camera-buttons{display:flex;flex-wrap:wrap;gap:var(--lab-gap)}
+#camera-tools p{margin:0;opacity:.8}
+#camera-tools :focus-visible{outline:2px solid var(--lab-ink);outline-offset:2px}

@@ -1,9 +1,12 @@
+import { residentName } from './names.ts';
+import { RESIDENT_COPY as COPY } from './copy.ts';
+
 export const GENERATED_CAPACITY = 12; // Additional residents; never evicts the six originals.
 const STORAGE_KEY = 'loftio-residents-v1';
 export type Position = { x: number; y: number };
 export type ResidentEntry = {
   id: string; savedId: string; inRoom: boolean; arrival: 'waiting' | 'saved' | 'welcomed';
-  positions: Partial<Record<'desktop' | 'portrait', Position>>;
+  positions: Partial<Record<'desktop' | 'portrait', Position>>; name?: string;
 };
 type Storage = { getItem(key: string): string | null; setItem(key: string, value: string): void };
 const point = (value: any) => value && Number.isFinite(value.x) && Number.isFinite(value.y);
@@ -18,6 +21,7 @@ function restore(raw: string | null): ResidentEntry[] {
       || typeof entry.inRoom !== 'boolean' || !['waiting', 'saved', 'welcomed'].includes(entry.arrival)
       || !entry.positions || typeof entry.positions !== 'object' || ids.has(entry.id) || savedIds.has(entry.savedId)
       || Object.entries(entry.positions).some(([room, position]) => !['desktop', 'portrait'].includes(room) || !point(position))) throw Error('Invalid resident registry');
+    if ('name' in entry && residentName(entry.name) !== entry.name) throw Error(COPY.nameInvalid);
     ids.add(entry.id); savedIds.add(entry.savedId);
   }
   return value.residents;
@@ -48,6 +52,10 @@ export function residentRegistry(storage: Storage, newId: () => string, key = ST
       const entry = residents.find(entry => entry.id === id);
       if (!entry || entry.inRoom || residents.filter(item => item.inRoom).length >= GENERATED_CAPACITY) return false;
       change(id, { inRoom: true, arrival: 'welcomed' }); return true;
+    },
+    rename(id: string, value: string) {
+      if (!residents.some(entry => entry.id === id)) throw Error(COPY.nameMissing);
+      change(id, { name: residentName(value) });
     },
     remove(id: string) { change(id, { inRoom: false }); },
     defer(id: string) { change(id, { arrival: 'saved' }); },

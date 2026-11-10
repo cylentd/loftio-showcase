@@ -1,0 +1,3 @@
+.roster .card.stunned{border-color:var(--warning);box-shadow:none}
+.roster .card.stunned .portrait{filter:grayscale(1);opacity:var(--slow-saturate)}
+.loft-art .roster .card.stunned small{color:var(--warning)}

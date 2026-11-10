@@ -1,11 +1,13 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
+import { rumbleRelease } from "./build/rumble-release.mjs";
 
 const page = (name: string) => fileURLToPath(new URL(`showcase/${name}`, import.meta.url));
 
 // The public showcase: its pages live in showcase/ and it builds to dist-showcase/ (the export builds to dist/ with
 // --outDir). Static build viewed through the shared devserver or any host, so every URL is relative.
 export default defineConfig({
+  plugins: [rumbleRelease()],
   root: "showcase",
   publicDir: "../public",
   base: "./",

@@ -1,4 +1,9 @@
+const CREATING = 'Close this and keep playing. Your resident will arrive in the loft in about a minute.';
+
 export const RESIDENT_COPY = {
+  nameLabel: 'Name', nameHint: 'Up to 20 characters. You can change the suggestion.',
+  nameInvalid: 'Choose a name with 1 to 20 characters and no control characters.',
+  nameMissing: 'Could not find that saved resident.',
   title: 'Residents', close: 'Close', tabs: ['In the loft', 'Collection', 'Create'],
   welcome: 'Welcome home', invite: 'Invite in', later: 'Save for later', remove: 'Send home',
   ready: 'Someone’s arrived.', reveal: 'Open travelling basket', skip: 'Skip arrival',
@@ -6,11 +11,10 @@ export const RESIDENT_COPY = {
   emptyLoft: 'The loft is quiet. Invite someone in from your collection.',
   capacity: 'The loft has room for 12 created residents. Send one home to make space; they stay in your collection.',
   create: 'Bring to life',
-  // Shown while a resident is being made. Online the image arrives through this page, so leaving it loses the image.
   creating: {
-    mock: 'Bringing your design to life. You can close this drawer.',
-    local: 'Bringing your design to life. You can close this drawer or leave the page; it keeps going.',
-    online: 'Bringing your design to life. You can close this drawer, but keep this page open until it arrives.',
+    mock: CREATING,
+    local: CREATING,
+    online: CREATING,
   },
   preparing: 'Your image is saved. Getting it ready for the loft…',
   reconnect: 'Reconnect', retryPreparation: 'Retry preparation',

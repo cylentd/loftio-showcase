@@ -1,0 +1,227 @@
+@import "../../src/tokens.css";
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('../../public/fonts/nunito-latin.woff2') format('woff2');
+}
+
+:root.loft-art {
+  color-scheme: dark;
+  --font-sans: var(--font-body);
+  --foreground: var(--scene-actions-ink);
+  --background: #202a34;
+  --card: var(--scene-actions-bg);
+  --secondary: var(--scene-actions-bg);
+  --primary: #e1bd76;
+  --muted-foreground: var(--scene-actions-muted);
+  --border: var(--scene-actions-edge);
+  --track: var(--color-surface-sunk);
+  --good: #70c894;
+  --warning: #efba60;
+  --chip: #c48d46;
+  --danger: #ee756e;
+  --pending: #7b8b9b;
+  --art-page-edge: var(--color-bg);
+  --art-ring-inset: -3px;
+  --art-border-size: 2px;
+  --art-sprite-finish: contrast(1.06) saturate(.92);
+  --art-danger-surface: color-mix(in srgb, var(--danger) 14%, var(--controls-bg));
+  --rumble-title-size: clamp(24px, calc(var(--col, 360px) * .088), 32px);
+  --rumble-kicker-size: 12px;
+  --rumble-title-spacing: -.045em;
+  --rumble-title-lean: -5deg;
+  --rumble-title-edge: 1px;
+  --rumble-title-depth: 0 3px 0 var(--controls-accent);
+  --hero-card-footer: 4px;
+  --hero-cutout-height: calc(var(--portrait) + var(--gap) * 3 - var(--hero-card-footer));
+  --hero-cutout-bleed: 0px;
+  --hero-cutout-lift: 0px;
+  --hero-name-size: clamp(14px, calc(var(--col, 360px) * .035), 18px);
+  --hero-detail-size: 12px;
+  --hero-card-gap: 0px;
+  --hero-frame-radius: 14px;
+  --hero-cutout-shadow: drop-shadow(0 4px 2px var(--controls-edge));
+}
+.loft-art body { background: var(--art-page-edge); }
+.loft-art main {
+  background: var(--background);
+  box-shadow: var(--scene-actions-shadow);
+}
+.loft-art .top h1 {
+  display: grid;
+  justify-items: start;
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: var(--weight-strong);
+  color: var(--scene-actions-ink);
+}
+.loft-art .rumble-title-kicker {
+  font-size: var(--rumble-kicker-size);
+  line-height: 1;
+  letter-spacing: var(--tracking-label);
+}
+.loft-art .rumble-title-name {
+  font-size: var(--rumble-title-size);
+  font-style: italic;
+  line-height: 1;
+  letter-spacing: var(--rumble-title-spacing);
+  transform: skewX(var(--rumble-title-lean));
+  -webkit-text-stroke: var(--rumble-title-edge) var(--controls-ink);
+  paint-order: stroke fill;
+  text-shadow: var(--rumble-title-depth);
+}
+.loft-art .battle-status { font-variant-numeric: tabular-nums; }
+.loft-art #pause, .loft-art #menu-toggle, .loft-art #help-toggle {
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: 0;
+  color: var(--scene-actions-ink);
+  background: var(--scene-actions-bg);
+  border: var(--border-width) solid var(--scene-actions-edge);
+  border-radius: var(--chip-radius);
+  box-shadow: var(--scene-actions-shadow);
+}
+.loft-art .top button:hover, .loft-art .top button:focus-visible,
+.loft-art .top button[aria-pressed=true], .loft-art .top button[aria-expanded=true] {
+  background: var(--scene-actions-hover);
+  border-color: var(--scene-actions-ink);
+}
+.loft-art button:focus-visible, .loft-art :is(#arena-skin, #stage-layout):focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+.loft-art #arena {
+  border-color: var(--controls-edge);
+  border-width: var(--border-width);
+  border-radius: var(--controls-panel-radius);
+  box-shadow: var(--card-shadow);
+}
+.loft-art .roster {
+  --foreground: var(--controls-ink);
+  --muted-foreground: var(--controls-muted);
+}
+.loft-art .roster .card {
+  position: relative;
+  isolation: isolate;
+  gap: var(--hero-card-gap);
+  padding: 0 var(--border-width) var(--hero-card-footer);
+  overflow: visible;
+  cursor: default;
+  color: var(--controls-ink);
+  background: var(--controls-bg);
+  border-color: var(--controls-edge);
+  border-radius: var(--hero-frame-radius);
+  box-shadow: var(--bubble-rim);
+}
+.loft-art .roster b {
+  width: 100%;
+  color: var(--controls-surface);
+  background: var(--controls-accent);
+  font-size: var(--hero-name-size);
+  font-weight: var(--weight-strong);
+  line-height: normal;
+}
+.loft-art .roster em, .loft-art .roster small {
+  font-size: var(--hero-detail-size);
+  line-height: normal;
+}
+.loft-art .roster small {
+  color: var(--controls-accent);
+  font-weight: var(--weight-strong);
+}
+.loft-art .roster .portrait {
+  width: 100%;
+  height: var(--hero-cutout-height);
+  overflow: visible;
+  border-radius: var(--hero-frame-radius);
+  background: transparent;
+}
+.loft-art .roster .portrait img {
+  width: calc(100% + var(--hero-cutout-bleed));
+  height: var(--hero-cutout-height);
+  max-width: none;
+  object-fit: cover;
+  object-position: center top;
+  transform: translateY(var(--hero-cutout-lift));
+  border-radius: 0;
+  background: transparent;
+  filter: var(--art-sprite-finish) var(--hero-cutout-shadow);
+}
+.loft-art .roster .portrait::before {
+  content: '';
+  position: absolute;
+  inset: var(--art-ring-inset);
+  z-index: 1;
+  pointer-events: none;
+  border: 0;
+  border-radius: inherit;
+}
+.loft-art .roster .portrait::after { border-radius: inherit; }
+.loft-art .roster .badge {
+  top: 0;
+  z-index: 2;
+  color: var(--controls-ink);
+}
+.loft-art .roster .card.ready {
+  animation: none;
+  border-color: var(--warning);
+  box-shadow: var(--bubble-rim);
+}
+.loft-art .roster .card.ready .portrait::before { border-color: var(--warning); }
+.loft-art .roster .card.ready b {
+  color: var(--controls-ink);
+  background: var(--warning);
+}
+.loft-art .roster .card.danger {
+  border-color: var(--danger);
+  background: var(--art-danger-surface);
+}
+.loft-art #menu, .loft-art #help-panel, .loft-art #tip {
+  color: var(--controls-ink);
+  background: var(--controls-bg);
+  border-color: var(--controls-edge);
+  border-radius: var(--controls-panel-radius);
+  box-shadow: var(--controls-panel-shadow);
+}
+.loft-art #menu {
+  max-height: calc(100svh - var(--tap-min) * 2 - var(--pad) * 2);
+  overflow-y: auto;
+}
+.loft-art #help-panel { line-height: var(--line-body); }
+.loft-art #menu button, .loft-art #tip button {
+  min-height: var(--tap-min);
+  color: var(--controls-ink);
+  background: var(--controls-surface);
+  border-color: var(--controls-edge);
+  border-radius: var(--chip-radius);
+  box-shadow: var(--bubble-rim);
+  font-weight: var(--weight-strong);
+}
+.loft-art #menu button:hover, .loft-art #tip button:hover {
+  background: var(--controls-hover);
+}
+.loft-art #menu button[aria-pressed=true] {
+  color: var(--controls-accent);
+  background: var(--controls-selected);
+  box-shadow: none;
+}
+.loft-art #menu a { color: var(--controls-accent); }
+.loft-art .arena-skin-control {
+  display: grid;
+  gap: var(--gap);
+  color: var(--controls-muted);
+  font-size: var(--small);
+}
+.loft-art :is(#arena-skin, #stage-layout) {
+  min-height: var(--tap-min);
+  max-width: 100%;
+  padding: var(--gap);
+  color: var(--controls-ink);
+  background: var(--controls-surface);
+  border: var(--border-width) solid var(--controls-edge);
+  border-radius: var(--radius-1);
+  font: inherit;
+}

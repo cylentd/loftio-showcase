@@ -1,0 +1,137 @@
+:root.loft-art {
+  --hero-sprout-ink: #385542;
+  --hero-sprout-surface: #dce8d5;
+  --hero-chomper-ink: #5d4268;
+  --hero-chomper-surface: #e8dff0;
+  --hero-custom-ink: #35576f;
+  --hero-custom-surface: #dce9f2;
+  --hero-mark-strength: 12%;
+  --hero-trait-height: 32px;
+  --hero-chip-height: 22px;
+  --hero-glyph-size: 14px;
+  --hero-chip-gap: 2px;
+  --hero-state-size: 20px;
+  --hero-special-size: 24px;
+  --hero-state-inset: 3px;
+  --hero-busy-opacity: .55;
+  --hero-charge-edge: 2px;
+  --hero-ignite-duration: .45s;
+  --hero-ignite-spread: 5px;
+}
+.loft-art .roster .card {
+  --hero-ink: var(--controls-accent);
+  --hero-surface: var(--controls-selected);
+  --hero-mark: color-mix(in srgb, var(--hero-ink) var(--hero-mark-strength), transparent);
+}
+.loft-art .roster [data-resident="sprout"] {
+  --hero-ink: var(--hero-sprout-ink);
+  --hero-surface: var(--hero-sprout-surface);
+  --hero-pattern: radial-gradient(ellipse at 12% 75%, var(--hero-mark) 0 12%, transparent 13%), radial-gradient(ellipse at 85% 22%, var(--hero-mark) 0 14%, transparent 15%);
+}
+.loft-art .roster [data-resident="chomper"] {
+  --hero-ink: var(--hero-chomper-ink);
+  --hero-surface: var(--hero-chomper-surface);
+  --hero-pattern: repeating-radial-gradient(circle at 70% 60%, transparent 0 14%, var(--hero-mark) 15% 18%, transparent 19% 26%);
+}
+.loft-art .roster [data-resident="custom"] {
+  --hero-ink: var(--hero-custom-ink);
+  --hero-surface: var(--hero-custom-surface);
+  --hero-pattern: radial-gradient(circle at 12% 30%, var(--hero-mark) 0 12%, transparent 13%), radial-gradient(circle at 80% 75%, var(--hero-mark) 0 20%, transparent 21%);
+}
+.loft-art .roster .portrait::before {
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--hero-frame-radius) var(--hero-frame-radius) 0 0;
+  background-color: var(--hero-surface);
+  background-image: var(--hero-pattern);
+}
+.loft-art .roster b { background: var(--hero-ink); }
+.loft-art .roster em {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--hero-trait-height);
+  max-width: 100%;
+}
+.loft-art .roster .trait-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hero-chip-gap);
+  min-height: var(--hero-chip-height);
+  padding: 0 var(--hero-chip-gap);
+  border: var(--border-width) solid var(--controls-edge);
+  border-radius: var(--chip-radius);
+  color: var(--controls-ink);
+  background: var(--controls-surface);
+  white-space: nowrap;
+}
+.loft-art .roster .trait-chip svg {
+  flex-shrink: 0;
+  width: var(--hero-glyph-size);
+  height: var(--hero-glyph-size);
+}
+.loft-art .roster small {
+  position: absolute;
+  top: var(--hero-state-inset);
+  left: var(--hero-state-inset);
+  z-index: 2;
+  width: var(--hero-state-size);
+  height: var(--hero-state-size);
+  place-items: center;
+  border-radius: var(--chip-radius);
+}
+.loft-art .roster small > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.loft-art .roster small svg {
+  visibility: visible;
+  width: var(--hero-glyph-size);
+  height: var(--hero-glyph-size);
+}
+.loft-art .roster .card:not([data-motion="available"]) small {
+  color: var(--controls-surface);
+  background: var(--scene-actions-bg);
+}
+.loft-art .roster .card[data-motion="moving"] .portrait img,
+.loft-art .roster .card[data-motion="recharging"] .portrait img {
+  opacity: var(--hero-busy-opacity);
+}
+.loft-art .roster .badge {
+  top: var(--hero-state-inset);
+  right: var(--hero-state-inset);
+  left: auto;
+  width: var(--hero-special-size);
+  height: var(--hero-special-size);
+  padding: var(--hero-state-inset);
+  transform: none;
+  border-radius: var(--chip-radius);
+  font-size: 0;
+  box-shadow: 0 0 0 var(--border-width) var(--controls-ink);
+}
+.loft-art .roster .badge svg { width: 100%; height: 100%; }
+.loft-art .roster .card.ready::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border: var(--hero-charge-edge) solid var(--warning);
+  border-radius: inherit;
+  animation: special-ignite var(--hero-ignite-duration) ease-out 1;
+}
+.loft-art .roster .card.danger.ready::after { border-color: var(--danger); }
+.loft-art .roster .card.danger .portrait::before { background-color: var(--art-danger-surface); }
+@keyframes special-ignite {
+  from { box-shadow: 0 0 0 var(--hero-ignite-spread) color-mix(in srgb, var(--warning) 40%, transparent); }
+  to { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loft-art .roster .card.ready::after,
+  .loft-art .roster .card.ping .portrait { animation: none; }
+}

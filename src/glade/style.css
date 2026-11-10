@@ -1,0 +1,19 @@
+@import './tokens.css';
+.glade-sign, .glade-panel { font: var(--glade-body-size)/var(--glade-line-height) var(--font-body); }
+.glade-sign { position: fixed; z-index: var(--glade-layer); top: max(var(--glade-inset), env(safe-area-inset-top)); left: max(var(--glade-inset), env(safe-area-inset-left)); min-height: var(--glade-target); padding: 0 var(--glade-padding); border: var(--glade-border) solid var(--paper-edge); border-radius: var(--glade-sign-radius); background: var(--paper); color: var(--ink); box-shadow: var(--glade-shadow); cursor: pointer; font-weight: 800; }
+.glade-panel { box-sizing: border-box; width: min(var(--glade-width), calc(100% - var(--glade-gap) - var(--glade-gap))); max-height: calc(100dvh - var(--glade-gap) - var(--glade-gap)); padding: var(--glade-padding); border: var(--glade-border) solid var(--paper-edge); border-radius: var(--glade-radius); background: var(--paper); color: var(--ink); box-shadow: var(--glade-shadow); overflow-y: auto; scrollbar-color: var(--paper-edge) var(--paper); }
+.glade-panel::backdrop { background: var(--glade-scrim); }
+.glade-close { display: block; margin-left: auto; min-height: var(--glade-target); padding: 0 var(--glade-gap); border: var(--glade-border) solid var(--paper-edge); border-radius: var(--glade-radius); background: var(--paper-sunk); color: var(--ink); font: inherit; cursor: pointer; }
+.glade-header { display: flex; align-items: center; justify-content: space-between; gap: var(--glade-gap); }
+.glade-logo { display: block; width: var(--glade-logo-width); height: auto; }
+.glade-title { font-size: var(--glade-title-size); margin: var(--glade-gap) 0 0; text-align: center; }
+.glade-intro { text-align: center; margin: 0 0 var(--glade-padding); color: var(--ink-muted); }
+.glade-activity { overflow: hidden; border: var(--glade-border) solid var(--paper-edge); border-radius: var(--glade-radius); background: var(--paper-sunk); }
+.glade-art { display: block; width: 100%; height: var(--glade-art-height); object-fit: cover; }
+.glade-visual { position: relative; }
+.glade-boss { position: absolute; height: var(--glade-boss-height); width: auto; left: 50%; bottom: 0; transform: translateX(-50%); }
+.glade-activity-body { padding: var(--glade-padding); }
+.glade-activity-title { margin: 0; font-size: var(--glade-heading-size); }
+.glade-description { margin: var(--glade-gap) 0; }
+.glade-play { display: block; padding: var(--glade-gap); border-radius: var(--glade-radius); background: var(--controls-accent); color: var(--controls-on-accent); text-align: center; text-decoration: none; font-weight: 800; }
+.glade-sign:focus-visible, .glade-close:focus-visible, .glade-play:focus-visible { outline: var(--glade-focus-width) solid var(--ink-focus); outline-offset: var(--glade-focus-gap); }

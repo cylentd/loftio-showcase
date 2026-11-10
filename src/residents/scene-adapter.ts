@@ -62,7 +62,7 @@ export function sceneResidents(scene: Scene, runtime: Runtime, overlay: Overlay,
           motion: motionFor(saved.resolvedSelections.creature.id) };
         const resident = new Resident(cast, texture, scene.dot,
           { shadow: css('--grove-shadow'), tintFront: css('--grove-tint-front'), tintBack: css('--grove-tint-back') }, seeded(entry.id.length));
-        overlay.addResident(entry.id, saved.resolvedSelections.creature.label, () => { if (!runtime.look.frozen) resident.play('press'); }, RESIDENT_COPY.greeting);
+        overlay.addResident(entry.id, entry.name ?? saved.resolvedSelections.creature.label, () => { if (!runtime.look.frozen) resident.play('press'); }, RESIDENT_COPY.greeting);
         scene.residents.push(resident); scene.cast.addChild(resident.root); controls.bind(resident);
         // Membership is recorded only once the sprite exists, so a failed build can be retried.
         if (welcome) {

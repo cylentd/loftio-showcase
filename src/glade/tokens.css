@@ -1,0 +1,22 @@
+:root {
+  --glade-gap: 1rem;
+  --glade-inset: 1rem;
+  --glade-padding: 1.25rem;
+  --glade-width: 31rem;
+  --glade-radius: 1.5rem;
+  --glade-sign-radius: 0.5rem 1rem 1rem 0.5rem;
+  --glade-logo-width: 8rem;
+  --glade-boss-height: 90%;
+  --glade-title-size: 2rem;
+  --glade-heading-size: 1.5rem;
+  --glade-body-size: 1rem;
+  --glade-line-height: 1.5;
+  --glade-target: 2.75rem;
+  --glade-art-height: 10rem;
+  --glade-border: 1px;
+  --glade-focus-width: 3px;
+  --glade-focus-gap: 3px;
+  --glade-shadow: 0 0.5rem 2rem rgb(28 15 10 / 0.3);
+  --glade-scrim: rgb(28 15 10 / 0.72);
+  --glade-layer: 12;
+}

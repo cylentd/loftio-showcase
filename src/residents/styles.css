@@ -60,6 +60,14 @@
 .resident-reveal img { display: block; width: 100%; max-height: 40dvh; object-fit: contain; }
 .resident-reveal .world-content { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
 .resident-reveal p { width: 100%; text-align: center; }
+.resident-arrival-form { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); width: 100%; }
+.resident-name { display: grid; gap: var(--space-2); width: 100%; min-width: 0; }
+.resident-name label { font-weight: var(--weight-strong); }
+.resident-name input { box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--tap-min); padding: var(--space-2) var(--space-3);
+  border: var(--world-lip) solid var(--world-wood-dark); border-radius: var(--world-radius); background: var(--world-paper); color: var(--world-ink); font: inherit; }
+.resident-name input:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
+.resident-reveal .resident-name p { margin: 0; text-align: left; line-height: var(--line-body); color: var(--world-muted); }
+.resident-reveal .resident-name [role="alert"] { color: var(--world-ink); }
 .world-drawer :is([role="status"], [role="alert"]):empty { margin: 0; }
 .resident-reveal a { color: var(--world-accent); min-height: var(--tap-min); display: inline-flex; align-items: center; }
 .arrival-peek { animation: arrival-peek var(--arrival-duration) ease-out both; }
