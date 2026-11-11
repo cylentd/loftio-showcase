@@ -3,7 +3,7 @@ import { canStand, floorOf, separate, type Occupant, type SpaceBody } from "./pe
 import { heightAt, type Resident } from "./resident.ts";
 import { surfaceAt } from "./resident-movement.ts";
 
-const occupant = (r: Resident): Occupant => ({ surface: surfaceAt(r.pos), held: r.held, walking: r.walking, paused: r.stopped,
+const occupant = (r: Resident): Occupant => ({ surface: surfaceAt(r.pos), held: r.held || r.falling, walking: r.walking, paused: r.stopped,
   climbing: r.climbing, posedByPlay: r.posedByPlay });
 
 /** The room's per-frame pass: gives every eligible resident a footprint from its on-screen size, then nudges overlaps

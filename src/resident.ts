@@ -3,7 +3,7 @@ import type { CastMember, Point } from "./cast";
 import { DEPTH, HOP, IDLE, SHADOW, TURN } from "./tune";
 import { Turn } from "./turn-pose";
 import { PLACEMENT, WANDER } from "./resident-movement-data";
-import { landingPose, residentDepth, residentSeat } from "./resident-movement";
+import { fallDrop, fallEndMs, fallMs, fallPose, landingPose, residentDepth, residentSeat } from "./resident-movement";
 import { travelRoute } from "./travel-route";
 import { TRAVEL } from "./travel-data";
 import { ladderPose } from "./ladder-pose";
@@ -16,7 +16,8 @@ import { cloudPose } from "./cloud-pose";
 import { touchPose } from "./tactile";
 import { TACTILE } from "./tactile-constants";
 
-type Action = { kind: "hop" | "look" | "wiggle" | "nod" | "press" | "settle"; t: number; dur: number };
+/** `drop`: for a fall, the world px from the release height down to the feet. */
+type Action = { kind: "hop" | "look" | "wiggle" | "nod" | "press" | "settle" | "fall"; t: number; dur: number; drop?: number };
 type Palette = { shadow: string; tintFront: string; tintBack: string };
 type ShadowStyle = typeof SHADOW & { offsetY?: number };
 type RenderStyle = { shadowTexture?: Texture; shadow?: ShadowStyle; airShadowTexture?: Texture; airShadow?: ShadowStyle; seatSupport?: boolean };
@@ -184,6 +185,15 @@ export class Resident {
     if (animate) this.play("settle");
   }
 
+  /** Put down at its landing spot after a release over thin air at `from`: drawn falling from there to its feet, then squashing. */
+  fall(from: Point, carried = true): void {
+    const drop = fallDrop(from, this.pos, carried ? this.height : 0);
+    if (drop) this.action = { kind: "fall", t: 0, dur: fallEndMs(drop), drop };
+  }
+
+  /** In the air after a release, before its feet touch down. */
+  get falling(): boolean { return this.action?.kind === "fall" && this.action.t < fallMs(this.action.drop ?? 0); }
+
   resetHome(): void {
     this.carryOrigin = null;
     this.carriedMotion = null;
@@ -234,7 +244,7 @@ export class Resident {
   }
 
   walkTo(target: Point, to: "home" | "interest", ladderAvailable = true, seatClaims: readonly Point[] = []): boolean {
-    if (!seatAvailable(target, seatClaims)) return false;
+    if (this.falling || !seatAvailable(target, seatClaims)) return false;
     const route = travelRoute(this.pos, target);
     if (!route.length || (!ladderAvailable && route.some(leg => leg.motion === "climb"))) return false;
     this.hops = [{ ...this.pos, climb: false }];
@@ -255,6 +265,7 @@ export class Resident {
   }
 
   play(kind: Action["kind"]): void {
+    if (this.falling) return; // a nod or press never cuts a fall short
     if (this.walking) {
       this.queued = kind; // played on arrival, so a nod asked for mid-walk still happens
       return;
@@ -278,6 +289,7 @@ export class Resident {
     }
     if (this.paused) return;
     if (reduced) {
+      if (this.action?.kind === "fall") this.action = null;
       this.turn.snap(this.facing);
       this.layout(0, 0);
       return;
@@ -406,6 +418,7 @@ export class Resident {
 
   private actionPose(kind: Action["kind"], p: number, h: number) {
     if (kind === "settle") { const pose = landingPose(p); return { ...pose, lift: pose.lift * h }; }
+    if (kind === "fall") return fallPose(this.action?.t ?? 0, this.action?.drop ?? 0);
     if (kind === "hop") return this.hopPose(p, this.pos, this.pos, h, HOP.height * 0.55, 0);
     if (kind === "press") {
       const k = Math.sin(Math.PI * p) * (1 - p);

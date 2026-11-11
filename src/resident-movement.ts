@@ -1,4 +1,5 @@
-import { WORLD } from "./tune.ts";
+import { IDLE, WORLD } from "./tune.ts";
+import { FLOOR_PLAY } from "./floor-play-data.ts";
 import { PLACEMENT, LANDING, SURFACES, SURFACE_SPLIT, SEATING_DEPTH, CHAIR_SUPPORT, COUCH_SEAT } from "./resident-movement-data.ts";
 export type Point = { x: number; y: number };
 export type Frame = { scale: number; left: number; top: number };
@@ -36,11 +37,52 @@ export function residentDepth(point: Point, walking = false): number {
   return point.y;
 }
 export const placementPosition = (point: Point): Point => floorPosition(point, surfaceAt(point));
-/** Glass and bare wall hold nothing: a release there falls to the floor straight below. Anywhere else it stays at the shadow. */
+/** Glass, bare wall and the air above a loft hold nothing: a release there comes to rest on the surface straight below
+ *  (the bed or deck upstairs, the window's floor strip, the ground floor). Anywhere else it stays at the shadow. */
 export function restingPosition(point: Point): Point {
   const surface = surfaceAt(point);
-  const unsupported = surface === "window" || (surface === "ground" && point.y < SURFACE_SPLIT.y);
-  return unsupported ? floorPosition(point, surface) : { ...point };
+  if (surface === "window") return floorPosition(point, surface);
+  if (SEATING.includes(surface) || point.y >= SURFACE_SPLIT.y) return { ...point };
+  const surfaces: Surface[] = ["loft-left", "loft-right", "bed-left", "bed-right"];
+  let landing: Point | null = null;
+  for (const surface of surfaces) {
+    const candidate = supportBelow(point, surface);
+    if (candidate && (!landing || candidate.y < landing.y)) landing = candidate;
+  }
+  return landing ?? floorPosition(point);
+}
+function supportBelow(point: Point, surface: Surface): Point | null {
+  const bounds = surfaceBounds(surface);
+  const span = bounds.front - bounds.back;
+  let start = Math.max(0, (point.y - bounds.back) / span);
+  let end = 1;
+  const sides = [
+    { back: bounds.backLeft, front: bounds.frontLeft, left: true },
+    { back: bounds.backRight, front: bounds.frontRight, left: false },
+  ];
+  for (const side of sides) {
+    const slope = side.front - side.back;
+    if (!slope) {
+      if (side.left ? point.x < side.back : point.x > side.back) return null;
+      continue;
+    }
+    const crossing = (point.x - side.back) / slope;
+    if ((slope > 0) === side.left) end = Math.min(end, crossing);
+    else start = Math.max(start, crossing);
+  }
+  return start <= end ? { x: point.x, y: bounds.back + start * span } : null;
+}
+/** Height in world px a resident let go at `air` falls to its feet at `landing`: the gap plus the held lift. 0: no fall. */
+export const fallDrop = (air: Point, landing: Point, height: number): number => landing.y > air.y ? landing.y - air.y + height * PLACEMENT.lift : 0;
+/** Air time of a fall from rest under the gravity thrown residents use. */
+export const fallMs = (drop: number): number => Math.sqrt(2 * Math.max(0, drop) / FLOOR_PLAY.gravity) * FLOOR_PLAY.seconds;
+/** The fall, then the settle's landing squash at the settle's own pace. */
+export const fallEndMs = (drop: number): number => fallMs(drop) + (1 - LANDING.touchDown) * IDLE.pressMs;
+export function fallPose(ms: number, drop: number) {
+  const air = fallMs(drop);
+  if (ms >= air) return landingPose(LANDING.touchDown + (ms - air) / IDLE.pressMs);
+  const remaining = 1 - (ms / air) ** 2;
+  return { lift: drop * remaining, air: PLACEMENT.air * remaining, sx: 1, sy: 1, rot: 0 };
 }
 export function landingPose(progress: number) {
   const rest = { lift: 0, air: 0, sx: 1, sy: 1, rot: 0 };

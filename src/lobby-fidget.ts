@@ -68,7 +68,7 @@ export class LobbyFidget {
     const bodies = new Map(this.flights), view = this.view();
     for (const resident of this.scene.residents) {
       if (bodies.has(resident)) continue;
-      if ((resident.held && !this.stacks.isBase(resident)) || resident.walking || resident.climbing || resident.seatSupport.lift > 0) continue;
+      if ((resident.held && !this.stacks.isBase(resident)) || resident.falling || resident.walking || resident.climbing || resident.seatSupport.lift > 0) continue;
       if (resident.pos.y < PLACEMENT.back || resident.pos.y > PLACEMENT.front) continue;
       const radius = this.radius(resident, resident.pos.y);
       if (resident.pos.x - radius < view.left || resident.pos.x + radius > view.right) continue;

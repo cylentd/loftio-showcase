@@ -46,10 +46,10 @@ class ResidentControls {
       if (!this.drag.begin(resident.cast.id, event.pointerId, client, this.world(client), resident.pos)) return;
       resident.touch(true); this.draw(resident);
       if (event.pointerType === "touch") vibrate("touch", this.runtime.look.frozen);
-      const caught = this.catch(resident);
+      const { caught, origin } = this.take(resident);
       this.runtime.play?.sample(this.world(client), event.timeStamp, true);
       this.suppressClick = null;
-      this.held = { resident, button, origin: caught ? floorPosition(resident.pos) : { ...resident.pos }, pointer: event.pointerId, caught };
+      this.held = { resident, button, origin, pointer: event.pointerId, caught };
       if (caught) this.pickUp(this.held);
       button.setPointerCapture(event.pointerId);
       event.stopPropagation();
@@ -70,6 +70,13 @@ class ResidentControls {
 
   private catch(resident: Resident): boolean {
     return this.runtime.play?.catch(resident, this.runtime.clock) ?? false;
+  }
+
+  /** Taking a resident out of a toss or pile, or out of a fall (whose feet already stand on its landing spot), catches it mid-air. */
+  private take(resident: Resident): { caught: boolean; origin: Point } {
+    const falling = resident.falling;
+    const caught = this.catch(resident) || falling;
+    return { caught, origin: caught && !falling ? floorPosition(resident.pos) : { ...resident.pos } };
   }
 
   private world(point: Point): Point {
@@ -99,8 +106,9 @@ class ResidentControls {
     held.resident.touch(false);
     if (this.runtime.look.frozen) this.draw(held.resident);
     if (!cancel && event.pointerType === "touch") vibrate("release", this.runtime.look.frozen);
+    const air = this.drag.landing;
     const result = this.drag.finish(event.pointerId, cancel);
-    if (!result) return;
+    if (!result || !air) return;
     this.held = null;
     if (result.moved || held.caught) {
       this.suppressClick = held.button;
@@ -108,8 +116,10 @@ class ResidentControls {
       const line = cancel ? null : this.runtime.play?.release(held.resident, event.timeStamp, look.scale, result.moved, !look.frozen && !look.still) ?? null;
       if (line) this.released(held, line);
       else {
-        Object.assign(held.resident.pos, held.caught && (cancel || !result.moved) ? held.origin : result.position);
-        this.drop(held, cancel);
+        const back = held.caught && (cancel || !result.moved);
+        const from = back ? { x: held.resident.pos.x, y: held.resident.pos.y - held.resident.lift } : air;
+        Object.assign(held.resident.pos, back ? held.origin : result.position);
+        this.drop(held, cancel, cancel ? null : from, !back);
       }
     }
     if (held.button.hasPointerCapture(event.pointerId)) held.button.releasePointerCapture(event.pointerId);
@@ -131,15 +141,17 @@ class ResidentControls {
     this.runtime.update(0);
   }
 
-  private drop(held: Held, cancel: boolean): void {
+  /** `from`: where it was let go, when that was over thin air and its feet now stand on the surface below. */
+  private drop(held: Held, cancel: boolean, from: Point | null = null, carried = true): void {
     const resident = held.resident;
-    if (!cancel || held.caught) Object.assign(resident.pos, placementPosition(resident.pos));
+    if ((!cancel || held.caught) && !from) Object.assign(resident.pos, placementPosition(resident.pos));
     resident.putDown(!cancel || !!held.caught, !this.runtime.look.frozen, this.runtime.clock);
+    if (from && !this.runtime.look.frozen) resident.fall(from, carried);
     delete held.button.dataset.held;
     held.button.setAttribute("aria-pressed", "false");
     this.overlay.announce(`${held.button.getAttribute('aria-label') ?? NAMES[resident.cast.id]} ${cancel ? COPY.cancelled : COPY.placed}`);
     const interest = resident.cast.interest;
-    if (!cancel && Math.hypot(resident.pos.x - interest.x, resident.pos.y - interest.y) <= PLACEMENT.interestRadius) {
+    if (!cancel && !resident.falling && Math.hypot(resident.pos.x - interest.x, resident.pos.y - interest.y) <= PLACEMENT.interestRadius) {
       this.overlay.arrive(resident.cast.id);
     }
     this.draw(resident);
@@ -156,8 +168,7 @@ class ResidentControls {
       event.preventDefault();
       if (event.repeat) return;
       if (!this.held) {
-        const caught = this.catch(resident);
-        this.held = { resident, button, origin: caught ? floorPosition(resident.pos) : { ...resident.pos }, pointer: null, caught };
+        this.held = { resident, button, ...this.take(resident), pointer: null };
         this.pickUp(this.held);
       } else if (this.held.button === button && this.held.pointer === null) {
         const held = this.held; this.held = null; this.drop(held, false);

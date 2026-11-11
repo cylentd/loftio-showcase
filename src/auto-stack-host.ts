@@ -7,9 +7,9 @@ import type { ResidentStacks } from "./resident-stacks";
 import type { Scene } from "./scene";
 import { ROUTINE } from "./tune";
 
-/** Only a resident at rest on the floor takes part: not held, walking, on a ladder, seated, or already in a pile. */
+/** Only a resident at rest on the floor takes part: not held, falling, walking, on a ladder, seated, or already in a pile. */
 function isFree(r: Resident, stacks: ResidentStacks): boolean {
-  return !r.held && !r.walking && !r.climbing && !r.ladderReserved && r.seatSupport.lift === 0 && !isSitting(r.pos)
+  return !r.held && !r.falling && !r.walking && !r.climbing && !r.ladderReserved && r.seatSupport.lift === 0 && !isSitting(r.pos)
     && !stacks.contains(r) && r.pos.y >= PLACEMENT.back && r.pos.y <= PLACEMENT.front;
 }
 

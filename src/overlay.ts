@@ -62,6 +62,7 @@ export class Overlay {
   placeBubble(anchor: (id: string) => { x: number; y: number; height: number } | null): void {
     if (!this.bubbleFor) return;
     const a = anchor(this.bubbleFor);
+    this.bubble.hidden = !a;
     if (!a) return;
     const metrics = bubbleMetrics(a.height);
     this.bubble.style.setProperty("--bubble-width", metrics.width + "px");

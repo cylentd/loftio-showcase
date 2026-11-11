@@ -56,19 +56,19 @@ export class Runtime {
     world.position.set(-left - x * scale, offsetY - y * scale);
     cast.position.set(-x * EFFECTS.castParallax, -y * EFFECTS.castParallax);
     for (const prop of this.scene.props) prop.position.set(-cast.x, -cast.y);
-    if (dt) {
-      this.routine(dt);
-      for (const r of residents) {
-        const arriving = r.walking && r.at === "interest";
-        r.update(dt, this.clock, false);
-        if (arriving && !r.walking) {
-          r.play("nod");
-          const favorite = Math.hypot(r.pos.x - r.cast.interest.x, r.pos.y - r.cast.interest.y) <= PLACEMENT.interestRadius;
-          if (favorite || isLoft(r.pos)) this.overlay.arrive(r.cast.id, isLoft(r.pos));
-        }
+    if (dt) this.routine(dt);
+    for (const r of residents) {
+      if (!dt && !(this.look.frozen && (r.held || r.falling))) continue;
+      const arriving = r.walking && r.at === "interest";
+      const falling = r.falling;
+      r.update(dt, this.clock, this.look.frozen);
+      if (falling && !r.falling && Math.hypot(r.pos.x - r.cast.interest.x, r.pos.y - r.cast.interest.y) <= PLACEMENT.interestRadius) this.overlay.arrive(r.cast.id);
+      if (arriving && !r.walking) {
+        r.play("nod");
+        const favorite = Math.hypot(r.pos.x - r.cast.interest.x, r.pos.y - r.cast.interest.y) <= PLACEMENT.interestRadius;
+        if (favorite || isLoft(r.pos)) this.overlay.arrive(r.cast.id, isLoft(r.pos));
       }
     }
-    if (!dt && this.look.frozen) for (const resident of residents) if (resident.held) resident.update(0, this.clock, true);
     this.play?.update(dt, this.clock);
     stepPersonalSpace(residents, dt);
     ambience.update(this.clock, lighting.timeline.blend, lighting.flickers);
@@ -128,7 +128,7 @@ export class Runtime {
     this.overlay.place("cue", { x: (letter.x - x) * scale - size / 2, y: (letter.y - y) * scale + offsetY - size / 2, w: size, h: size });
     this.overlay.placeBubble((id) => {
       const r = residents.find((resident) => resident.cast.id === id);
-      if (!r) return null;
+      if (!r || r.held || r.falling) return null;
       const lift = id === "puff" && this.settings.showCue ? r.height * (1 + CUE.lift) + CUE.size * BUBBLE_CUE : r.height * HIT_HEIGHT;
       return { x: (r.pos.x + cast.x - x) * scale, y: (r.pos.y + cast.y - y - r.lift - lift) * scale + offsetY, height: r.height * scale };
     });
