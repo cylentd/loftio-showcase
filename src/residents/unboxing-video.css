@@ -1,0 +1,101 @@
+:root {
+  --reveal-video-ratio: 16 / 9;
+  --reveal-resident-height: min(26dvh, 240px);
+  --reveal-cinema-matte: #0c100d;
+  --reveal-on-matte: var(--world-paper);
+  --reveal-control-scrim: color-mix(in srgb, var(--reveal-cinema-matte) 82%, transparent);
+  --reveal-cinema-inset: max(var(--space-4), env(safe-area-inset-top));
+  --reveal-phone-size: min(100dvw, calc(100dvh - 2 * (var(--tap-min) + var(--reveal-cinema-inset))));
+  --reveal-phone-position: 50% 50%;
+  --reveal-handoff-duration: 160ms;
+  --reveal-ground-shadow: color-mix(in srgb, var(--world-ink) 20%, transparent);
+  --reveal-fill-blur: var(--space-6);
+  --reveal-fill-scale: 1.12;
+  --reveal-fill-light: .65;
+}
+.resident-reveal .unboxing-video-stage {
+  position: relative; display: grid; place-items: center; width: 100%;
+  height: auto; min-height: 0; aspect-ratio: var(--reveal-video-ratio);
+  overflow: hidden; border-radius: var(--world-radius);
+}
+.unboxing-video { display: block; width: 100%; height: 100%; object-fit: contain; grid-area: 1 / 1; }
+.unboxing-video-backdrop { display: none; }
+.unboxing-video-open { z-index: 1; }
+.unboxing-video-notice:empty { display: none; }
+.unboxing-video-stage[data-phase='retry'] { aspect-ratio: auto; }
+.unboxing-video-stage[data-phase='retry'] .unboxing-video-open { position: relative; min-height: var(--tap-min); }
+.resident-reveal .unboxing-video-stage[data-phase='revealed'] {
+  aspect-ratio: auto; height: var(--reveal-stage); flex: none; isolation: isolate;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+}
+.resident-reveal .unboxing-video-stage[data-phase='revealed']::after {
+  content: ''; position: absolute; width: var(--resident-pool-width); max-width: var(--reveal-resident-height);
+  height: var(--space-3); bottom: calc((100% - var(--reveal-figure)) / 2);
+  border-radius: 50%; background: var(--reveal-ground-shadow); filter: blur(var(--space-2));
+  z-index: -1;
+}
+.resident-reveal .unboxing-video-stage .unboxing-resident {
+  position: relative; inset: auto; width: 100%; height: var(--reveal-resident-height);
+  max-height: none; object-fit: contain; grid-area: 1 / 1;
+}
+.resident-reveal .unboxing-video-stage[data-phase='revealed'] .unboxing-resident { height: var(--reveal-figure); }
+.resident-reveal.world-modal.world-drawer[data-cinema='true'] {
+  box-sizing: border-box; inset: 0; margin: 0; padding: 0;
+  width: 100dvw; max-width: none; height: 100dvh; max-height: none;
+  border: 0; border-image: none; border-radius: 0; box-shadow: none; overflow: hidden;
+  background: transparent; color: var(--reveal-on-matte);
+}
+.resident-reveal[data-cinema='true']::before,
+.resident-reveal[data-cinema='true']::after { content: none; }
+.resident-reveal[data-cinema='true']::backdrop { background: transparent; }
+.resident-reveal.world-modal.world-drawer[data-cinema='true'][data-handoff='pending'],
+.resident-reveal[data-cinema='true'][data-handoff='pending']::backdrop { background: transparent; }
+.resident-reveal[data-cinema='true'][data-handoff='pending'] .unboxing-video { opacity: 0; }
+.resident-reveal[data-cinema='true'][data-handoff='pending'] .unboxing-video-backdrop { visibility: hidden; }
+body:has(.resident-reveal[data-cinema='true'][data-handoff='pending']) :is(.scene-actions, .scene-actions *, .glade-sign) { visibility: hidden; }
+body:has(.resident-reveal[data-cinema='true']) :is(.scene-actions, .glade-sign) { opacity: 0; pointer-events: none; }
+.resident-reveal[data-cinema='true'] .world-content {
+  position: relative; display: block; width: 100%; height: 100%; overflow: hidden;
+}
+.resident-reveal[data-cinema='true'] .world-header {
+  position: absolute; z-index: 2; top: var(--reveal-cinema-inset);
+  left: max(var(--space-4), env(safe-area-inset-left)); padding: 0;
+}
+.resident-reveal[data-cinema='true'] .world-header h2 { display: none; }
+.resident-reveal[data-cinema='true'] .world-close,
+.resident-reveal[data-cinema='true'] .unboxing-skip {
+  border: 0; box-shadow: none; background: var(--reveal-control-scrim); color: var(--reveal-on-matte);
+}
+.resident-reveal[data-cinema='true'] .unboxing-skip {
+  position: absolute; z-index: 2; top: var(--reveal-cinema-inset);
+  right: max(var(--space-4), env(safe-area-inset-right));
+}
+.resident-reveal[data-cinema='true'] .unboxing-video-stage {
+  width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0;
+}
+.resident-reveal[data-cinema='true'] :is(.unboxing-video, .reveal-flight-background) {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+}
+.resident-reveal[data-cinema='true'] :is(.unboxing-video-backdrop, .reveal-flight-fill) {
+  display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: blur(var(--reveal-fill-blur)) brightness(var(--reveal-fill-light)); transform: scale(var(--reveal-fill-scale));
+}
+.resident-reveal[data-cinema='true'] .unboxing-video-open { position: relative; align-self: center; }
+.resident-reveal[data-cinema='true'] .unboxing-video-notice {
+  position: absolute; bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  box-sizing: border-box; padding: var(--space-4); margin: 0;
+  color: var(--reveal-on-matte); background: var(--reveal-control-scrim);
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .resident-reveal[data-cinema='true'] :is(.unboxing-video, .reveal-flight-background) {
+    width: var(--reveal-phone-size); height: var(--reveal-phone-size);
+    inset: 50% auto auto 50%; translate: -50% -50%;
+    object-fit: cover; object-position: var(--reveal-phone-position);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .resident-reveal[data-cinema='true']:not([data-framed='true'])[data-handoff='true'] .unboxing-video-stage {
+    animation: reveal-dissolve var(--reveal-handoff-duration) var(--motion-ease) both;
+  }
+}
+@keyframes reveal-dissolve { from { opacity: 0; } to { opacity: 1; } }

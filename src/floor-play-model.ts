@@ -3,7 +3,7 @@ import { PLACEMENT as FLOOR } from "./resident-movement-data.ts";
 import { TRAVEL_OBSTACLES } from "./travel-data.ts";
 
 export type FloorBody = { x: number; y: number; z: number; vx: number; vy: number; vz: number; radius: number; edgeRadius?: number; impact: number; asleep: boolean };
-export type FloorView = { left: number; right: number };
+export type FloorView = { left: number; right: number; resolve?: (body: FloorBody) => void };
 export function floorBody(x: number, y: number, radius: number): FloorBody {
   return { x, y, z: 0, vx: 0, vy: 0, vz: 0, radius, impact: 0, asleep: true };
 }
@@ -22,6 +22,7 @@ function limits(b: FloorBody, view?: FloorView) {
 
 /** Resolve feet against the painted floor and existing table footprints. */
 export function fitFloor(b: FloorBody, view?: FloorView): void {
+  if (view?.resolve) { view.resolve(b); return; }
   const edge = limits(b, view);
   if (b.y < edge.back) { b.y = edge.back; b.vy = Math.abs(b.vy) * P.bounce; b.impact = 1; }
   if (b.y > edge.front) { b.y = edge.front; b.vy = -Math.abs(b.vy) * P.bounce; b.impact = 1; }

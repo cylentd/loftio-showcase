@@ -2,6 +2,19 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { residentRegistry } from '../src/residents/registry.ts';
 
+test('unopened box placement survives reload without moving the future resident', () => {
+  let stored: string | null = null;
+  const storage = { getItem: () => stored, setItem: (_key: string, value: string) => { stored = value; } };
+  const registry = residentRegistry(storage, () => 'parcel');
+  const id = registry.discover('new-resident');
+  registry.deliveryPosition(id, 'portrait', { x: 500, y: 900 });
+  const entry = residentRegistry(storage, () => 'unused').list()[0]!;
+  assert.equal(entry.arrival, 'waiting');
+  assert.deepEqual(entry.deliveryPositions, { portrait: { x: 500, y: 900 } });
+  assert.deepEqual(entry.positions, {});
+  assert.throws(() => registry.deliveryPosition(id, 'portrait', { x: NaN, y: 900 }), /Invalid/);
+});
+
 test('resident identity and membership survive reload independently of generation and reveal', () => {
   let stored: string | null = null;
   const storage = { getItem: () => stored, setItem: (_key: string, value: string) => { stored = value; } };

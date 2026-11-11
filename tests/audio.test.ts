@@ -10,6 +10,36 @@ function fixture(reject = false) {
   };
   return { calls, audio, model: new Soundtrack(audio) };
 }
+test("cinematic suspension pauses without losing intent, position or volume", async () => {
+  const { audio, calls, model } = fixture();
+  model.volume(0.35); await model.start();
+  const resume = model.suspend();
+  assert.equal(model.playing, false);
+  assert.equal(model.desired, true);
+  await model.visibility(true); resume();
+  assert.equal(calls.play, 1);
+  await model.visibility(false);
+  assert.equal(model.playing, true);
+  assert.equal(audio.currentTime, 17);
+  assert.equal(audio.volume, 0.35);
+});
+test("suspensions compose and never resume a track switched off during the video", async () => {
+  const { calls, model } = fixture();
+  await model.start();
+  const first = model.suspend(), second = model.suspend();
+  first(); first();
+  assert.equal(calls.play, 1);
+  await model.stop(); second();
+  assert.equal(model.desired, false);
+  assert.equal(calls.play, 1);
+});
+test("ending a cinematic leaves an already paused track silent", () => {
+  const { calls, model } = fixture();
+  const resume = model.suspend(); resume(); resume();
+  assert.equal(model.desired, false);
+  assert.equal(model.playing, false);
+  assert.equal(calls.play, 0);
+});
 test("soundtrack is opt-in and toggle preserves the playhead", async () => {
   const { calls, audio, model } = fixture();
   assert.equal(calls.play, 0);

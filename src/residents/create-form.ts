@@ -8,6 +8,7 @@ import { createAction } from './create-action';
 import { pickTile, type PickTile } from './pick-tile';
 import { SUMMARY_STEP, WIZARD_FIELDS, createWizard } from './wizard';
 import { questionPicker } from './question-picker';
+import { creationProgress } from './creation-progress';
 import './wizard.css';
 
 const PICK_HOLD_MS = 320; // the chosen card's hop (--wizard-hop in styles.css) plays out before the next question
@@ -51,7 +52,7 @@ function stepSection(title: string, index: number, uid: string) {
 }
 
 /** grant adds a test ticket; passed in mock mode only, where images are free placeholders. */
-export function residentForm(builder: ReturnType<typeof createBuilder>, mode: BuilderMode, grant?: () => void) {
+export function residentForm(builder: ReturnType<typeof createBuilder>, mode: BuilderMode, grant?: () => void, exit: () => void = () => {}) {
   const uid = `resident-wizard-${formCount++}`;
   // Only the local worker can reattach to a request; elsewhere a failed build's button starts a new one.
   const action = (state: ReturnType<typeof builder.state>) => createAction({ ...state, resumable: mode === 'local' });
@@ -59,6 +60,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const form = document.createElement('form'); form.className = 'resident-form resident-wizard';
   const cards: { button: HTMLButtonElement; field: SelectionField; value: string | null }[] = [];
   let pending = false;
+  let arrivalNotice = false;
   const hold = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : PICK_HOLD_MS;
 
   const steps = WIZARD_FIELDS.map((field, index) => {
@@ -70,15 +72,13 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     cards.push(...picker.cards); section.append(picker.root); return { section, heading, picker };
   });
 
-  // The summary: a designer-toy box card holding the four picks (each jumps back to its question), the basket
-  // while waiting, then Bring to life with its small print underneath.
   const summary = stepSection(WIZARD_COPY.summary, SUMMARY_STEP, uid);
   const picks = document.createElement('div'); picks.className = 'wizard-picks';
   const pickButtons = WIZARD_FIELDS.map((_, index) => {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'wizard-pick';
     button.addEventListener('click', () => { wizard.goTo(index); show(true); }); picks.append(button); return button;
   });
-  const basket = document.createElement('div'); basket.className = 'wizard-basket reveal-basket'; basket.setAttribute('aria-hidden', 'true');
+  const progress = creationProgress(exit);
   const notice = document.createElement('p'); notice.className = 'wizard-notice'; notice.textContent = RESIDENT_COPY.notice[mode];
   // The failure sits directly above the button that answers it: on a phone the drawer is scrolled to the button.
   const failure = document.createElement('p'); failure.className = 'resident-failure'; failure.setAttribute('role', 'alert');
@@ -102,7 +102,9 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const grantButton = grant ? worldButton(RESIDENT_COPY.grantTicket, () => { grant(); update(); }) : null;
   if (grantButton) out.append(grantButton);
   const ticketNote = document.createElement('p'); ticketNote.className = 'wizard-notice wizard-ticket-note';
-  summary.section.append(picks, basket, failure, submit, confirm, out, ticketNote, notice);
+  summary.section.append(picks, notice);
+  const actions = document.createElement('div'); actions.className = 'wizard-summary-actions';
+  actions.append(failure, submit, confirm, out, ticketNote);
 
   // Back and the dice sit together under the cards: the thumb's end of a phone sheet.
   const bar = document.createElement('div'); bar.className = 'wizard-bar';
@@ -110,8 +112,8 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const dice = worldButton('', () => roll()); dice.classList.add('wizard-dice');
   const face = document.createElement('span'); face.className = 'wizard-dice-face'; face.append(icon('effects'));
   const diceLabel = document.createElement('span'); diceLabel.textContent = WIZARD_COPY.surprise; dice.append(face, diceLabel);
-  bar.append(back, dice);
-  form.append(...steps.map(step => step.section), summary.section, bar);
+  bar.append(back, dice, actions);
+  form.append(...steps.map(step => step.section), summary.section, progress.root, bar);
 
   function pick(field: SelectionField, value: string | null, button: HTMLButtonElement) {
     if (pending || button.disabled) return;
@@ -135,7 +137,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     confirming = false; // leaving the summary drops an open question; the picks may change
     steps.forEach((step, index) => { step.section.hidden = index !== current; });
     summary.section.hidden = current !== SUMMARY_STEP;
-    dice.hidden = current === SUMMARY_STEP || wizard.field === 'palette';
+    dice.hidden = current === SUMMARY_STEP;
     // The first question has nothing to go back to: Surprise me takes the whole bar instead of leaving a hole.
     bar.classList.toggle('is-first', current === 0);
     update();
@@ -147,18 +149,14 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     if (!action(builder.state()).confirmBeforeCreate) { void wizard.make(); return; }
     if (confirming) return;
     confirming = true; armed = false; update(); question.focus({ preventScroll: true });
-    // Centred, so the answer buttons clear the Back bar pinned to the bottom of a phone sheet.
-    choices.scrollIntoView({ block: 'center' });
     setTimeout(() => { armed = true; update(); }, CONFIRM_ARM_MS);
   });
 
   function update() {
     const state = builder.state(); const busy = state.status === 'generating' || state.saving;
-    // A creation already running (or resumed after reload) is shown where it was started: on the summary.
     if (busy && wizard.step !== SUMMARY_STEP) { wizard.goTo(SUMMARY_STEP); show(false); return; }
-    // A finished resident waits in the loft's basket, so the panel starts a fresh design.
     const finished = lastStatus === 'generating' && state.status === 'ready'; lastStatus = state.status;
-    if (finished) { wizard.restart(); show(false); return; }
+    if (finished) { arrivalNotice = !!form.closest('dialog')?.open; wizard.restart(); show(false); return; }
     // A card shows as picked only after the user picked on that step, though the builder always holds a value.
     if (!pending) for (const { button, field, value } of cards) button.setAttribute('aria-pressed', String(wizard.chosen(field) && state.selections[field] === value));
     for (const { button } of cards) button.disabled = busy;
@@ -170,10 +168,15 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
       button.setAttribute('aria-label', WIZARD_COPY.change(WIZARD_COPY.parts[index]!, tile.label));
     });
     const generating = state.status === 'generating';
-    picks.hidden = generating; basket.hidden = !generating;
-    if (generating && !basket.childElementCount) basket.append(picture(pickTile('creature', state.selections.creature)));
-    if (!generating) basket.replaceChildren();
-    // While waiting, the basket is the whole card: a started resident always finishes, so nothing to press.
+    const progressVisible = generating || arrivalNotice;
+    form.dataset.phase = progressVisible ? 'creating' : 'design';
+    progress.update(state.stage, progressVisible, arrivalNotice);
+    const active = wizard.step;
+    steps.forEach((step, index) => { step.section.hidden = progressVisible || index !== active; });
+    summary.section.hidden = progressVisible || active !== SUMMARY_STEP;
+    bar.hidden = progressVisible;
+    actions.hidden = active !== SUMMARY_STEP;
+    picks.hidden = generating;
     back.disabled = busy; dice.disabled = busy; back.hidden = generating || wizard.step === 0;
     submit.disabled = busy; notice.hidden = generating;
     const shown = action(state); submit.textContent = shown.label;
@@ -185,5 +188,5 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     if (grantButton) grantButton.disabled = busy;
     ticketNote.textContent = shown.ticketNote; ticketNote.hidden = generating || asking || !shown.ticketNote; // the question already says it
   }
-  show(false); return { form, update };
+  show(false); return { form, update, dismissProgress() { arrivalNotice = false; update(); } };
 }

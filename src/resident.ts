@@ -13,9 +13,13 @@ import { seatAvailable } from "./seat-occupancy";
 import { heldPose } from "./held-pose";
 import { ChairBooster } from "./chair-booster";
 import { cloudPose } from "./cloud-pose";
+import { touchPose } from "./tactile";
+import { TACTILE } from "./tactile-constants";
 
 type Action = { kind: "hop" | "look" | "wiggle" | "nod" | "press" | "settle"; t: number; dur: number };
 type Palette = { shadow: string; tintFront: string; tintBack: string };
+type ShadowStyle = typeof SHADOW & { offsetY?: number };
+type RenderStyle = { shadowTexture?: Texture; shadow?: ShadowStyle; airShadowTexture?: Texture; airShadow?: ShadowStyle; seatSupport?: boolean };
 
 const TAU = Math.PI * 2;
 const WALK_LIFT = 0.02; // Gentle footfall, as a share of displayed height.
@@ -87,6 +91,17 @@ export class Resident {
   /** Head height above the feet in world px, for the letter and the bubble. */
   lift = 0;
   height = 0;
+  private touching = false;
+  private pressure = 0;
+
+  touch(pressed: boolean): void {
+    this.touching = pressed;
+    if (pressed) this.pressure = 1;
+  }
+
+  updateTouch(dt: number, reduced: boolean): void {
+    if (!this.touching) this.pressure = reduced ? 0 : this.pressure * Math.exp(-dt / TACTILE.releaseMs);
+  }
 
   constructor(
     readonly cast: CastMember,
@@ -94,16 +109,17 @@ export class Resident {
     dot: Texture,
     private readonly palette: Palette,
     private readonly rand: () => number,
+    private readonly renderStyle: RenderStyle = {},
   ) {
     this.phase = rand() * TAU;
     this.pos = { ...cast.home };
     this.home = { ...cast.home };
     this.sprite = new Sprite(texture);
     this.sprite.anchor.set(0.5, 1);
-    this.shadow = new Sprite(dot);
+    this.shadow = new Sprite(renderStyle.shadowTexture ?? dot);
     this.shadow.anchor.set(0.5);
     this.shadow.tint = palette.shadow;
-    this.core = new Sprite(dot);
+    this.core = new Sprite(renderStyle.shadowTexture ?? dot);
     this.core.anchor.set(0.5);
     this.core.tint = palette.shadow;
     this.body.addChild(this.sprite);
@@ -251,6 +267,7 @@ export class Resident {
   /** dt in ms; now in ms. With reduced motion nothing moves: the resident is drawn once, at rest. */
   update(dt: number, now: number, reduced: boolean): void {
     this.poseTime = now;
+    this.updateTouch(dt, reduced);
     if (this.held) {
       if (!reduced) this.carryTime += dt;
       const pose = heldPose(this.carryTime, this.phase, reduced);
@@ -406,27 +423,35 @@ export class Resident {
   }
 
   private layout(lift: number, air: number, sx = 1, sy = 1, rot = 0): void {
-    const seat = residentSeat(this.pos, heightAt(this.pos.y, this.cast.sizeBias));
+    const height = heightAt(this.pos.y, this.cast.sizeBias);
+    const seat = this.renderStyle.seatSupport === false ? { height, lift: 0 } : residentSeat(this.pos, height);
     const h = this.held ? this.carryHeight : seat.height;
     const cloud = cloudPose(this.poseTime, this.phase);
     const support = seat.lift > 0 ? seat.lift + cloud.lift : 0;
     this.supportLift = this.held ? this.carrySupportLift : this.walking ? 0 : support;
     this.booster.place(h, this.aspect, this.held || this.walking ? 0 : seat.lift, this.lighting, cloud);
     const base = h / this.sprite.texture.height;
+    const touch = touchPose(this.pressure);
     this.root.position.set(this.pos.x, this.pos.y);
     this.root.zIndex = this.held ? PLACEMENT.heldDepth : this.climbing ? TRAVEL.climbDepth : residentDepth(this.pos, this.walking);
     this.body.position.set(0, -lift - this.supportLift);
     this.body.rotation = rot;
-    this.sprite.scale.set(base * sx * this.turn.pose().sx, base * sy);
+    this.sprite.scale.set(base * sx * this.turn.pose().sx * touch.sx, base * sy * touch.sy);
     this.setLighting(this.lighting);
-    const shrink = 1 - SHADOW.airShrink * air;
+    const airborneShadow = air > 0 && this.renderStyle.airShadow;
+    const shadow: ShadowStyle = airborneShadow || this.renderStyle.shadow || SHADOW;
+    if (this.renderStyle.airShadowTexture && this.renderStyle.shadowTexture) {
+      this.shadow.texture = airborneShadow ? this.renderStyle.airShadowTexture : this.renderStyle.shadowTexture;
+    }
+    const shrink = 1 - shadow.airShrink * air;
     const footW = h * this.aspect;
-    this.shadow.width = footW * SHADOW.width * shrink;
-    this.shadow.height = h * SHADOW.height * shrink;
-    this.shadow.alpha = this.climbing ? 0 : SHADOW.alpha * (1 - 0.5 * air);
-    this.core.width = footW * SHADOW.coreWidth * shrink * sx;
-    this.core.height = h * SHADOW.coreHeight * shrink;
-    this.core.alpha = this.climbing ? 0 : SHADOW.coreAlpha * (1 - air);
+    this.shadow.y = this.core.y = h * (shadow.offsetY ?? 0);
+    this.shadow.width = footW * shadow.width * shrink;
+    this.shadow.height = h * shadow.height * shrink;
+    this.shadow.alpha = this.climbing ? 0 : shadow.alpha * (1 - 0.5 * air);
+    this.core.width = footW * shadow.coreWidth * shrink * sx;
+    this.core.height = h * shadow.coreHeight * shrink;
+    this.core.alpha = this.climbing ? 0 : shadow.coreAlpha * (1 - air);
     this.lift = lift + this.supportLift;
     this.height = h;
   }

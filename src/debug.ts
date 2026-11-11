@@ -15,6 +15,14 @@ export function installDebug(shell: HTMLElement, app: Application, scene: Scene,
       residents: scene.residents.map((resident) => ({ id: resident.cast.id, x: resident.pos.x, y: resident.pos.y, home: { ...resident.home }, wanderAfter: resident.wanderAfter, held: resident.held, placed: resident.placed, walking: resident.walking, climbing: resident.climbing, ladderReserved: resident.ladderReserved, depth: resident.root.zIndex, height: resident.height })),
       frame: { scale: look.scale, left: look.left + look.x * look.scale, top: look.offsetY - look.y * look.scale } }),
     advanceFrames: (count: number, render = true) => { for (let frame = 0; frame < count; frame += 1) runtime.update(DEBUG_FRAME_MS, false); runtime.update(0, render); if (render) app.render(); },
+    actorPose: (index: number) => {
+      const actor = scene.actors[index];
+      if (!actor) throw new Error("Unknown scene actor");
+      const body = actor.children.at(-1)!;
+      const shadow = actor.children[0]!;
+      return { rotation: body.rotation, lift: -body.y, ground: { x: actor.x, y: actor.y },
+        shadow: { x: actor.x + shadow.x, y: actor.y + shadow.y, alpha: shadow.alpha, width: shadow.width, height: shadow.height } };
+    },
     pauseTicker: () => app.ticker.stop(),
     residentPose: (id: string) => {
       const resident = scene.residents.find(member => member.cast.id === id);

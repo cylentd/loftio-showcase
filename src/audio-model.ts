@@ -4,6 +4,7 @@ export class Soundtrack {
   playing = false;
   failed = false;
   private hidden = false;
+  private suspensions = 0;
   private revision = 0;
   private fadeTarget: number | null = null;
   private readonly audio: AudioPort;
@@ -21,6 +22,16 @@ export class Soundtrack {
     await this.reconcile();
   }
   subscribe(listener: () => void): void { this.listeners.add(listener); }
+  suspend(): () => void {
+    this.suspensions += 1;
+    void this.reconcile();
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true; this.suspensions -= 1;
+      void this.reconcile();
+    };
+  }
   private notify(): void { this.changed(); for (const listener of this.listeners) listener(); }
 
   async toggle(): Promise<void> {
@@ -76,7 +87,7 @@ export class Soundtrack {
   }
   private async reconcile(): Promise<void> {
     const revision = ++this.revision;
-    if (!this.desired || this.hidden) {
+    if (!this.desired || this.hidden || this.suspensions > 0) {
       this.audio.pause();
       this.playing = false;
       this.notify();

@@ -7,6 +7,7 @@ export type Position = { x: number; y: number };
 export type ResidentEntry = {
   id: string; savedId: string; inRoom: boolean; arrival: 'waiting' | 'saved' | 'welcomed';
   positions: Partial<Record<'desktop' | 'portrait', Position>>; name?: string;
+  deliveryPositions?: Partial<Record<'desktop' | 'portrait', Position>>;
 };
 type Storage = { getItem(key: string): string | null; setItem(key: string, value: string): void };
 const point = (value: any) => value && Number.isFinite(value.x) && Number.isFinite(value.y);
@@ -22,6 +23,8 @@ function restore(raw: string | null): ResidentEntry[] {
       || !entry.positions || typeof entry.positions !== 'object' || ids.has(entry.id) || savedIds.has(entry.savedId)
       || Object.entries(entry.positions).some(([room, position]) => !['desktop', 'portrait'].includes(room) || !point(position))) throw Error('Invalid resident registry');
     if ('name' in entry && residentName(entry.name) !== entry.name) throw Error(COPY.nameInvalid);
+    if ('deliveryPositions' in entry && (!entry.deliveryPositions || typeof entry.deliveryPositions !== 'object'
+      || Array.isArray(entry.deliveryPositions) || Object.entries(entry.deliveryPositions).some(([room, position]) => !['desktop', 'portrait'].includes(room) || !point(position)))) throw Error('Invalid delivery position');
     ids.add(entry.id); savedIds.add(entry.savedId);
   }
   return value.residents;
@@ -63,6 +66,14 @@ export function residentRegistry(storage: Storage, newId: () => string, key = ST
       if (!point(position)) throw Error('Invalid resident position');
       const entry = residents.find(item => item.id === id);
       if (entry) change(id, { positions: { ...entry.positions, [room]: { ...position } } });
+    },
+    deliveryPosition(id: string, room: 'desktop' | 'portrait', position: Position) {
+      if (!point(position)) throw Error('Invalid delivery position');
+      const entry = residents.find(item => item.id === id);
+      if (entry) {
+        change(id, { deliveryPositions: { ...entry.deliveryPositions, [room]: { ...position } } });
+        return structuredClone(residents.find(item => item.id === id));
+      }
     },
     list() { return structuredClone(residents); },
   };

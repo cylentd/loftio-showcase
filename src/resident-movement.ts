@@ -36,6 +36,12 @@ export function residentDepth(point: Point, walking = false): number {
   return point.y;
 }
 export const placementPosition = (point: Point): Point => floorPosition(point, surfaceAt(point));
+/** Glass and bare wall hold nothing: a release there falls to the floor straight below. Anywhere else it stays at the shadow. */
+export function restingPosition(point: Point): Point {
+  const surface = surfaceAt(point);
+  const unsupported = surface === "window" || (surface === "ground" && point.y < SURFACE_SPLIT.y);
+  return unsupported ? floorPosition(point, surface) : { ...point };
+}
 export function landingPose(progress: number) {
   const rest = { lift: 0, air: 0, sx: 1, sy: 1, rot: 0 };
   if (progress >= 1) return rest;
@@ -79,7 +85,7 @@ export class DragPlacement {
   finish(pointer: number, cancel = false): { id: string; moved: boolean; position: Point } | null {
     const grab = this.grab;
     if (!grab || grab.pointer !== pointer) return null;
-    const position = cancel ? grab.origin : this.landing ?? grab.position;
+    const position = cancel ? grab.origin : restingPosition(grab.position);
     this.grab = null;
     return { id: grab.id, moved: grab.moved, position: { ...position } };
   }

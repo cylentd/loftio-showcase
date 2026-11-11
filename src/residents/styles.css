@@ -1,4 +1,4 @@
-:root { --resident-thumb: 88px; --basket-width: 120px; --basket-height: 66px; --arrival-peek: 24px; --arrival-duration: 700ms; --basket-weave: 10px; --basket-ridge: 3px; }
+:root { --resident-thumb: 88px; }
 .resident-form { display: grid; gap: var(--space-4); }
 .resident-form p { margin: 0; line-height: var(--line-body); color: var(--world-muted); }
 /* A failure reads in full ink right above the button that answers it. Empty, it stays in the accessibility tree
@@ -87,9 +87,6 @@
 .resident-reveal .resident-name [role="alert"] { color: var(--world-ink); }
 .world-drawer :is([role="status"], [role="alert"]):empty { margin: 0; }
 .resident-reveal a { color: var(--world-accent); min-height: var(--tap-min); display: inline-flex; align-items: center; }
-.arrival-peek { animation: arrival-peek var(--arrival-duration) ease-out both; }
-@keyframes arrival-peek { from { transform: translateY(var(--arrival-peek)); opacity: 0; } to { transform: none; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .arrival-peek { animation: none; } }
 
 /* Residents are lit from the floor, not boxed: keyboard focus is a lamp-amber ring at the feet,
    and a newcomer stands in a warm pool of light that fades after it settles in. */

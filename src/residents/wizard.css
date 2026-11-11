@@ -22,6 +22,7 @@
   --wizard-icon: 28px;
   --wizard-icon-stroke: 2.25;
   --wizard-make-height: 3.75rem;
+  --wizard-actions-max-height: 45dvh;
   --wizard-basket-width: 260px;
   --wizard-basket-friend: 52%; /* of the basket width: the friend sits on the blanket, rim over its feet */
   --wizard-rock: 3deg;

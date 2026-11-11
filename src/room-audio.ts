@@ -53,7 +53,7 @@ export function installRoomAudio() {
     retryBlocked();
   };
   button.addEventListener("click", () => {
-    if (tracks.some(track => track.playing)) void Promise.all(tracks.map(track => track.stop()));
+    if (tracks.some(track => track.desired)) void Promise.all(tracks.map(track => track.stop()));
     else void start();
   });
   for (const track of tracks) track.subscribe(sync);
@@ -65,6 +65,11 @@ export function installRoomAudio() {
   return {
     unlock: () => retryBlocked(true), button, music,
     subscribe(listener: () => void) { for (const track of tracks) track.subscribe(listener); },
+    suspend() {
+      const resume = tracks.map(track => track.suspend());
+      return () => resume.forEach(release => release());
+    },
+    get enabled() { return tracks.some(track => track.desired); },
     get playing() { return tracks.some(track => track.playing); },
   };
 }

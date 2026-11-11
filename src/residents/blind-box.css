@@ -1,0 +1,202 @@
+/* The blind box: a carton of flat card panels placed in 3D, seen from one fixed camera.
+   Painted pieces come from art/blind-box through scripts/prepare_box_art.py and reach here as --art-box-* urls. */
+:root {
+  /* Printed card keeps the paintings' colours in every room skin. Sampled from art/blind-box/front.png and lid.png. */
+  --box-paper: #f4e8d0;
+  --box-card: #dcc8a4;
+  --box-ink: #2e4a2d;
+  --box-tissue: #fdf8ea;
+  --box-shade: color-mix(in srgb, var(--world-ink) 18%, transparent);      /* the panel turned from the light */
+  --box-shade-deep: color-mix(in srgb, var(--world-ink) 36%, transparent); /* the walls inside */
+  --box-shadow: color-mix(in srgb, var(--world-ink) 24%, transparent);
+  --box-unit: clamp(11px, 1.7dvh, 16px);
+  --box-mini-unit: 7px;
+  --box-wait-unit: 13px;
+  --box-mini-tag-width: 144px;
+  /* Camera: above and to the right, as in the concept painting. */
+  --box-tilt: -24deg;
+  --box-turn: -32deg;
+  --box-skin: 1px; /* gap between card layers that share a plane, so one always paints over the other */
+  --box-lid-open: 205deg;     /* closed is 90deg; 180deg stands straight up */
+  --box-lid-swing: 216deg;    /* overshoot before it settles */
+  --box-lip-open: -24deg;     /* closed is -90deg, folded down over the front */
+  --box-flap-open: 116deg;
+  --box-flap-swing: 128deg;
+  /* The jagged line the seal breaks along, as the upper and lower halves of one shape. */
+  --box-tear-upper: polygon(0 0, 100% 0, 100% 50%, 82% 44%, 64% 55%, 46% 45%, 28% 56%, 12% 46%, 0 52%);
+  --box-tear-lower: polygon(0 52%, 12% 46%, 28% 56%, 46% 45%, 64% 55%, 82% 44%, 100% 50%, 100% 100%, 0 100%);
+  --box-tissue-edge: polygon(0 0, 100% 0, 100% 78%, 84% 100%, 66% 82%, 48% 100%, 30% 80%, 14% 96%, 0 80%);
+  --box-tissue-fold: polygon(8% 0, 92% 0, 70% 100%, 52% 64%, 30% 96%);
+  --box-stage-height: min(34dvh, 300px);
+  --box-open-stage-height: min(26dvh, 240px);
+  --box-open-duration: 1500ms;
+  --box-open-scale: .66;      /* the camera pulls back so the raised lid stays inside the stage */
+  --box-reveal-duration: 640ms;
+  --box-reveal-delay: 860ms;  /* the resident rises once the flaps are open */
+  --box-reveal-scale: .3;     /* it starts small enough to fit the carton's mouth */
+  --box-reveal-from: 22%;
+  --box-reveal-overshoot: -4%;
+  --box-reveal-overshoot-scale: 1.04;
+  --box-shake: 1.6deg;
+  --box-fall: 40px;
+}
+.blind-box {
+  /* Card sizes in units: the front is printed 3:4 and the side 9:16, so depth is 9/16 of the height. */
+  --box-w: calc(9 * var(--box-unit));
+  --box-h: calc(12 * var(--box-unit));
+  --box-d: calc(6.75 * var(--box-unit));
+  --box-lip: calc(1 * var(--box-unit));
+  --box-strip: calc(.56 * var(--box-unit));
+  --box-seal: calc(1.9 * var(--box-unit));
+  --box-flap: calc(3.6 * var(--box-unit));
+  --box-tissue-drop: calc(1.6 * var(--box-unit));
+  --box-tissue-rise: calc(-1.1 * var(--box-unit));
+  --box-strip-fly: calc(3 * var(--box-unit));
+  --box-open-drop: calc(4 * var(--box-unit));
+  /* The footprint is the carton as the camera sees it: 11.3 by 15.2 units at the tilt and turn above. */
+  position: relative; flex: none; width: calc(11.3 * var(--box-unit)); height: calc(15.2 * var(--box-unit));
+  filter: drop-shadow(0 var(--space-3) var(--space-3) var(--box-shadow)); pointer-events: none;
+}
+.blind-box-model {
+  position: absolute; left: calc(50% - var(--box-w) / 2); top: calc(50% - var(--box-h) / 2); width: var(--box-w); height: var(--box-h);
+  transform: rotateX(var(--box-tilt)) rotateY(var(--box-turn));
+}
+.blind-box-model, .blind-box-lid, .blind-box-lip { transform-style: preserve-3d; }
+.blind-box-model span { position: absolute; }
+:is(.blind-box-lid, .blind-box-lip)::before, :is(.blind-box-lid, .blind-box-lip)::after { content: ''; position: absolute; inset: 0; backface-visibility: hidden; }
+/* The underside of the lid and its lip is bare card. */
+:is(.blind-box-lid, .blind-box-lip)::after { transform: rotateY(180deg); background: linear-gradient(var(--box-shade), var(--box-shade)), var(--box-card); }
+
+.blind-box-front, .blind-box-back { inset: 0; }
+.blind-box-front, .blind-box-back, .blind-box-left, .blind-box-right { backface-visibility: hidden; }
+.blind-box-front { transform: translateZ(calc(var(--box-d) / 2)); background: var(--art-box-front) center / 100% 100%; }
+.blind-box-back { transform: translateZ(calc(var(--box-d) / -2)) rotateY(180deg); background: linear-gradient(var(--box-shade), var(--box-shade)), var(--art-box-front) center / 100% 100%; }
+.blind-box-right, .blind-box-left { top: 0; left: calc(50% - var(--box-d) / 2); width: var(--box-d); height: 100%; }
+.blind-box-right { transform: rotateY(90deg) translateZ(calc(var(--box-w) / 2)); background: linear-gradient(var(--box-shade), var(--box-shade)), var(--art-box-right) center / 100% 100%; }
+.blind-box-left { transform: rotateY(-90deg) translateZ(calc(var(--box-w) / 2)); background: linear-gradient(var(--box-shade-deep), var(--box-shade-deep)), var(--art-box-right) center / 100% 100%; }
+
+/* The lid hinges on the back wall's top edge; its lip folds down over the front and carries the tear strip. */
+.blind-box-lid { left: 0; top: 0; width: 100%; height: var(--box-d); transform-origin: 50% 0; transform: translateZ(calc(var(--box-d) / -2)) rotateX(90deg); }
+.blind-box-lid::before { background: var(--art-box-lid) center / 100% 100%; }
+.blind-box-lip { left: 0; top: 100%; width: 100%; height: var(--box-lip); transform-origin: 50% 0; transform: rotateX(-90deg) translateZ(var(--box-skin)); }
+.blind-box-lip::before { background: var(--box-paper); box-shadow: inset 0 calc(-1 * var(--border-width)) 0 var(--box-shade); }
+.blind-box-strip {
+  inset: auto 6% 0; height: var(--box-strip); transform: translateZ(var(--box-skin)); backface-visibility: hidden;
+  display: grid; align-items: center; border-block: var(--border-width) dashed var(--box-ink); background: var(--box-card); color: var(--box-ink);
+  font-family: var(--font-heading); font-size: calc(.8 * var(--box-strip)); font-weight: var(--weight-strong); line-height: 1; letter-spacing: var(--tracking-label);
+  justify-items: end; padding-inline-end: 8%;
+}
+.blind-box-seal { width: var(--box-seal); height: var(--box-seal); background: var(--art-box-seal) center / contain no-repeat; backface-visibility: hidden; }
+.blind-box-seal-upper { left: calc(50% - var(--box-seal) / 2); top: calc(100% - var(--box-seal) / 2); transform: translateZ(calc(2 * var(--box-skin))); clip-path: var(--box-tear-upper); }
+.blind-box-seal-lower {
+  left: calc(50% - var(--box-seal) / 2); top: calc(var(--box-lip) - var(--box-seal) / 2);
+  transform: translateZ(calc(var(--box-d) / 2 + 3 * var(--box-skin))); clip-path: var(--box-tear-lower);
+}
+
+/* Two inner flaps lie under the lid and swing outward once it lifts. */
+.blind-box-flap { top: 0; width: var(--box-flap); height: var(--box-d); background: linear-gradient(var(--box-shade), var(--box-shade)), var(--box-card); }
+.blind-box-flap-left { left: 0; transform-origin: 0 0; transform: translate3d(0, var(--box-skin), calc(var(--box-d) / -2)) rotateX(90deg); }
+.blind-box-flap-right { right: 0; transform-origin: 100% 0; transform: translate3d(0, var(--box-skin), calc(var(--box-d) / -2)) rotateX(90deg); }
+
+/* Tissue: one sheet sloping to the front and one fold standing over it, leaf-dotted like wrapping paper. */
+.blind-box-tissue {
+  left: 5%; top: 0; width: 90%; height: calc(.94 * var(--box-d)); transform-origin: 50% 0;
+  transform: translate3d(0, var(--box-tissue-drop), calc(-.47 * var(--box-d))) rotateX(80deg); clip-path: var(--box-tissue-edge);
+  background: radial-gradient(circle, color-mix(in srgb, var(--box-ink) 34%, transparent) 16%, transparent 18%) 0 0 / var(--box-unit) var(--box-unit), var(--box-tissue);
+}
+.blind-box-tissue-fold { transform: translate3d(0, var(--box-tissue-drop), calc(-.47 * var(--box-d))) rotateX(104deg); clip-path: var(--box-tissue-fold); filter: brightness(.94); }
+
+.arrival-box {
+  --box-unit: var(--box-mini-unit); position: absolute; z-index: 1; transform: translate(-50%, -100%);
+  display: grid; justify-items: center; gap: var(--space-1); padding: var(--space-1); border: 0;
+  background: transparent; color: var(--world-ink); font: inherit; cursor: pointer;
+}
+.arrival-box[hidden] { display: none; }
+.arrival-box-tag {
+  max-width: var(--box-mini-tag-width); padding: var(--space-1) var(--space-3); border: var(--border-width) solid var(--world-wood-dark);
+  border-radius: var(--world-radius); background: var(--world-paper); color: var(--world-ink); white-space: nowrap;
+  font-size: var(--text-sm); font-weight: var(--weight-strong); box-shadow: var(--world-shadow);
+}
+.arrival-box:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); border-radius: var(--world-radius); }
+.arrival-box:hover .blind-box { translate: 0 calc(-1 * var(--space-1)); }
+.unboxing-stage { position: relative; width: 100%; height: var(--box-stage-height); display: grid; place-items: center; }
+.unboxing-stage[data-phase='revealed'] { height: var(--box-open-stage-height); }
+.unboxing-stage > .blind-box { z-index: 1; margin-bottom: var(--tap-min); }
+.unboxing-open {
+  position: absolute; inset: 0; z-index: 1; display: grid; align-items: end; justify-items: center;
+  border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; border-radius: var(--world-radius);
+}
+.unboxing-open:focus-visible { outline: none; }
+.unboxing-open:focus-visible > span { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
+.unboxing-stage .unboxing-resident { position: absolute; z-index: 0; inset: 0; width: 100%; height: var(--box-open-stage-height); max-height: none; object-fit: contain; }
+.resident-reveal [hidden] { display: none; }
+.wizard-package { display: grid; place-items: center; }
+.wizard-package .blind-box { --box-unit: var(--box-wait-unit); }
+/* Still, Skip and reduced motion show the resident at once: the opened carton is never drawn. */
+.unboxing-stage[data-opened="true"][data-reduced="true"] .blind-box { visibility: hidden; }
+
+/* Opening, as shares of --box-open-duration: the strip tears (0-26%), the seal snaps and the lid swings (24-76%),
+   the flaps follow (34-70%), tissue lifts (40-66%), then the carton sinks away (60-86%) as the resident rises from its mouth. */
+@media (prefers-reduced-motion: no-preference) {
+  .unboxing-stage[data-phase='opening']:not([data-reduced="true"]) {
+    & .blind-box { animation: box-settle var(--box-open-duration) var(--motion-ease) both; }
+    & .blind-box-strip { animation: box-strip-tear var(--box-open-duration) var(--motion-ease) both; }
+    & .blind-box-seal-lower { animation: box-seal-snap var(--box-open-duration) var(--motion-ease) both; }
+    & .blind-box-lid { animation: box-lid-open var(--box-open-duration) var(--motion-ease) both; }
+    & .blind-box-lip { animation: box-lip-open var(--box-open-duration) var(--motion-ease) both; }
+    & .blind-box-flap-left { animation: box-flap-left-open var(--box-open-duration) var(--motion-ease) both; }
+    & .blind-box-flap-right { animation: box-flap-right-open var(--box-open-duration) var(--motion-ease) both; }
+    & .blind-box-tissue { animation: box-tissue-rise var(--box-open-duration) var(--motion-ease) both; }
+    & .unboxing-resident { animation: box-resident-reveal var(--box-reveal-duration) var(--motion-ease) var(--box-reveal-delay) both; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrival-box:hover .blind-box { translate: none; }
+  .unboxing-stage[data-opened="true"] .blind-box { visibility: hidden; }
+}
+@keyframes box-settle {
+  6% { rotate: calc(-1 * var(--box-shake)); }
+  12% { rotate: var(--box-shake); }
+  18% { rotate: 0deg; scale: 1; }
+  30%, 76% { scale: var(--box-open-scale); translate: 0 var(--box-open-drop); opacity: 1; }
+  98%, to { scale: var(--box-open-scale); translate: 0 calc(var(--box-open-drop) + var(--box-fall)); opacity: 0; }
+}
+@keyframes box-strip-tear {
+  8% { transform: translate3d(-4%, 0, var(--box-skin)); opacity: 1; }
+  26%, to { transform: translate3d(90%, calc(-1 * var(--box-strip-fly)), var(--box-strip-fly)) rotateZ(22deg); opacity: 0; }
+}
+@keyframes box-seal-snap {
+  0%, 24% { rotate: 0deg; translate: 0 0; }
+  34%, to { rotate: -9deg; translate: 0 8%; }
+}
+@keyframes box-lid-open {
+  0%, 26% { transform: translateZ(calc(var(--box-d) / -2)) rotateX(90deg); }
+  40% { transform: translateZ(calc(var(--box-d) / -2)) rotateX(100deg); }
+  50% { transform: translateZ(calc(var(--box-d) / -2)) rotateX(110deg); }
+  74% { transform: translateZ(calc(var(--box-d) / -2)) rotateX(var(--box-lid-swing)); }
+  88%, to { transform: translateZ(calc(var(--box-d) / -2)) rotateX(var(--box-lid-open)); }
+}
+@keyframes box-lip-open {
+  0%, 24% { transform: rotateX(-90deg) translateZ(var(--box-skin)); }
+  74%, to { transform: rotateX(var(--box-lip-open)) translateZ(var(--box-skin)); }
+}
+@keyframes box-flap-left-open {
+  0%, 44% { transform: translate3d(0, var(--box-skin), calc(var(--box-d) / -2)) rotateX(90deg) rotateY(0deg); }
+  68% { transform: translate3d(0, var(--box-skin), calc(var(--box-d) / -2)) rotateX(90deg) rotateY(calc(-1 * var(--box-flap-swing))); }
+  80%, to { transform: translate3d(0, var(--box-skin), calc(var(--box-d) / -2)) rotateX(90deg) rotateY(calc(-1 * var(--box-flap-open))); }
+}
+@keyframes box-flap-right-open {
+  0%, 44% { transform: translate3d(0, var(--box-skin), calc(var(--box-d) / -2)) rotateX(90deg) rotateY(0deg); }
+  68% { transform: translate3d(0, var(--box-skin), calc(var(--box-d) / -2)) rotateX(90deg) rotateY(var(--box-flap-swing)); }
+  80%, to { transform: translate3d(0, var(--box-skin), calc(var(--box-d) / -2)) rotateX(90deg) rotateY(var(--box-flap-open)); }
+}
+@keyframes box-tissue-rise {
+  0%, 46% { translate: 0 0; }
+  72%, to { translate: 0 var(--box-tissue-rise); }
+}
+@keyframes box-resident-reveal {
+  from { translate: 0 var(--box-reveal-from); scale: var(--box-reveal-scale); opacity: 0; }
+  30% { opacity: 1; }
+  76% { translate: 0 var(--box-reveal-overshoot); scale: var(--box-reveal-overshoot-scale); opacity: 1; }
+  to { translate: 0 0; scale: 1; opacity: 1; }
+}

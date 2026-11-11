@@ -6,6 +6,11 @@ export const WORLD_ART = {
   frame: 'brand/frame-treehouse.webp',
   'window-frame': 'art/skin-treehouse/window_frame.webp',
   basket: 'brand/basket-treehouse.webp',
+  // The blind box's printed panels, lid and seal, from scripts/prepare_box_art.py.
+  'box-front': 'brand/box-front.webp',
+  'box-right': 'brand/box-right.webp',
+  'box-lid': 'brand/box-lid.webp',
+  'box-seal': 'brand/box-seal.webp',
   'leaf-1': LEAF_ART[0],
   'leaf-2': LEAF_ART[1],
   'leaf-3': LEAF_ART[2],

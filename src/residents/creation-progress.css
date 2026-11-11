@@ -1,0 +1,32 @@
+:root { --creation-art-height: 152px; --creation-status-width: 360px; }
+.creation-progress { display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; gap: var(--space-4); min-height: 0;
+  overflow: hidden; padding: var(--space-3); text-align: center; }
+.creation-progress-body { display: grid; align-content: safe center; justify-items: center; gap: var(--space-4); min-height: 0; overflow: auto; width: 100%; padding: var(--space-2); }
+.creation-message { display: grid; justify-items: center; gap: var(--space-4); }
+.creation-progress[hidden], .resident-build-status[hidden], .wizard-summary-actions[hidden], .resident-wizard .wizard-bar[hidden] { display: none; }
+.creation-package { --box-unit: var(--box-mini-unit); height: var(--creation-art-height); display: grid; place-items: center; }
+.creation-progress h3 { margin: 0; font: var(--weight-normal) var(--text-xl) / var(--line-heading) var(--font-heading); text-wrap: balance; }
+.creation-progress .creation-stage { font-size: var(--text-sm); }
+.resident-build-status { position: fixed; z-index: 5; top: max(var(--space-4), env(safe-area-inset-top)); left: 50%; translate: -50% 0;
+  max-width: min(var(--creation-status-width), calc(100vw - 2 * var(--space-4))); box-shadow: var(--world-shadow); font-size: var(--text-sm); }
+.resident-build-status::before { content: ''; width: var(--space-2); height: var(--space-2); flex: none;
+  border-radius: var(--chip-radius); background: var(--world-accent); }
+.resident-build-status[data-state='failed']::before { background: var(--world-ink); }
+.resident-wizard[data-phase='creating'] { grid-template-rows: minmax(0, 1fr); }
+.wizard-summary-actions { min-width: 0; flex: 1; display: grid; gap: var(--space-2); max-height: var(--wizard-actions-max-height); overflow: auto; padding: var(--space-1); }
+.wizard-bar:has(> .wizard-summary-actions:not([hidden])) { align-items: start; }
+.resident-wizard .wizard-summary-actions .wizard-make { font-size: var(--text-lg); }
+.wizard-summary-actions .wizard-confirm, .wizard-summary-actions .wizard-out { padding: var(--space-2); }
+.wizard-summary-actions .wizard-confirm p { font-size: var(--text-base); }
+.wizard-summary-actions .wizard-notice { margin: 0; }
+@media (max-width: 700px) {
+  .residents-drawer.world-modal[data-panel='create'] { height: calc(100dvh - var(--modal-gap)); max-height: calc(100dvh - var(--modal-gap));
+    padding-top: max(var(--modal-pad), env(safe-area-inset-top)); }
+  .residents-drawer[data-panel='create'] .world-header h2 { font-size: var(--text-xl); }
+  .residents-drawer[data-panel='create'] .world-header { gap: var(--space-2); }
+  .residents-drawer[data-panel='create'] .world-tabs { margin-block: 0; }
+  .residents-drawer[data-panel='create'] .world-tabs > button { font-size: var(--text-sm); padding-inline: var(--space-1); gap: var(--space-1); }
+  .residents-drawer[data-panel='create'] .world-tabs .control-icon { width: var(--text-base); height: var(--text-base); }
+  .residents-drawer[data-panel='create'] .wizard-picks { padding: var(--space-2); gap: var(--space-2); }
+  .residents-drawer[data-panel='create'] .wizard-step { gap: var(--space-3); }
+}

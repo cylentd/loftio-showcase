@@ -7,6 +7,7 @@ import type { Scene } from "./scene";
 import type { Runtime } from "./runtime";
 import type { Overlay } from "./overlay";
 import type { SceneSettings } from "./scene-settings";
+import { vibrate } from "./tactile";
 
 /** `caught`: taken back out of a game feature's play (runtime.play), so it is held from the first touch. */
 type Held = { resident: Resident; button: HTMLButtonElement; origin: Point; pointer: number | null; caught?: boolean };
@@ -43,6 +44,8 @@ class ResidentControls {
       button.dataset.input = "pointer";
       const client = { x: event.clientX, y: event.clientY };
       if (!this.drag.begin(resident.cast.id, event.pointerId, client, this.world(client), resident.pos)) return;
+      resident.touch(true); this.draw(resident);
+      if (event.pointerType === "touch") vibrate("touch", this.runtime.look.frozen);
       const caught = this.catch(resident);
       this.runtime.play?.sample(this.world(client), event.timeStamp, true);
       this.suppressClick = null;
@@ -93,6 +96,9 @@ class ResidentControls {
   private finishPointer(event: PointerEvent, cancel = false): void {
     const held = this.held;
     if (!held || held.pointer !== event.pointerId) return;
+    held.resident.touch(false);
+    if (this.runtime.look.frozen) this.draw(held.resident);
+    if (!cancel && event.pointerType === "touch") vibrate("release", this.runtime.look.frozen);
     const result = this.drag.finish(event.pointerId, cancel);
     if (!result) return;
     this.held = null;
@@ -127,6 +133,7 @@ class ResidentControls {
 
   private drop(held: Held, cancel: boolean): void {
     const resident = held.resident;
+    if (!cancel || held.caught) Object.assign(resident.pos, placementPosition(resident.pos));
     resident.putDown(!cancel || !!held.caught, !this.runtime.look.frozen, this.runtime.clock);
     delete held.button.dataset.held;
     held.button.setAttribute("aria-pressed", "false");
@@ -182,6 +189,8 @@ class ResidentControls {
   private cancel(): void {
     const held = this.held;
     if (!held) return;
+    held.resident.touch(false);
+    if (this.runtime.look.frozen) this.draw(held.resident);
     this.held = null;
     if (held.pointer !== null) {
       this.drag.finish(held.pointer, true);

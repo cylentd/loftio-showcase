@@ -86,13 +86,13 @@ async function start(intro: ReturnType<typeof installIntro>, features: readonly 
   const favorites = new FavoriteSpots(worldEl, look, settings, overlay, scene.favoriteScenery);
   const syncRoom = installRoomResize({ app, scene, runtime, settings, favorites, shell, scroller, applySettings });
   installPostcard(app);
-  const updateResidents = installResidents(scene, runtime, overlay, residentControls);
+  const updateResidents = installResidents(scene, runtime, overlay, residentControls, roomAudio);
   const tray = mountSceneActions(makeNowPlaying(roomAudio, () => look.frozen), document.querySelector<HTMLElement>(".postcard-action")!, settings,
     document.querySelector<HTMLElement>('.residents-trigger')!);
   const installed = features.map((feature) => feature({ shell, app, scene, runtime, look, overlay, settings, audio: roomAudio }));
   if (params.has("debug")) installDebug(shell, app, scene, runtime, look);
   runtime.update(0);
-  app.ticker.add((ticker) => { runtime.update(ticker.deltaMS); favorites.update(); updateResidents(); });
+  app.ticker.add((ticker) => { runtime.update(ticker.deltaMS); favorites.update(); updateResidents(ticker.deltaMS); });
   if (document.hidden) app.stop();
   app.render();
   shell.dataset.ready = "true";

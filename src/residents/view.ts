@@ -12,7 +12,6 @@ import { utcDay } from '../builder/utc-day';
 import { onlineApi } from '../builder/online-api';
 import { turnstileTokens } from '../builder/turnstile-client';
 import { VISITOR_DAILY_CAP } from '../builder/server/online-config';
-import { worldButton } from '../world-ui';
 import type { Scene } from '../scene';
 import type { Runtime } from '../runtime';
 import type { Overlay } from '../overlay';
@@ -21,15 +20,17 @@ import { residentRegistry, type ResidentEntry } from './registry';
 import { RESIDENT_COPY as COPY } from './copy';
 import { residentForm } from './create-form';
 import { createAction } from './create-action';
-import { arrivalSpot, openSpot, sceneResidents } from './scene-adapter';
-import { residentChrome, arrivalReveal, renderResidents } from './view-parts';
+import { sceneResidents } from './scene-adapter';
+import { residentChrome, renderResidents } from './view-parts';
+import { arrivalReveal } from './arrival-reveal';
+import { roomDeliveries } from './delivery';
+import { creationIndicator } from './creation-progress';
+import type { RevealAudioPreference } from './unboxing-sound';
 import { CAST } from '../cast';
 import { originalLineup } from './original-lineup';
 import { originalResidents } from './original-scene';
 import { arrivalPreview } from './arrival-preview-mode';
 import { previewBackend } from './arrival-preview';
-
-const BASKET_MARGIN = 16; // px from the screen edge and the Residents button; matches --space-4
 
 const NAMES = {
   local: { registry: 'loftio-residents-v1', tickets: 'loftio-build-tickets-v1', journal: 'loftio-builder-local-pending-v1' },
@@ -78,7 +79,7 @@ function restore(current: ReturnType<typeof session>, adapter: ReturnType<typeof
   }).catch(failure);
 }
 
-export function installResidents(scene: Scene, runtime: Runtime, overlay: Overlay, controls: ReturnType<typeof installResidentControls>) {
+export function installResidents(scene: Scene, runtime: Runtime, overlay: Overlay, controls: ReturnType<typeof installResidentControls>, audio: RevealAudioPreference) {
   const mode = builderMode(location.search, location.hostname, { workerHost: import.meta.env.VITE_LOCAL_WORKER_HOST, mode: import.meta.env.VITE_BUILDER_MODE });
   const chrome = residentChrome();
   let current: ReturnType<typeof session>;
@@ -87,7 +88,9 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   const { registry, builder, tickets, ticketKey } = current;
   const originals = originalResidents(scene, runtime, overlay, controls, current.originals);
   // Test tickets only where images are free placeholders; real builds (local, online) never get them.
-  const form = residentForm(builder, mode, mode === 'mock' ? () => tickets.grant(1) : undefined); chrome.panels[2]!.append(form.form, challenge);
+  const form = residentForm(builder, mode, mode === 'mock' ? () => tickets.grant(1) : undefined, () => chrome.drawer.dialog.close()); chrome.panels[2]!.append(form.form, challenge);
+  const indicator = creationIndicator(chrome.openCreate);
+  chrome.drawer.dialog.addEventListener('close', form.dismissProgress);
   // Online the image arrives through this page and the ticket is already spent, so leaving mid-build asks first.
   if (mode === 'online') addEventListener('beforeunload', event => { if (builder.state().status === 'generating') event.preventDefault(); });
   // Another tab spent or added a ticket: show the new count here too.
@@ -98,24 +101,19 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
     welcome: async (entry, saved, skip) => { await adapter.add(entry, saved, true, skip); render(); },
     rename: (id, name) => registry.rename(id, name),
     later: id => { registry.defer(id); render(); }, failure,
-  });
-  const reveal = (entry: ResidentEntry) => {
+  }, audio);
+  const reveal = (entry: ResidentEntry, trigger?: HTMLButtonElement) => {
     const saved = builder.state().kept.find(item => item.id === entry.savedId);
-    if (saved) showArrival(entry, saved, runtime.look.frozen);
+    if (saved) showArrival(entry, saved, runtime.look.frozen, trigger);
   };
-  const basket = worldButton(COPY.ready, () => { const next = registry.list().find(entry => entry.arrival === 'waiting'); if (next) reveal(next); });
-  basket.className = 'arrival-basket'; basket.setAttribute('aria-label', COPY.reveal); basket.hidden = true;
-  const tag = document.createElement('span'); tag.textContent = COPY.ready; basket.replaceChildren(tag);
-  document.querySelector('#world')!.append(basket);
-  let basketSpot: { x: number; y: number } | null = null;
+  const deliveries = roomDeliveries(scene, runtime, reveal, audio,
+    (id, room, point) => registry.deliveryPosition(id, room, point), failure);
   function render() {
     const state = builder.state(); form.update();
-    chrome.status.textContent = state.status === 'generating' ? state.stage === 'preparing' ? COPY.preparing : COPY.creating[mode] : '';
+    indicator.update(state.status, state.stage);
     chrome.error.textContent = createAction(state).drawerAlert;
-    try { for (const saved of state.kept) registry.discover(saved.id, saved.state === 'kept' ? 'saved' : 'waiting'); } catch (error) { failure(error); return; }
-    const entries = registry.list(); const ready = entries.some(entry => entry.arrival === 'waiting'); basket.hidden = !ready;
-    // Chosen once when the basket appears, so it doesn't follow residents as they wander.
-    basketSpot = ready ? basketSpot ?? openSpot(scene) : null;
+    try { if (state.status !== 'generating') for (const saved of state.kept) registry.discover(saved.id, saved.state === 'kept' ? 'saved' : 'waiting'); } catch (error) { failure(error); return; }
+    const entries = registry.list(); const ready = entries.some(entry => entry.arrival === 'waiting'); deliveries.sync(entries);
     chrome.trigger.setAttribute('aria-label', ready ? COPY.title + ' · ' + COPY.ready : COPY.title);
     chrome.trigger.title = ready ? COPY.ready : COPY.title;
     renderResidents(chrome.panels, state, entries, id => { try { adapter.remove(id); } catch (error) { failure(error); } }, reveal,
@@ -123,14 +121,5 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   }
   const openPreview = preview ? () => { const waiting = registry.list().find(entry => entry.arrival === 'waiting'); if (waiting) reveal(waiting); } : undefined;
   builder.subscribe(render); render(); restore(current, adapter, failure, openPreview);
-  return () => {
-    const spot = basketSpot ?? arrivalSpot(); const { scale, x, y, offsetY, left: scrolled } = runtime.look;
-    // The door can sit past a phone's edge or behind the Residents button: keep the basket in view above it.
-    // left is in world-scroller coordinates, so clamp the on-screen position and add the scroll back.
-    const bottomControls = [chrome.trigger, document.querySelector('.scene-actions')].filter(item => item instanceof HTMLElement);
-    const half = basket.offsetWidth / 2; const ceiling = Math.min(...bottomControls.map(item => item.getBoundingClientRect().top)) - BASKET_MARGIN;
-    const left = (spot.x + scene.cast.x - x) * scale - scrolled; const top = (spot.y + scene.cast.y - y) * scale + offsetY;
-    basket.style.left = Math.max(half + BASKET_MARGIN, Math.min(innerWidth - half - BASKET_MARGIN, left)) + scrolled + 'px';
-    basket.style.top = Math.min(ceiling, top) + 'px';
-  };
+  return (elapsed: number) => deliveries.update(elapsed);
 }

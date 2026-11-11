@@ -1,0 +1,40 @@
+:root {
+  --arrival-unit: clamp(12px, 2.8dvh, 19px);
+  --arrival-stage-width: calc(17 * var(--arrival-unit));
+  --arrival-stage-height: calc(18 * var(--arrival-unit));
+  --arrival-heading: clamp(28px, 4.6vw, 40px);
+  --arrival-copy-width: 30ch;
+  --arrival-action-width: 240px;
+}
+.creation-progress[data-state='arrived'] { gap: var(--space-5); padding: var(--space-4); }
+.creation-progress[data-state='arrived'], .creation-progress[data-state='arrived'] .creation-progress-body { box-sizing: border-box; }
+.creation-progress[data-state='arrived'] .creation-progress-body { grid-template-columns: minmax(0, 1fr); }
+.creation-progress[data-state='arrived'] .creation-package {
+  --box-unit: var(--arrival-unit);
+  --arrival-stage-width: calc(17 * var(--arrival-unit));
+    position: relative; isolation: isolate; width: var(--arrival-stage-width); max-width: 100%; height: var(--arrival-stage-height);
+}
+.creation-progress[data-state='arrived'] .creation-message { gap: var(--space-3); min-width: 0; }
+.creation-progress[data-state='arrived'] h3 { font-size: var(--arrival-heading); max-width: 16ch; color: var(--world-accent); }
+.creation-progress[data-state='arrived'] .creation-message > p { max-width: var(--arrival-copy-width); margin: 0; text-wrap: pretty; }
+.creation-progress[data-state='arrived'] > .world-primary { min-width: min(100%, var(--arrival-action-width)); padding-block: var(--space-3); }
+@media (min-width: 701px) and (min-height: 560px) {
+  .creation-progress[data-state='arrived'] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: 1fr auto auto 1fr;
+    gap: var(--space-5) var(--space-6); text-align: left;
+  }
+  .creation-progress[data-state='arrived'] .creation-progress-body { display: contents; }
+  .creation-progress[data-state='arrived'] .creation-package { grid-column: 1; grid-row: 1 / -1; align-self: center; }
+  .creation-progress[data-state='arrived'] .creation-message { grid-column: 2; grid-row: 2; justify-items: start; }
+  .creation-progress[data-state='arrived'] > .world-primary { grid-column: 2; grid-row: 3; justify-self: start; }
+}
+@media (max-width: 700px) {
+  .creation-progress[data-state='arrived'] { --arrival-unit: clamp(12px, 1.95dvh, 16px); --arrival-stage-height: calc(16 * var(--arrival-unit)); padding: var(--space-2); gap: var(--space-3); }
+}
+@media (max-height: 500px) and (min-width: 600px) {
+  .creation-progress[data-state='arrived'] { --arrival-unit: 9.25px; --arrival-stage-height: 144px; gap: var(--space-2); padding: var(--space-1); }
+  .creation-progress[data-state='arrived'] .creation-progress-body { grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); padding: 0; text-align: left; }
+  .creation-progress[data-state='arrived'] .creation-message { justify-items: start; }
+  .creation-progress[data-state='arrived'] h3 { font-size: var(--text-xl); }
+  .creation-progress[data-state='arrived'] .creation-message > p { font-size: var(--text-sm); line-height: var(--line-tight); }
+}
