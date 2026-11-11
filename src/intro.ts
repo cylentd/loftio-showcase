@@ -41,7 +41,13 @@ export function installIntro(shell: HTMLElement, still: boolean) {
   const image = sign.querySelector<HTMLImageElement>("img")!;
   const fallback = element.querySelector<HTMLElement>(".grove-intro-name")!;
   const retry = element.querySelector<HTMLButtonElement>(".grove-intro-retry")!;
-  let ready = false, failed = false, dismissed = false, skipRequested = false;
+  const returning = document.documentElement.hasAttribute('data-loft-return');
+  if (returning) {
+    element.hidden = true;
+    const url = new URL(location.href); url.searchParams.delete('from');
+    history.replaceState(history.state, '', url.href);
+  }
+  let ready = false, failed = false, dismissed = false, skipRequested = returning;
   let onEnter = () => {};
   document.title = INTRO.pageTitle; shell.setAttribute("aria-busy", "true"); shell.inert = true;
   status.textContent = INTRO.loading; image.alt = INTRO.name; fallback.textContent = INTRO.name;
@@ -63,6 +69,7 @@ export function installIntro(shell: HTMLElement, still: boolean) {
       element.remove(); shell.inert = false;
       if (hadFocus) { shell.tabIndex = -1; shell.focus({ preventScroll: true }); }
     };
+    if (returning) { finish(); return; }
     const timer = window.setTimeout(finish, INTRO.cleanupMs);
     element.addEventListener("transitionend", event => {
       if (event.target !== element || event.propertyName !== "opacity") return;
@@ -89,6 +96,7 @@ export function installIntro(shell: HTMLElement, still: boolean) {
     fail() {
       if (ready || failed) return;
       failed = true; document.removeEventListener("keydown", onKey, true);
+      element.hidden = false; delete document.documentElement.dataset.loftReturn;
       shell.setAttribute("aria-busy", "false"); status.textContent = INTRO.error; retry.hidden = false;
     },
   };

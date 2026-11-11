@@ -1,21 +1,30 @@
-.world-modal { --modal-width: 760px; --modal-height: 680px; --modal-sheet-height: 80dvh; }
+/* --modal-gap: what a framed surface leaves free of the viewport, so its footer is never pushed off screen
+   (standards L4: surface height at most the viewport minus 48 px). */
+/* --modal-pad: the content box's padding from the frame's inner edge (L1), plus any paper the skin tucks under its wood. */
+.world-modal { --modal-width: 760px; --modal-height: 680px; --modal-sheet-height: 80dvh; --modal-gap: var(--space-7);
+  --modal-pad: calc(var(--space-5) + var(--frame-tuck, 0px)); }
 :is(.residents-drawer, .resident-reveal, .scene-controls, .postcard-preview, .focus-drawer).world-modal {
   position: fixed; inset: var(--world-inset); margin: auto;
   width: min(var(--modal-width), calc(100vw - 2 * var(--world-inset)));
-  max-width: calc(100vw - 2 * var(--world-inset)); height: min(var(--modal-height), calc(100dvh - 2 * var(--world-inset)));
-  max-height: calc(100dvh - 2 * var(--world-inset)); padding: var(--space-4);
+  max-width: calc(100vw - 2 * var(--world-inset)); height: min(var(--modal-height), calc(100dvh - var(--modal-gap)));
+  max-height: calc(100dvh - var(--modal-gap)); padding: var(--modal-pad);
   border-radius: var(--world-radius); overscroll-behavior: contain;
 }
+/* The arrival is as tall as its content (L5); the others keep a steady height while their tabs change. */
+.resident-reveal.world-modal { --modal-width: 560px; height: fit-content; }
 .world-modal::backdrop { background: var(--color-scene-scrim); }
 .world-modal.scene-controls:not([open]) { display: none; }
-.world-modal .world-header { flex-shrink: 0; padding-inline: 0; }
+/* L3: the close sits inside the content box, 12 px from its top and right edges. */
+.world-modal .world-header { flex-shrink: 0; padding: var(--space-3) var(--space-3) 0 0; }
 .world-modal .world-header .world-close { position: static; flex-shrink: 0; }
 .world-modal.postcard-preview .postcard-viewport { flex: 1; min-height: 0; max-height: none; }
 @media (max-width: 700px) {
   :is(.residents-drawer, .resident-reveal, .scene-controls, .postcard-preview, .focus-drawer).world-modal {
     inset: auto 0 0; margin: 0; width: 100%; max-width: none;
     height: min(var(--modal-height), var(--modal-sheet-height)); max-height: var(--modal-sheet-height);
-    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    --modal-pad: calc(var(--space-4) + var(--frame-tuck, 0px));
+    padding: var(--modal-pad); padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
     border-radius: var(--world-radius) var(--world-radius) 0 0;
   }
+  .resident-reveal.world-modal { height: fit-content; }
 }

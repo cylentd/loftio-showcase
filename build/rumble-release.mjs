@@ -24,7 +24,7 @@ export async function publishRumble(gameRoot, output) {
   const files = JSON.parse(await readFile(manifestPath, 'utf8'));
   const paths = new Map();
   for (const name of files) {
-    if (!/^(?:[\w-]+\.(?:html|js|css)|art\/[\w-]+\.webp|assets\/camera-storybook\/[\w-]+\.webp)$/.test(name)) {
+    if (!/^(?:[\w-]+\.(?:html|js|css)|audio\/[\w-]+\.mp3|art\/[\w-]+\.webp|assets\/camera-storybook\/[\w-]+\.webp)$/.test(name)) {
       throw new Error('Unsafe Rumble runtime path: ' + name);
     }
     paths.set(resolve(gameRoot, runtimeDirectory, name), join(output, 'play/rumble', name === 'loft-rumble-realtime.html' ? 'index.html' : name));

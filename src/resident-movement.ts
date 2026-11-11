@@ -18,9 +18,14 @@ export function surfaceAt(point: Point): Surface {
     const right = bounds.backRight + depth * (bounds.frontRight - bounds.backRight);
     if (point.x >= left && point.x <= right) return surface;
   }
-  if (point.x >= SURFACES.window.frontLeft && point.x <= SURFACES.window.frontRight && point.y >= SURFACE_SPLIT.y && point.y <= SURFACES.window.front) return "window";
-  return point.y >= SURFACE_SPLIT.y ? "ground" : point.x < SURFACE_SPLIT.x ? "loft-left" : "loft-right";
+  // The window glass runs from the ceiling to the sill, so a drop anywhere on it settles on the sill, never on the loft.
+  if (point.x >= SURFACES.window.frontLeft && point.x <= SURFACES.window.frontRight && point.y <= SURFACES.window.front) return "window";
+  if (point.y >= SURFACE_SPLIT.y) return "ground";
+  if (point.x < SURFACE_SPLIT.x) return "loft-left";
+  // Past the loft's right edge there is no loft, only wall: the drop falls to the ground floor.
+  return point.x <= loftRightEdge() ? "loft-right" : "ground";
 }
+const loftRightEdge = () => Math.max(SURFACES["loft-right"].backRight, SURFACES["loft-right"].frontRight);
 export function residentDepth(point: Point, walking = false): number {
   const surface = surfaceAt(point);
   if (surface === "couch") return COUCH_SEAT.depth;

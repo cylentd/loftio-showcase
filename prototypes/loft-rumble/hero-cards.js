@@ -40,10 +40,33 @@
     card.setAttribute('role', 'group');
     card.setAttribute('aria-label', view.accessibleLabel);
     traitChip(card, view);
+    card.title = view.traitLabel + ': ' + view.description;
     const status = card.querySelector('small');
     status.title = view.stateLabel;
     if (view.motion !== 'available') status.append(glyph(data.icons[view.motion]));
     card.querySelector('.badge').append(glyph(data.icons.special));
+    if (!document.documentElement.hasAttribute('data-rumble-demo')) return;
+    if (!card.querySelector('.dock-meter')) {
+      const meter = document.createElement('div');
+      meter.className = 'dock-meter';
+      meter.setAttribute('role', 'progressbar');
+      meter.setAttribute('aria-valuemin', '0');
+      meter.setAttribute('aria-valuemax', String(data.dock.percent));
+      const charge = document.createElement('span');
+      charge.className = 'dock-charge';
+      const danger = document.createElement('span');
+      danger.className = 'dock-danger';
+      danger.textContent = data.dock.danger;
+      card.append(meter, charge, danger);
+    }
+    const percent = Math.round(view.specialCharge * data.dock.percent);
+    const meter = card.querySelector('.dock-meter');
+    meter.setAttribute('aria-label', view.name + ' special charge');
+    meter.setAttribute('aria-valuenow', String(percent));
+    card.querySelector('.dock-charge').textContent = percent === data.dock.percent
+      ? data.dock.special : data.dock.special + ' ' + percent + '%';
+    meter.title = percent === data.dock.percent ? data.dock.ready : data.dock.special + ' ' + percent + '%';
+    if (view.motion === 'stunned') status.textContent = data.dock.stunned + ' ' + view.stunRemaining.toFixed(1) + data.dock.seconds;
   }
 
   window.LoftRumbleHeroCards = Object.freeze({ update });

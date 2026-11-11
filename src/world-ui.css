@@ -2,7 +2,8 @@
   --world-paper: #fff4da; --world-ink: #35271d; --world-muted: #69503a; --world-wood: #684327;
   --world-edge: #a57942; --world-accent: #365335; --world-selected: #e0e7c8;
   --world-frame: 7px; --world-radius: 24px; --world-drawer-width: 420px; --world-inset: 16px;
-  --world-shadow: 0 18px 60px #20160e66, inset 0 2px 0 #ffffff80;
+  --world-drop: 0 18px 60px #20160e66; /* the cast shadow alone, for painted frames whose art carries its own bevel */
+  --world-shadow: var(--world-drop), inset 0 2px 0 #ffffff80;
   --world-button-shadow: 0 3px 0 var(--world-edge), inset 0 1px 0 #ffffffb0;
   --world-press: 2px; --world-duration: 180ms;
   /* Treehouse Den skin (docs/design/LOFTIO-UI-DESIGN-SYSTEM.md): carved wood, parchment, moss-green pills */
@@ -114,12 +115,17 @@
 /* Treehouse (also the fallback skin): the painted frame and leaves replace the CSS wood above.
    Coffee and beach keep the CSS frame. --art-* urls are set by world-art.ts. */
 :root[data-world-theme="treehouse"] {
-  /* Measured on public/brand/frame-treehouse.webp (937 x 933) by scripts/clean_brand_art.py:
-     wood 80/88/81/85 px thick (left/top/right/bottom); the corner curve ends 178 px in, the fan carving ~155 px. */
-  --frame-art-slice: 210; /* clears both the curve and the carving, so the straight edges stretch plain wood only */
-  --frame-art-corner: 2.5; /* slice / mean wood thickness (210 / 84): the drawn corner keeps the wood its own width */
-  --frame-art-radius: 1.4; /* outer corner radius / wood thickness on the art (about 120 / 84) */
-  --world-carved: 30px; /* drawn wood thickness on desktop: 1.5x the first pass, so it reads as the concept board's chunky frame */
+  /* The window frame: chestnut planks with brass corner brackets, a nine-slice made by scripts/prepare_window_frame.py.
+     Every number comes from its entry in art/ui/treehouse-v1/manifest.json (tests/window-frame.test.ts checks the slice). */
+  --window-frame-slice: 120; /* shipped.nineSlice: px on the WebP, the corner square holding the bracket and inner curve */
+  --window-frame-plank-y: 0.7; /* plank.top / nineSlice (169 / 240): top and bottom wood as a share of the corner */
+  --window-frame-plank-x: 0.61; /* plank.side / nineSlice (146 / 240) */
+  --window-frame-round: 0.23; /* inner opening's corner radius / corner size on the art (about 55 / 240): the paper's corner */
+  --window-frame-corner: 44px; /* drawn corner size on desktop: wood 31 px top, 27 px sides, the brackets about 40 px */
+  /* The paper starts this far under the wood: with the paper edge exactly at the plank's edge, Chrome draws a faint
+     1 px seam just inside it (seen at 1500 x 920, 2026-11-10). world-modal.css adds it back to the padding. */
+  --frame-tuck: var(--space-1);
+  --world-carved: calc(var(--window-frame-corner) * var(--window-frame-plank-x) - var(--frame-tuck));
   --frame-leaf-sprig: 64px;
   /* Music tray and name tag (world-tray.css): a carved wood board with leaf tufts, a rose-brown tag */
   --skin-tag: #8a4a43; /* rose-brown; 6.2:1 under --world-paper */
@@ -129,25 +135,31 @@
   --tray-tuft: var(--art-leaf-1); --tray-tuft-end: var(--art-leaf-2);
   --tray-label-ink: var(--world-tray-ink);
 }
+/* The art is drawn behind the content (border-image paints under it). The layout border is the plank, so the
+   padding (L1) is measured from the wood's inner edge; the corner art reaches past it only by the bracket. */
 :root[data-world-theme="treehouse"] .world-frame {
-  border-image: var(--art-frame) var(--frame-art-slice) / calc(var(--world-carved) * var(--frame-art-corner)) stretch;
-  border-radius: calc(var(--world-carved) * var(--frame-art-radius));
-  background: var(--world-paper) padding-box; box-shadow: var(--world-shadow);
+  border-style: solid; border-color: transparent;
+  border-width: calc(var(--window-frame-corner) * var(--window-frame-plank-y) - var(--frame-tuck)) var(--world-carved);
+  border-image: var(--art-window-frame) var(--window-frame-slice) / var(--window-frame-corner) stretch;
+  /* The paper's corner follows the opening's curve: the inner radius is the outer one less the border. */
+  border-radius: calc(var(--window-frame-corner) * (var(--window-frame-plank-x) + var(--window-frame-round))) / calc(var(--window-frame-corner) * (var(--window-frame-plank-y) + var(--window-frame-round)));
+  background: var(--world-paper) padding-box; box-shadow: var(--world-drop);
 }
-/* A painted sprig on each top corner: one leaf on the frame, a smaller one tucked behind it. */
-:root[data-world-theme="treehouse"] .world-frame::before, :root[data-world-theme="treehouse"] .world-frame::after {
-  top: calc(-1 * var(--world-carved) - var(--space-4)); width: var(--frame-leaf-sprig); height: var(--frame-leaf-sprig);
+/* Painted leaves on the top-left corner only, hung off its outside: perimeter, never over text or a control. */
+:root[data-world-theme="treehouse"] .world-frame::before {
+  top: calc(-1 * var(--window-frame-corner) * var(--window-frame-plank-y) - var(--frame-leaf-sprig) / 4);
+  left: calc(-1 * var(--window-frame-corner) * var(--window-frame-plank-x) - var(--frame-leaf-sprig) / 4);
+  width: var(--frame-leaf-sprig); height: var(--frame-leaf-sprig);
   border-radius: 0; box-shadow: none; rotate: none;
   background: var(--art-leaf-3) right top / 58% no-repeat, var(--art-leaf-1) left bottom / 66% no-repeat;
   filter: drop-shadow(0 var(--world-lip) var(--world-lip) color-mix(in srgb, var(--world-ink) 45%, transparent));
 }
-:root[data-world-theme="treehouse"] .world-frame::before { left: calc(-1 * var(--world-carved)); }
-:root[data-world-theme="treehouse"] .world-frame::after { background: var(--art-leaf-3) right top / 58% no-repeat, var(--art-leaf-2) left bottom / 66% no-repeat; }
+:root[data-world-theme="treehouse"] .world-frame::after { content: none; }
 @media (max-width: 700px) {
   /* Phone sheet: thinner wood, and the frame runs off the bottom of the screen instead of closing under it. */
-  :root[data-world-theme="treehouse"] { --world-carved: 14px; --frame-leaf-sprig: 52px; }
+  :root[data-world-theme="treehouse"] { --window-frame-corner: 28px; --frame-leaf-sprig: 52px; }
   :root[data-world-theme="treehouse"] .world-frame {
-    border-bottom-width: 0; border-image-width: calc(var(--world-carved) * var(--frame-art-corner)) calc(var(--world-carved) * var(--frame-art-corner)) 0;
-    border-radius: calc(var(--world-carved) * var(--frame-art-radius)) calc(var(--world-carved) * var(--frame-art-radius)) 0 0;
+    border-bottom-width: 0; border-image-width: var(--window-frame-corner) var(--window-frame-corner) 0;
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
   }
 }

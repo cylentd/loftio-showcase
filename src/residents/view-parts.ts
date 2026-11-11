@@ -79,7 +79,7 @@ export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbac
   return (entry: ResidentEntry, saved: SavedCharacter, reduced: boolean) => {
     if (document.querySelector('dialog[open]:not(.world-drawer)')) return;
     chrome.drawer.dialog.close();
-    let skip = reduced; let joining = false;
+    const skip = reduced; let joining = false;
     const image = document.createElement('img'); image.src = imageSource(saved.image); image.alt = saved.resolvedSelections.creature.label;
     image.className = 'arrival-peek';
     const basket = document.createElement('div'); basket.className = 'reveal-basket'; basket.append(image);
@@ -107,13 +107,18 @@ export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbac
       if (joining) return;
       try { if (!persist()) return; callbacks.later(entry.id); arrival.dialog.close(); } catch (failure) { failed(failure); }
     });
-    const skipButton = worldButton(COPY.skip, () => { skip = true; image.classList.remove('arrival-peek'); skipButton.hidden = true; });
-    form.append(naming.field, error, welcome, later, skipButton);
-    arrival.content.replaceChildren(basket, greeting, form);
+    // The body scrolls when the screen is short; the actions stay in a footer below it, always in view.
+    const body = document.createElement('div'); body.className = 'reveal-body';
+    body.append(basket, greeting, naming.field, error);
     if (saved.image.mime === 'image/webp') {
       const original = document.createElement('a'); original.href = saved.image.originalUrl; original.download = 'loftio-resident.png'; original.textContent = COPY.original;
-      arrival.content.append(original);
+      body.append(original);
     }
+    const actions = document.createElement('div'); actions.className = 'reveal-actions';
+    // Two choices only (owner, 2026-11-10). Closing keeps the basket waiting in the room, which is the redo.
+    actions.append(welcome, later);
+    form.append(body, actions);
+    arrival.content.replaceChildren(form);
     arrival.open(chrome.trigger);
   };
 }

@@ -1,0 +1,386 @@
+:root[data-rumble-demo] {
+  --stage-shell-width: 960px;
+  --stage-chrome-width: 360px;
+  --stage-gap: 6px;
+  --stage-pad: 10px;
+  --stage-logo-width: 144px;
+  --stage-logo-height: 48px;
+  --stage-control: 44px;
+  --stage-radius: 12px;
+  --stage-dock-height: 64px;
+  --stage-avatar: 36px;
+  --stage-name-size: 12px;
+  --stage-state-size: 11px;
+  --stage-state-icon: 12px;
+  --stage-back-size: 22px;
+  --stage-border: 1px;
+  --stage-backdrop-shade: #16251fe0;
+  --stage-backdrop-bottom: #101b18f2;
+  --stage-chrome-surface: #182820e8;
+  --stage-dock-surface: #213b30;
+  --stage-dock-ink: #f6efdc;
+  --stage-dock-muted: #c6d3c4;
+  --stage-edge: #a4ac7a55;
+  --stage-arrival-life: 4000ms;
+  --stage-arrival-reveal: 1100ms;
+  --stage-arrival-ease: ease-in-out;
+  --stage-arrival-shade: #14231d59;
+  --stage-arrival-title: clamp(48px, calc(var(--col, 360px) * .17), 76px);
+  --stage-arrival-lead: 22px;
+  --stage-arrival-ink: #ffe6a5;
+  --stage-arrival-outline: #4b2639;
+  --stage-arrival-stroke: 2px;
+  --stage-arrival-lean: -5deg;
+  --stage-arrival-tracking: -.045em;
+  --stage-arrival-gap: 2px;
+  --stage-arrival-depth: 0 4px 0 #9b5b31, 0 7px 0 #4b2639, 0 12px 22px #0008;
+  --stage-arrival-layer: 4;
+  --stage-arrival-shadow: 0 2px 8px #000b;
+  --stage-sheet-width: 360px;
+  --stage-sheet-space: 20px;
+  --stage-sheet-gap: 12px;
+  --stage-sheet-radius: 24px;
+  --stage-sheet-art-height: 88px;
+  --stage-sheet-title: 26px;
+  --stage-sheet-copy: 14px;
+  --stage-sheet-control: 48px;
+  --stage-sheet-surface: #f5ecd9;
+  --stage-sheet-ink: #332c23;
+  --stage-sheet-muted: #68634f;
+  --stage-sheet-edge: #bda77a;
+  --stage-sheet-rule: #d7c9ab;
+  --stage-sheet-accent: #f4c566;
+  --stage-sheet-backdrop: #101a16c9;
+  --stage-sheet-toggle: #637c53;
+  --stage-sheet-toggle-off: #b3ad9b;
+  --stage-sheet-toggle-width: 32px;
+  --stage-sheet-toggle-height: 20px;
+  --stage-sheet-toggle-dot: 12px;
+  --stage-sheet-shadow: 0 16px 64px #0008;
+  --stage-dock-pad: 8px;
+  --stage-dock-gap: 4px;
+  --stage-dock-row: 16px;
+  --stage-meter-height: 4px;
+}
+[data-rumble-demo] main {
+  height: 100dvh;
+  padding: max(var(--stage-gap), env(safe-area-inset-top)) max(var(--stage-pad), env(safe-area-inset-right)) max(var(--stage-gap), env(safe-area-inset-bottom)) max(var(--stage-pad), env(safe-area-inset-left));
+  grid-template-columns: min(100%, var(--stage-shell-width));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'top' 'stage' 'roster';
+  gap: var(--stage-gap);
+  background: linear-gradient(var(--stage-backdrop-shade), var(--stage-backdrop-bottom)), url('assets/camera-storybook/arena.webp') center / cover;
+  box-shadow: none;
+}
+[data-rumble-demo] .top,
+.loft-art[data-rumble-demo] .roster {
+  width: min(100%, max(var(--col), var(--stage-chrome-width)));
+  justify-self: center;
+}
+[data-rumble-demo] .top {
+  grid-template-columns: var(--stage-control) minmax(0, 1fr) var(--stage-control);
+  gap: 0 var(--stage-gap);
+  align-items: center;
+}
+[data-rumble-demo] .top h1 {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  min-width: 0;
+}
+.rumble-logo {
+  display: block;
+  width: var(--stage-logo-width, 144px);
+  height: var(--stage-logo-height, 56px);
+  max-width: 100%;
+  object-fit: contain;
+}
+[data-rumble-demo] .top #menu-toggle { grid-column: 3; }
+[data-rumble-demo] .top > :is(#pause, #menu-toggle, #help-toggle, .demo-back) {
+  grid-row: 1;
+  width: var(--stage-control);
+  min-width: var(--stage-control);
+  height: var(--stage-control);
+  min-height: var(--stage-control);
+  border: var(--stage-border) solid var(--stage-edge);
+  background: var(--stage-chrome-surface);
+  border-radius: var(--stage-radius);
+  box-shadow: none;
+}
+[data-rumble-demo] .top .demo-back {
+  grid-column: 1;
+  display: grid;
+  place-items: center;
+  font-size: 0;
+  text-decoration: none;
+}
+[data-rumble-demo] .demo-back::before {
+  content: '\2190';
+  font-size: var(--stage-back-size);
+}
+
+[data-rumble-demo] .top .battle-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+[data-rumble-demo] #stage { isolation: isolate; }
+[data-rumble-demo] #arena {
+  box-shadow: var(--card-shadow);
+  border-color: var(--stage-edge);
+}
+.loft-art[data-rumble-demo] #portrait-hint { display: none; }
+.loft-art[data-rumble-demo] .roster { gap: var(--stage-gap); }
+.loft-art[data-rumble-demo] .roster .card {
+  height: var(--stage-dock-height);
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: var(--stage-avatar) minmax(0, 1fr);
+  grid-template-rows: var(--stage-dock-row) var(--stage-dock-row) var(--stage-meter-height);
+  align-items: center;
+  gap: var(--stage-dock-gap);
+  padding: var(--stage-dock-pad);
+  overflow: hidden;
+  border-radius: var(--stage-radius);
+  border-color: var(--stage-edge);
+  background: var(--stage-dock-surface);
+  color: var(--stage-dock-ink);
+  box-shadow: none;
+  animation: none;
+}
+.loft-art[data-rumble-demo] .roster .portrait {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: var(--stage-avatar);
+  height: var(--stage-avatar);
+  border-radius: 0;
+  background: none;
+}
+.loft-art[data-rumble-demo] .roster .card .portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: none;
+  opacity: 1;
+  filter: var(--art-sprite-finish);
+}
+.loft-art[data-rumble-demo] .roster .portrait::before,
+.loft-art[data-rumble-demo] .roster .portrait::after,
+.loft-art[data-rumble-demo] .roster .card::after { display: none; }
+.loft-art[data-rumble-demo] .roster .card b {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  text-align: left;
+  padding: 0;
+  font-size: var(--stage-name-size);
+  line-height: 1;
+  color: var(--stage-dock-ink);
+  background: none;
+}
+.loft-art[data-rumble-demo] .roster em { display: none; }
+.loft-art[data-rumble-demo] .roster .card small,
+[data-rumble-demo] .dock-charge,
+[data-rumble-demo] .dock-danger {
+  position: static;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  justify-self: start;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  padding: 0;
+  color: var(--stage-dock-muted);
+  background: none;
+  font-size: var(--stage-state-size);
+  line-height: 1;
+  white-space: nowrap;
+}
+.loft-art[data-rumble-demo] .roster small { display: flex; }
+.loft-art[data-rumble-demo] .roster small > span:not([aria-hidden=true]) {
+  position: static;
+  width: auto;
+  height: auto;
+  clip-path: none;
+  white-space: nowrap;
+}
+.loft-art[data-rumble-demo] .roster small > span[aria-hidden=true],
+.loft-art[data-rumble-demo] .roster small > svg,
+.loft-art[data-rumble-demo] .roster .card .badge,
+[data-rumble-demo] .dock-charge,
+[data-rumble-demo] .dock-danger { display: none; }
+[data-rumble-demo] .dock-meter {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  height: 100%;
+  border-radius: var(--stage-radius);
+  background: var(--stage-chrome-surface);
+  overflow: hidden;
+}
+[data-rumble-demo] .dock-meter::after {
+  content: '';
+  display: block;
+  width: calc(var(--charge) * 100%);
+  height: 100%;
+  background: var(--stage-dock-muted);
+}
+[data-rumble-demo] .card.ready .dock-meter::after { background: var(--warning); }
+[data-rumble-demo] .card.ready:not(.stunned) .dock-charge { display: block; color: var(--warning); }
+[data-rumble-demo] .card.ready:not(.stunned) small { visibility: hidden; }
+.loft-art[data-rumble-demo] .roster .card[data-motion=stunned] small { color: var(--warning); }
+.loft-art[data-rumble-demo] .roster .card.danger { border-color: var(--danger); }
+[data-rumble-demo] .card.danger:not(.stunned) .dock-danger { display: block; color: var(--danger); }
+[data-rumble-demo] .card.danger:not(.stunned) small { visibility: hidden; }
+[data-rumble-demo] .card.danger .dock-charge { visibility: hidden; }
+.loft-art[data-rumble-demo] .roster .card[data-grabbed] {
+  border-color: var(--stage-dock-ink);
+  box-shadow: inset 0 0 0 var(--stage-border) var(--stage-dock-ink);
+}
+
+[data-rumble-demo] :is(#menu, #help-panel) {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(var(--stage-sheet-width), calc(100% - var(--stage-sheet-space) * 2));
+  min-width: 0;
+  max-width: none;
+  max-height: calc(100dvh - var(--stage-sheet-space) * 2);
+  box-sizing: border-box;
+  padding: var(--stage-sheet-space);
+  border: var(--stage-border) solid var(--stage-sheet-edge);
+  border-radius: var(--stage-sheet-radius);
+  background: var(--stage-sheet-surface);
+  color: var(--stage-sheet-ink);
+  box-shadow: var(--stage-sheet-shadow);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-rumble-demo] :is(#menu, #help-panel)::backdrop { background: var(--stage-sheet-backdrop); }
+[data-rumble-demo] #menu { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--stage-sheet-gap); }
+[data-rumble-demo] #menu > :is(.pause-brand, h2) { grid-column: 1 / -1; margin: 0; }
+[data-rumble-demo] .pause-brand {
+  display: grid;
+  place-items: center;
+  height: var(--stage-sheet-art-height);
+  margin: calc(-1 * var(--stage-sheet-space)) calc(-1 * var(--stage-sheet-space)) 0 !important;
+  background: linear-gradient(var(--stage-backdrop-shade), var(--stage-backdrop-shade)), url('assets/camera-storybook/arena.webp') center / cover;
+}
+[data-rumble-demo] .pause-brand img { width: var(--stage-logo-width); height: var(--stage-logo-height); object-fit: contain; }
+[data-rumble-demo] :is(#menu, #help-panel) h2 { font-size: var(--stage-sheet-title); font-weight: 600; line-height: 1.2; text-align: center; color: var(--stage-sheet-ink); }
+[data-rumble-demo] #menu > button {
+  grid-column: auto;
+  grid-row: auto;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--stage-sheet-control);
+  height: auto;
+  padding: var(--stage-sheet-gap);
+  border: var(--stage-border) solid var(--stage-sheet-rule);
+  border-radius: var(--stage-radius);
+  background: transparent;
+  color: var(--stage-sheet-ink);
+  box-shadow: none;
+  font-size: var(--stage-sheet-copy);
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+[data-rumble-demo] #menu #pause,
+[data-rumble-demo] .help-resume {
+  grid-column: 1 / -1;
+  min-height: var(--stage-sheet-control);
+  border-color: var(--stage-sheet-edge);
+  background: var(--stage-sheet-accent);
+  color: var(--stage-sheet-ink);
+  font-weight: 600;
+  border-radius: var(--stage-radius);
+}
+[data-rumble-demo] #menu :is(#sound, #music, #haptics) {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) var(--stage-sheet-toggle-width);
+  justify-items: start;
+  border: 0;
+  border-bottom: var(--stage-border) solid var(--stage-sheet-rule);
+  border-radius: 0;
+  padding: var(--stage-sheet-gap) 0;
+}
+[data-rumble-demo] #menu :is(#sound, #music, #haptics)::after {
+  content: '';
+  grid-column: 2;
+  grid-row: 1;
+  width: var(--stage-sheet-toggle-width);
+  height: var(--stage-sheet-toggle-height);
+  border-radius: var(--stage-sheet-toggle-height);
+  background: radial-gradient(circle at calc(var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-surface) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle-off);
+}
+[data-rumble-demo] #menu :is(#sound, #music, #haptics)[aria-pressed=true]::after {
+  background: radial-gradient(circle at calc(100% - var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-surface) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle);
+}
+[data-rumble-demo] #menu #help-toggle { grid-column: 1 / -1; }
+[data-rumble-demo] #menu :is(#reset, #replay-tutorial) { border: 0; font-size: var(--stage-name-size); color: var(--stage-sheet-muted); padding-inline: 0; }
+[data-rumble-demo] #menu > button:hover { background-color: var(--stage-sheet-rule); }
+[data-rumble-demo] #menu #pause:hover { background-color: var(--warning); }
+[data-rumble-demo] :is(#menu, #help-panel) button:focus-visible { outline: var(--stage-dock-gap) solid var(--stage-sheet-toggle); outline-offset: var(--stage-dock-gap); }
+[data-rumble-demo] #help-panel { gap: var(--stage-sheet-space); }
+[data-rumble-demo] #help-panel h2 { margin: 0; }
+[data-rumble-demo] #help-panel :is(#help, #team-help) { color: var(--stage-sheet-ink); font-size: var(--stage-sheet-copy); line-height: 1.65; }
+
+@media (max-height: 520px) {
+  :root[data-rumble-demo] {
+    --stage-sheet-width: 520px;
+    --stage-sheet-space: 16px;
+    --stage-sheet-gap: 8px;
+    --stage-sheet-art-height: 48px;
+    --stage-sheet-title: 22px;
+    --stage-sheet-control: 44px;
+  }
+  [data-rumble-demo] #menu { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  [data-rumble-demo] #menu :is(#sound, #music, #haptics) { grid-column: span 2; }
+  [data-rumble-demo] #menu :is(#reset, #replay-tutorial) { grid-column: span 3; }
+}
+
+[data-rumble-demo][data-rumble-arriving] main {
+  animation: arena-arrive var(--stage-arrival-reveal) var(--stage-arrival-ease) both;
+}
+[data-rumble-demo] .battle-arrival {
+  position: absolute;
+  inset: 0;
+  z-index: var(--stage-arrival-layer);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--stage-radius);
+  background: var(--stage-arrival-shade);
+  color: var(--stage-dock-ink);
+  text-align: center;
+  text-shadow: var(--stage-arrival-shadow);
+  pointer-events: none;
+  animation: arrival-cue var(--stage-arrival-life) ease-out both;
+}
+[data-rumble-demo] .battle-arrival { gap: var(--stage-arrival-gap); }
+[data-rumble-demo] .battle-arrival span { font-size: var(--stage-arrival-lead); font-weight: 600; }
+[data-rumble-demo] .battle-arrival strong {
+  font-size: var(--stage-arrival-title);
+  line-height: 1.15;
+  font-weight: 600;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: var(--stage-arrival-tracking);
+  color: var(--stage-arrival-ink);
+  -webkit-text-stroke: var(--stage-arrival-stroke) var(--stage-arrival-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--stage-arrival-depth);
+  transform: rotate(var(--stage-arrival-lean));
+}
+
+@keyframes arena-arrive { from { opacity: 0; } to { opacity: 1; } }
+@keyframes arrival-cue { 0% { opacity: 0; } 12%, 72% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  [data-rumble-demo][data-rumble-arriving] main { animation: none; }
+  [data-rumble-demo] .battle-arrival { display: none; }
+}

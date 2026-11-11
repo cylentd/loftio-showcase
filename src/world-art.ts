@@ -1,8 +1,10 @@
 import { LEAF_ART } from './intro-data.ts';
 
-/** Painted UI art in public/brand, drawn by the treehouse skin. Frame and basket come from scripts/clean_brand_art.py. */
+/** Painted UI art in public/, drawn by the treehouse skin. Frame and basket come from scripts/clean_brand_art.py;
+ *  the window frame from scripts/prepare_window_frame.py (manifest: art/ui/treehouse-v1/manifest.json). */
 export const WORLD_ART = {
   frame: 'brand/frame-treehouse.webp',
+  'window-frame': 'art/skin-treehouse/window_frame.webp',
   basket: 'brand/basket-treehouse.webp',
   'leaf-1': LEAF_ART[0],
   'leaf-2': LEAF_ART[1],

@@ -35,3 +35,16 @@ test('published styles resolve their shared tokens and fonts inside the route', 
     await access(join(output, 'play/rumble/shared-tokens.css'));
   } finally { await rm(output, { recursive: true, force: true }); }
 });
+
+test('release preserves the gameplay soundtrack bytes and quiet-mix configuration', async () => {
+  const output = await mkdtemp(join(tmpdir(), 'rumble-music-'));
+  try {
+    await publishRumble(gameRoot, output);
+    const source = await readFile(join(gameRoot, 'prototypes/loft-rumble/audio/plushie-bumper-rush.mp3'));
+    const packaged = await readFile(join(output, 'play/rumble/audio/plushie-bumper-rush.mp3'));
+    assert.deepEqual(packaged, source);
+    const config = await readFile(join(output, 'play/rumble/rumble-music-data.js'), 'utf8');
+    assert.match(config, /plushie-bumper-rush\.mp3/);
+    assert.match(config, /volume:0\.16/);
+  } finally { await rm(output, { recursive: true, force: true }); }
+});

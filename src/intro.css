@@ -1,3 +1,15 @@
+html[data-loft-return] {
+  --loft-return-fade: 240ms;
+  --loft-return-background: #1c241d;
+  background: var(--loft-return-background);
+}
+html[data-loft-return] .grove-intro { display: none; }
+html[data-loft-return] .grove:not([data-ready="true"]) { visibility: hidden; }
+html[data-loft-return] .grove[data-ready="true"] { animation: loft-return var(--loft-return-fade) ease-out both; }
+@keyframes loft-return { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-loft-return] .grove[data-ready="true"] { animation: none; }
+}
 .grove-intro {
   --intro-bg: rgb(25 24 24 / 60%);
   --intro-blur: 10px;

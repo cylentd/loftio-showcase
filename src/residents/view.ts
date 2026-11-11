@@ -26,6 +26,8 @@ import { residentChrome, arrivalReveal, renderResidents } from './view-parts';
 import { CAST } from '../cast';
 import { originalLineup } from './original-lineup';
 import { originalResidents } from './original-scene';
+import { arrivalPreview } from './arrival-preview-mode';
+import { previewBackend } from './arrival-preview';
 
 const BASKET_MARGIN = 16; // px from the screen edge and the Residents button; matches --space-4
 
@@ -44,8 +46,8 @@ function builderApi(mode: BuilderMode) {
   return mockApi();
 }
 
-function session(mode: BuilderMode) {
-  const storage = { getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value) };
+function session(mode: BuilderMode, preview: ReturnType<typeof previewBackend> | null) {
+  const storage = preview?.storage ?? { getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value) };
   const names = NAMES[mode];
   const registry = residentRegistry(storage, () => crypto.randomUUID(), names.registry);
   const originals = originalLineup(storage, CAST.map(member => member.id), names.registry + '-originals');
@@ -54,14 +56,14 @@ function session(mode: BuilderMode) {
   // Online visitors get a daily allowance, topped up once per UTC day.
   if (mode === 'online') tickets.refillDaily(VISITOR_DAILY_CAP, utcDay(new Date()));
   const builder = createBuilder({ api: builderApi(mode),
-    store: mode === 'mock' ? indexedStore() : indexedStore(indexedDB, mode === 'local' ? LOCAL_DATABASE_NAME : ONLINE_DATABASE_NAME), inspect: inspectImage,
+    store: preview?.store ?? (mode === 'mock' ? indexedStore() : indexedStore(indexedDB, mode === 'local' ? LOCAL_DATABASE_NAME : ONLINE_DATABASE_NAME)), inspect: inspectImage,
     journal: requestJournal(storage, names.journal),
     tickets, newId: () => crypto.randomUUID(), now: () => new Date(),
   }, { creature: 'bunny', personality: 'sleepy', signatureDetail: 'none', palette: null });
   return { registry, originals, builder, tickets, ticketKey };
 }
 
-function restore(current: ReturnType<typeof session>, adapter: ReturnType<typeof sceneResidents>, failure: (error: unknown) => void) {
+function restore(current: ReturnType<typeof session>, adapter: ReturnType<typeof sceneResidents>, failure: (error: unknown) => void, loaded?: () => void) {
   const { builder, registry } = current;
   addEventListener('online', () => { void builder.reconnect(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void builder.reconnect(); });
@@ -72,6 +74,7 @@ function restore(current: ReturnType<typeof session>, adapter: ReturnType<typeof
       const saved = builder.state().kept.find(item => item.id === entry.savedId);
       if (saved) { try { await adapter.add(entry, saved); } catch (error) { failure(error); } }
     }
+    loaded?.();
   }).catch(failure);
 }
 
@@ -79,7 +82,8 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   const mode = builderMode(location.search, location.hostname, { workerHost: import.meta.env.VITE_LOCAL_WORKER_HOST, mode: import.meta.env.VITE_BUILDER_MODE });
   const chrome = residentChrome();
   let current: ReturnType<typeof session>;
-  try { current = session(mode); } catch { chrome.error.textContent = COPY.loadFailure; return () => {}; }
+  const preview = arrivalPreview(location.search, mode) ? previewBackend() : null;
+  try { current = session(mode, preview); } catch { chrome.error.textContent = COPY.loadFailure; return () => {}; }
   const { registry, builder, tickets, ticketKey } = current;
   const originals = originalResidents(scene, runtime, overlay, controls, current.originals);
   // Test tickets only where images are free placeholders; real builds (local, online) never get them.
@@ -117,7 +121,8 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
     renderResidents(chrome.panels, state, entries, id => { try { adapter.remove(id); } catch (error) { failure(error); } }, reveal,
       current.originals.list(), (id, inRoom) => { try { originals.setInRoom(id, inRoom); render(); } catch (error) { failure(error); } });
   }
-  builder.subscribe(render); render(); restore(current, adapter, failure);
+  const openPreview = preview ? () => { const waiting = registry.list().find(entry => entry.arrival === 'waiting'); if (waiting) reveal(waiting); } : undefined;
+  builder.subscribe(render); render(); restore(current, adapter, failure, openPreview);
   return () => {
     const spot = basketSpot ?? arrivalSpot(); const { scale, x, y, offsetY, left: scrolled } = runtime.look;
     // The door can sit past a phone's edge or behind the Residents button: keep the basket in view above it.

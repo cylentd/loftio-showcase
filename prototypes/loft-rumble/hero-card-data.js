@@ -2,6 +2,7 @@
   window.LoftRumbleHeroCardData = Object.freeze({
     viewBox: '0 0 24 24',
     strokeWidth: '2',
+    dock: Object.freeze({special: 'Special', ready: 'Special ready', danger: 'Danger', stunned: 'Stun', seconds: 's', percent: 100}),
     icons: {
       springy: ['M4 19h16', 'M6 15 10 11 7 8 13 4', 'M9 4h4v4', 'M15 16 19 12'],
       heavy: ['M7 5h10v9H7z', 'M12 14v5', 'M3 14l3 4', 'M21 14l-3 4', 'M8 21h8'],

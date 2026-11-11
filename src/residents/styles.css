@@ -57,10 +57,27 @@
   aspect-ratio: var(--basket-art-aspect); z-index: -1; border: 0; border-radius: 0; box-shadow: none;
   background: var(--art-basket) center / contain no-repeat;
 }
-.resident-reveal img { display: block; width: 100%; max-height: 40dvh; object-fit: contain; }
-.resident-reveal .world-content { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
-.resident-reveal p { width: 100%; text-align: center; }
-.resident-arrival-form { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); width: 100%; }
+/* Arrival reveal (standards L4-L7): a stage where the newcomer stands in the basket, a body that scrolls on a short
+   screen, and a footer of actions that never scrolls away. The surface is as tall as its content.
+   --reveal-stage: the stage height; the resident fills --reveal-figure of it (standards: 50-70%) and stays the
+   largest thing in the body (at least 35%). --reveal-basket-rise: the painted basket's height as a share of the
+   stage; --reveal-feet: where the feet land, as a share of the basket height from its bottom (the blanket). */
+:root { --reveal-stage: clamp(13rem, 32dvh, 18rem); --reveal-figure: 68%; --reveal-basket-rise: 46%; --reveal-feet: 0.5; }
+/* Phone sheet: a shorter stage, so name and actions fit an 844 px screen without the body scrolling. */
+@media (max-width: 700px) { :root { --reveal-stage: clamp(11rem, 26dvh, 18rem); } }
+.resident-reveal .world-content { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.resident-arrival-form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; gap: var(--space-4); }
+.reveal-body { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); min-height: 0; overflow: auto;
+  scrollbar-width: thin; scrollbar-color: var(--world-edge) transparent; padding: var(--focus-offset); margin: calc(-1 * var(--focus-offset)); }
+.reveal-body > p { margin: 0; width: 100%; text-align: center; line-height: var(--line-body); }
+.reveal-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); flex: none; }
+.reveal-actions > .world-button { flex: 1 1 auto; }
+.reveal-actions > .world-primary { flex-grow: 2; }
+.resident-reveal .reveal-basket { flex: none; width: 100%; height: var(--reveal-stage); padding: 0; overflow: visible; isolation: isolate; }
+.resident-reveal .reveal-basket img { position: absolute; left: 50%; translate: -50% 0; max-width: 100%; width: auto;
+  height: var(--reveal-figure); bottom: calc(var(--reveal-basket-rise) * var(--reveal-feet)); object-fit: contain; }
+:root[data-world-theme="treehouse"] .resident-reveal .reveal-basket { padding: 0; }
+:root[data-world-theme="treehouse"] .resident-reveal .reveal-basket::after { left: 50%; right: auto; translate: -50% 0; width: auto; height: var(--reveal-basket-rise); }
 .resident-name { display: grid; gap: var(--space-2); width: 100%; min-width: 0; }
 .resident-name label { font-weight: var(--weight-strong); }
 .resident-name input { box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--tap-min); padding: var(--space-2) var(--space-3);

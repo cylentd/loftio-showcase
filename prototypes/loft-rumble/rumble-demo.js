@@ -41,25 +41,66 @@
     document.getElementById('demo-combo').textContent=String(state.hitsPeak);
     if(wasHidden)document.getElementById('demo-replay').focus({preventScroll:true});
   }
-  function install({s,names,reset:restart,draw}){
+  function arrive(){
+    delete document.documentElement.dataset.rumblePending;
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const cue=document.createElement('div');cue.className='battle-arrival';cue.setAttribute('aria-hidden','true');
+    const lead=document.createElement('span');lead.textContent=copy.arrivalLead;
+    const title=document.createElement('strong');
+    title.textContent=copy.arrivalTitle;cue.append(lead,title);
+    const clear=()=>{
+      cue.remove();delete document.documentElement.dataset.rumbleArriving;
+      document.removeEventListener('pointerdown',clear,true);document.removeEventListener('keydown',clear,true);
+    };
+    document.documentElement.dataset.rumbleArriving='';document.getElementById('stage').append(cue);
+    cue.addEventListener('animationend',clear,{once:true});
+    document.addEventListener('pointerdown',clear,{capture:true,once:true});
+    document.addEventListener('keydown',clear,{capture:true,once:true});
+  }
+  function reveal(ready,draw){
+    const backdrop=new Image();backdrop.src=new URL('assets/camera-storybook/arena.webp',location.href).href;
+    const images=[...document.images,backdrop];
+    Promise.all([Promise.resolve(ready).catch(()=>{}),...images.map(image=>image.decode().catch(()=>{}))])
+      .then(()=>{draw();arrive()});
+  }
+  function install({s,names,reset:restart,draw,ready}){
     if(new URLSearchParams(location.search).get('lab')==='1')return;
     s.demo={enraged:false};document.documentElement.dataset.rumbleDemo='';
     if(document.documentElement.hasAttribute('data-published-rumble')){
       const back=document.createElement('a');back.className='demo-back';back.textContent=copy.back;
-      back.href=new URL('../../',location.href).href;document.querySelector('.top').prepend(back);
+      const loft=new URL('../../',location.href);loft.searchParams.set('from','rumble');
+      back.href=loft.href;document.querySelector('.top').prepend(back);
     }
+    const menu=document.getElementById('menu'),toggle=document.getElementById('menu-toggle');
+    const pause=document.getElementById('pause'),help=document.getElementById('help-toggle');
+    toggle.replaceChildren(pause.firstElementChild.cloneNode(true));
+    toggle.setAttribute('aria-label',copy.menuLabel);toggle.title=copy.menuLabel;
+    pause.textContent=copy.resume;help.textContent=copy.helpMenu;
+    menu.prepend(pause,help);
     names.custom=data.resident.name;
     document.querySelector('[data-resident="custom"] b').textContent=data.resident.name;
     for(const child of document.getElementById('menu').children){
       if(!data.playerControls.includes(child.id))child.hidden=true;
     }
+    const brand=document.createElement('div');brand.className='pause-brand';
+    const logo=document.createElement('img');logo.src='art/rumble-logo.webp';logo.alt='';
+    brand.append(logo);
+    const title=document.createElement('h2');title.id='pause-title';title.textContent=copy.pausedTitle;
+    menu.setAttribute('aria-labelledby',title.id);
+    menu.prepend(brand,title);
+    menu.append(pause,document.getElementById('sound'),document.getElementById('music'),document.getElementById('haptics'),help,document.getElementById('replay-tutorial'),document.getElementById('reset'));
+    const helpPanel=document.getElementById('help-panel'),helpTitle=document.createElement('h2');
+    helpTitle.id='battle-help-title';helpTitle.textContent=copy.helpMenu;helpTitle.tabIndex=-1;helpTitle.autofocus=true;
+    helpPanel.setAttribute('aria-labelledby',helpTitle.id);helpPanel.prepend(helpTitle);
+    const helpClose=document.createElement('button');helpClose.className='help-resume';helpClose.textContent=copy.resume;
+    helpClose.onclick=()=>help.click();helpPanel.append(helpClose);
     document.getElementById('team-help').textContent=copy.teamHelp;
     document.getElementById('help').textContent=copy.aimHelp;
     document.getElementById('demo-time-label').textContent=copy.time;
     document.getElementById('demo-combo-label').textContent=copy.combo;
     const replay=document.getElementById('demo-replay');replay.textContent=copy.replay;
-    replay.addEventListener('click',()=>{restart();draw();document.getElementById('pause').focus({preventScroll:true})});
-    restart();draw();
+    replay.addEventListener('click',()=>{restart();draw();document.getElementById('menu-toggle').focus({preventScroll:true})});
+    restart();draw();reveal(ready,draw);
   }
   root.LoftRumbleDemo=Object.freeze({active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install});
 })(globalThis);

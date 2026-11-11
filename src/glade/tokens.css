@@ -1,8 +1,19 @@
 :root {
+  --glade-rumble-surface: #2b1c30;
+  --glade-rumble-ink: #fff1d9;
+  --glade-rumble-muted: #decbbf;
+  --glade-rumble-edge: #c18b55;
+  --glade-rumble-accent: #ffc565;
+  --glade-rumble-accent-ink: #38200f;
+  --glade-rumble-close: #25152ce6;
+  --glade-close-layer: 1;
+  --glade-departure-ms: 420;
+  --glade-departure-ease: ease-in-out;
+  --glade-transition-surface: #16251f;
   --glade-gap: 1rem;
   --glade-inset: 1rem;
   --glade-padding: 1.25rem;
-  --glade-width: 31rem;
+  --glade-width: 36rem;
   --glade-radius: 1.5rem;
   --glade-sign-radius: 0.5rem 1rem 1rem 0.5rem;
   --glade-logo-width: 8rem;

@@ -5,8 +5,10 @@
     rotation:Object.freeze(['beam','slam','pulse']),
     tutorialKey:'loftRumbleDemoTutorialSeen',
     resident:Object.freeze({name:'Puff',trait:'piercing'}),
-    playerControls:Object.freeze(['sound','reset','replay-tutorial']),
+playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','reset','replay-tutorial']),
     copy:Object.freeze({
+      menuLabel:'Pause and settings',resume:'Resume battle',helpMenu:'How to play',pausedTitle:'Battle paused',
+      arrivalLead:'Ready to',arrivalTitle:'Rumble',musicOn:'Music on',musicOff:'Music off',
       boss:'Bramble Beetle',enragedBoss:'Bramble Beetle · Enraged',back:'Back to Loft',
       enrage:'Bramble is enraged!',enrageSub:'Attacks come faster. Watch the windup.',
       victory:'Bramble defeated!',defeat:'Team knocked out',
