@@ -64,9 +64,10 @@ export function installIntro(shell: HTMLElement, still: boolean) {
     dismissed = true; document.removeEventListener("keydown", onKey, true);
     onEnter();
     const hadFocus = element.contains(document.activeElement);
-    element.setAttribute("aria-hidden", "true"); element.classList.add("is-leaving");
+    // The room is live as soon as the title starts leaving: the exit animation must not swallow the first grab.
+    element.setAttribute("aria-hidden", "true"); element.classList.add("is-leaving"); shell.inert = false;
     const finish = () => {
-      element.remove(); shell.inert = false;
+      element.remove();
       if (hadFocus) { shell.tabIndex = -1; shell.focus({ preventScroll: true }); }
     };
     if (returning) { finish(); return; }

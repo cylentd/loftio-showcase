@@ -26,7 +26,18 @@ export class Runtime {
   private readonly rand = seeded(ROUTINE.seed);
   /** Extra resident play a game entry installed, or null (the showcase). */
   play: ResidentPlay | null = null;
-  constructor(private scene: Scene, readonly look: Look, private overlay: Overlay, private busy: boolean, private settings: SceneSettings) {}
+  private scene: Scene;
+  readonly look: Look;
+  private overlay: Overlay;
+  private busy: boolean;
+  private settings: SceneSettings;
+  constructor(scene: Scene, look: Look, overlay: Overlay, busy: boolean, settings: SceneSettings) {
+    this.scene = scene;
+    this.look = look;
+    this.overlay = overlay;
+    this.busy = busy;
+    this.settings = settings;
+  }
 
   syncWander(): void {
     if (this.settings.wander) {

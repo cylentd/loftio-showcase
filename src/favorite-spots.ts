@@ -2,6 +2,7 @@ import { CAST } from "./cast";
 import { FAVORITES, SETTINGS_NAV } from "./copy";
 import { settingsGroup, switchRow } from "./settings-components";
 import type { FavoriteScenery } from "./favorite-scenery";
+import { FavoriteLabels } from "./favorite-label";
 import type { Look } from "./look";
 import type { Overlay } from "./overlay";
 import type { SceneSettings } from "./scene-settings";
@@ -9,7 +10,15 @@ import type { SceneSettings } from "./scene-settings";
 export class FavoriteSpots {
   private readonly entries;
   private pointerHeld: string | null = null;
-  constructor(layer: HTMLElement, private look: Look, private settings: SceneSettings, overlay: Overlay, private scenery: FavoriteScenery) {
+  private look: Look;
+  private settings: SceneSettings;
+  private scenery: FavoriteScenery;
+  private readonly labels: FavoriteLabels;
+  constructor(layer: HTMLElement, look: Look, settings: SceneSettings, overlay: Overlay, scenery: FavoriteScenery) {
+    this.look = look;
+    this.settings = settings;
+    this.scenery = scenery;
+    this.labels = new FavoriteLabels(layer, look);
     this.entries = CAST.map(resident => {
       const character = overlay.residentButton(resident.id);
       const description = document.createElement("span"); description.className = "visually-hidden";
@@ -52,5 +61,6 @@ export class FavoriteSpots {
     const active = document.hidden ? [] : this.entries.filter(({ id, character }) =>
       this.settings.showFavorites || this.pointerHeld === id || character.dataset.held === "true").map(entry => entry.id);
     this.scenery.update(active, performance.now(), this.look.frozen);
+    this.labels.update(active);
   }
 }

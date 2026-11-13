@@ -5,4 +5,7 @@ export const FLOOR_PLAY = {
   radiusRatio: 0.28, screenRadiusRatio: 0.6, maxLean: 0.2, leanSpeed: 900,
   squash: 0.18, impactDecay: 5, maxFrameMs: 64, stepMs: 8, seconds: 1000,
   keyboardX: 800, keyboardY: -250,
+  // A toss that comes down inside a footprint it flew over slides out at this speed (px/s) instead of jumping to the edge:
+  // 240 px/s crosses the widest centre-table half span (~240 px) in one second, under 4 world px per 16 ms frame.
+  slideSpeed: 240, // magic-ok: derived in the comment above
 } as const;

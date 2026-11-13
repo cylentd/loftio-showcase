@@ -35,7 +35,10 @@ export class Ambience {
   private motes: { s: Sprite; x: number; y: number; phase: number }[] = [];
   private dustVisible = true;
 
-  constructor(dot: Texture, colours: Colours, rand: () => number, private readonly settings: SceneSettings) {
+  private readonly settings: SceneSettings;
+
+  constructor(dot: Texture, colours: Colours, rand: () => number, settings: SceneSettings) {
+    this.settings = settings;
     this.makeRain(dot, colours, rand);
     for (const [index, lamp] of LAMPS.entries()) {
       const s = new Sprite(dot);

@@ -116,7 +116,7 @@
    Coffee and beach keep the CSS frame. --art-* urls are set by world-art.ts. */
 :root[data-world-theme="treehouse"] {
   /* The window frame: chestnut planks with brass corner brackets, a nine-slice made by scripts/prepare_window_frame.py.
-     Every number comes from its entry in art/ui/treehouse-v1/manifest.json (tests/window-frame.test.ts checks the slice). */
+     Every number comes from its entry in art/ui/treehouse-v1/manifest.json (tests/integration/window-frame.test.ts checks the slice). */
   --window-frame-slice: 120; /* shipped.nineSlice: px on the WebP, the corner square holding the bracket and inner curve */
   --window-frame-plank-y: 0.7; /* plank.top / nineSlice (169 / 240): top and bottom wood as a share of the corner */
   --window-frame-plank-x: 0.61; /* plank.side / nineSlice (146 / 240) */

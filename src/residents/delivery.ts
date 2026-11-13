@@ -104,7 +104,7 @@ export function roomDeliveries(scene: Scene, runtime: Runtime,
       if (!position) return;
       const resident = parcel.resident;
       if (!parcel.moved) {
-        if (resident) { grabStyle(resident); resident.pickUp(motion.state().phase === 'falling'); }
+        if (resident) { grabStyle(resident); resident.pickUp(motion.state().phase === 'falling', 'parcel'); }
         motion.hold(); parcel.moved = true;
       }
       const before = motion.state().ground;

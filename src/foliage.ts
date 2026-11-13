@@ -11,7 +11,10 @@ export class Foliage {
   readonly root = new Container();
   private readonly patches;
 
-  constructor(room: Texture, private readonly settings: SceneSettings) {
+  private readonly settings: SceneSettings;
+
+  constructor(room: Texture, settings: SceneSettings) {
+    this.settings = settings;
     this.patches = FOLIAGE.map((p) => {
       const texture = new Texture({ source: room.source, frame: new Rectangle(p.x, p.y, p.w, p.h) });
       const mesh = new MeshPlane({ texture, verticesX: EFFECTS.meshVertices, verticesY: EFFECTS.meshVertices });

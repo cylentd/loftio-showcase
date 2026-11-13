@@ -4,8 +4,16 @@ export const TRAVEL = roomData({
   climbMs: 4800, climbDepth: 460,
   groundZone: "ground", ladderBottom: "ladder-bottom", ladderTop: "ladder-top",
 }, { climbDepth: 355 });
-export const TRAVEL_OBSTACLES = roomData([
-  { left: 735, right: 1135, back: 710, front: 825 },
+/** `clearance`: feet height (world px) above which a flying body passes over the footprint. Only footprints whose height was
+ *  measured from the painting have one; the rest block at every height. */
+export type Obstacle = { left: number; right: number; back: number; front: number; clearance?: number;
+  /** Outside `tallLeft..tallRight` (the tall objects on the prop) only the bare prop is in the way, so a body above `clearance` passes. */
+  low?: { clearance: number; tallLeft: number; tallRight: number } };
+export const TRAVEL_OBSTACLES: Obstacle[] = roomData<Obstacle[]>([
+  // Entire centre prop, including its tall terrarium: footprint front 825 minus painted top 594 (DEPTH_PROPS). Lip-to-leg height misses the objects on top.
+  // low.clearance 60: footprint front 825 minus the table's painted front lip at y 765 (DEPTH_PROPS table polygon), the bare table.
+  // tallLeft/tallRight 891..1054: x extent of the terrarium and lantern polygons painted on the table (DEPTH_PROPS).
+  { left: 735, right: 1135, back: 710, front: 825, clearance: 231, low: { clearance: 60, tallLeft: 891, tallRight: 1054 } }, // magic-ok: measured from DEPTH_PROPS, sourced above
   { left: 225, right: 555, back: 620, front: 752 },
 ], PORTRAIT_OBSTACLES);
 export const TRAVEL_NODES = roomData([

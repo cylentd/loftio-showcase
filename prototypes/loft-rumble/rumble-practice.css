@@ -1,0 +1,187 @@
+/* Loft Rumble practice card, cue rail and replay confirmation. Every value is a token below or in rumble-stage.css. */
+:root[data-rumble-demo] {
+  --practice-pad: 10px;
+  --practice-gap: 8px;
+  --practice-title: 15px;
+  --practice-copy: 15px;
+  --practice-small: 13px;
+  --practice-line: 1.35;
+  --practice-badge-pad: 2px 8px;
+  --practice-pill: 999px;
+  --practice-cue-pad: 4px 10px;
+  --practice-cue-gap: 4px;
+  --practice-cue-inset: 8px;
+  /* Keeps the rail left of the combo badge at the top right: the badge is centred barInset 14 from the right edge and is comboBadgeWidth 100 wide, so it reaches 64 canvas px in; plus the inset. */
+  --practice-cue-clear: 72px;
+  --practice-cue-surface: var(--stage-chrome-surface);
+  --practice-cue-ink: var(--stage-dock-ink);
+  --practice-danger-surface: #7b2a20f2;
+  --practice-danger-edge: #f3b6a2;
+  --practice-stun-surface: #3d3552f2;
+  --practice-ready-edge: var(--stage-sheet-accent);
+  --practice-cue-shadow: 0 2px 6px #0007;
+  --practice-layer: 3;
+}
+
+/* The card is its own grid row under the arena, so it never covers the drag route or the dock. */
+:root[data-rumble-demo][data-practice] main {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: 'top' 'stage' 'practice' 'roster';
+}
+[data-rumble-demo] .practice-card {
+  grid-area: practice;
+  width: min(100%, max(var(--col), var(--stage-chrome-width)));
+  justify-self: center;
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--practice-gap);
+  padding: var(--practice-pad);
+  border: var(--stage-border) solid var(--stage-sheet-edge);
+  border-radius: var(--stage-radius);
+  background: var(--stage-sheet-surface);
+  color: var(--stage-sheet-ink);
+  font-family: var(--font-sans);
+}
+[data-rumble-demo] .practice-card[hidden] { display: none; }
+[data-rumble-demo] .practice-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--practice-gap);
+}
+[data-rumble-demo] .practice-title {
+  margin: 0;
+  font-size: var(--practice-title);
+  font-weight: 700;
+  line-height: var(--practice-line);
+}
+[data-rumble-demo] .practice-progress {
+  font-size: var(--practice-small);
+  color: var(--stage-sheet-muted);
+}
+[data-rumble-demo] .practice-badge {
+  margin-left: auto;
+  padding: var(--practice-badge-pad);
+  border-radius: var(--practice-pill);
+  background: var(--stage-sheet-accent);
+  font-size: var(--practice-small);
+  font-weight: 700;
+  white-space: nowrap;
+}
+[data-rumble-demo] .practice-instruction {
+  margin: 0;
+  font-size: var(--practice-copy);
+  line-height: var(--practice-line);
+}
+[data-rumble-demo] .practice-actions,
+[data-rumble-demo] .practice-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--stage-sheet-gap);
+}
+[data-rumble-demo] :where(.practice-actions, .practice-confirm-actions, #help-panel) button:is(.practice-primary, .practice-quiet, .practice-replay, :not([class])) {
+  flex: 1 1 0;
+  min-width: max-content;
+  min-height: var(--stage-control);
+  padding: 0 var(--stage-sheet-gap);
+  border: var(--stage-border) solid var(--stage-sheet-rule);
+  border-radius: var(--stage-radius);
+  background: transparent;
+  color: var(--stage-sheet-ink);
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--stage-sheet-copy);
+  font-weight: 600;
+}
+[data-rumble-demo] :is(.practice-card, .practice-confirm) .practice-primary {
+  border-color: var(--stage-sheet-edge);
+  background: var(--stage-sheet-accent);
+}
+[data-rumble-demo] .practice-card .practice-quiet {
+  flex: 0 1 auto;
+  border-color: transparent;
+  color: var(--stage-sheet-muted);
+  text-decoration: underline;
+}
+[data-rumble-demo] :is(.practice-card, .practice-confirm, #help-panel) button:hover { background-color: var(--stage-sheet-rule); }
+[data-rumble-demo] :is(.practice-card, .practice-confirm) .practice-primary:hover { background-color: var(--warning); }
+[data-rumble-demo] :is(.practice-card, .practice-confirm, #help-panel) button:focus-visible {
+  outline: var(--stage-dock-gap) solid var(--stage-sheet-toggle);
+  outline-offset: var(--stage-dock-gap);
+}
+
+/* Cue rail: what is coming and what just happened, in words, under the boss bar. It never takes pointer input. */
+[data-rumble-demo] .rumble-cues {
+  position: absolute;
+  z-index: var(--practice-layer);
+  top: calc(var(--cue-top, 0px) + var(--practice-cue-inset));
+  left: var(--practice-cue-inset);
+  right: var(--practice-cue-clear);
+  display: grid;
+  gap: var(--practice-cue-gap);
+  pointer-events: none;
+  font-family: var(--font-sans);
+}
+[data-rumble-demo] .rumble-cue-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  justify-items: center;
+  gap: var(--practice-cue-gap);
+}
+[data-rumble-demo] .rumble-cue-list:empty { display: none; }
+[data-rumble-demo] .rumble-cue {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: var(--practice-cue-pad);
+  border: var(--stage-border) solid var(--stage-edge);
+  border-radius: var(--practice-pill);
+  background: var(--practice-cue-surface);
+  color: var(--practice-cue-ink);
+  box-shadow: var(--practice-cue-shadow);
+  font-size: var(--practice-small);
+  font-weight: 600;
+  line-height: var(--practice-line);
+  text-align: center;
+}
+[data-rumble-demo] .rumble-cue[data-rumble-cue=danger] {
+  border-color: var(--practice-danger-edge);
+  background: var(--practice-danger-surface);
+}
+[data-rumble-demo] .rumble-cue[data-rumble-cue=stun] { background: var(--practice-stun-surface); }
+[data-rumble-demo] .rumble-cue[data-rumble-cue=special-ready] { border-color: var(--practice-ready-edge); }
+
+/* Replay confirmation: the same sheet as the pause menu. */
+[data-rumble-demo] .practice-confirm {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(var(--stage-sheet-width), calc(100% - var(--stage-sheet-space) * 2));
+  height: fit-content;
+  box-sizing: border-box;
+  padding: var(--stage-sheet-space);
+  border: var(--stage-border) solid var(--stage-sheet-edge);
+  border-radius: var(--stage-sheet-radius);
+  background: var(--stage-sheet-surface);
+  color: var(--stage-sheet-ink);
+  box-shadow: var(--stage-sheet-shadow);
+  font-family: var(--font-sans);
+}
+[data-rumble-demo] .practice-confirm::backdrop { background: var(--stage-sheet-backdrop); }
+/* The sheet the question came from steps aside, so one sheet shows at a time. */
+[data-rumble-demo] :is(#menu, #help-panel)[data-practice-covered],
+[data-rumble-demo] :is(#menu, #help-panel)[data-practice-covered]::backdrop { visibility: hidden; }
+[data-rumble-demo] .practice-confirm h2 {
+  margin: 0 0 var(--stage-sheet-gap);
+  font-size: var(--stage-sheet-title);
+  font-weight: 600;
+  line-height: var(--practice-line);
+  text-align: center;
+}
+[data-rumble-demo] .practice-confirm p {
+  margin: 0 0 var(--stage-sheet-space);
+  font-size: var(--stage-sheet-copy);
+  line-height: var(--practice-line);
+  text-align: center;
+}

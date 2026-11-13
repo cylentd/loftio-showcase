@@ -129,7 +129,7 @@ html[data-loft-return] .grove[data-ready="true"] { animation: loft-return var(--
 .grove-intro button:focus-visible { outline: var(--focus-width) solid var(--intro-ink); outline-offset: var(--focus-offset); }
 .grove-intro.is-leaving {
   opacity: 0; background-color: var(--intro-bg-clear);
-  -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); cursor: default;
+  -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); cursor: default; pointer-events: none;
 }
 .grove-intro.is-leaving .grove-intro-sign {
   animation: none; opacity: 0; transform: translateY(var(--intro-exit-lift)) scale(var(--intro-exit-scale));

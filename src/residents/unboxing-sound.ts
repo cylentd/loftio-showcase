@@ -1,5 +1,6 @@
 import { REVEAL_SOUND } from './unboxing-constants.ts';
 import { REVEAL_SCORE, type SoundCue } from './unboxing-score.ts';
+import { audioRuntime } from '../audio-runtime.ts';
 
 export type RevealAudioPreference = { readonly playing: boolean; readonly enabled?: boolean; subscribe(listener: () => void): void; suspend?(): () => void };
 export type RevealCue = 'intro' | 'opening';
@@ -34,12 +35,22 @@ function schedule(context: AudioContext, destination: AudioNode, cue: SoundCue) 
   return source;
 }
 
-export function createRevealSound(enabled: () => boolean, factory: () => AudioContext = () => new AudioContext()) {
+/** The page's one shared context; throws where there is none, which marks the reveal sound failed. */
+function sharedContext(): AudioContext {
+  const context = audioRuntime.context();
+  if (!context) throw new Error('Web Audio is unavailable');
+  return context;
+}
+
+export function createRevealSound(enabled: () => boolean, factory: () => AudioContext = sharedContext) {
   let context: AudioContext | null = null, disposed = false, failed = false;
   let sources: AudioScheduledSourceNode[] = [];
+  let masters: GainNode[] = [];
+  const release = (master: GainNode) => { try { master.disconnect(); } catch {} masters = masters.filter(node => node !== master); };
   const stop = () => {
     for (const source of sources) { try { source.stop(context?.currentTime ?? 0); source.disconnect(); } catch {} }
     sources = [];
+    for (const master of [...masters]) release(master);
   };
   const play = (cue: RevealCue) => {
     stop();
@@ -48,13 +59,20 @@ export function createRevealSound(enabled: () => boolean, factory: () => AudioCo
       context ??= factory();
       if (context.state === 'suspended') void context.resume().catch(() => { failed = true; stop(); });
       const master = context.createGain(); master.gain.value = REVEAL_SOUND.volume; master.connect(context.destination);
-      for (const note of REVEAL_SCORE[cue]) sources.push(schedule(context, master, note));
+      masters.push(master);
+      // The context is shared and outlives every cue, so the cue's output node goes when its last note ends.
+      let sounding = REVEAL_SCORE[cue].length;
+      for (const note of REVEAL_SCORE[cue]) {
+        const source = schedule(context, master, note);
+        source.onended = () => { sounding -= 1; if (sounding <= 0) release(master); };
+        sources.push(source);
+      }
     } catch { failed = true; stop(); }
   };
   const dispose = () => {
     if (disposed) return;
     disposed = true; stop();
-    if (context) void context.close().catch(() => {});
+    if (context && !audioRuntime.owns(context)) void context.close().catch(() => {});
   };
   return { play, stop, dispose };
 }

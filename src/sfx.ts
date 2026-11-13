@@ -1,4 +1,5 @@
 import { SFX } from "./sfx-data.ts";
+import { audioRuntime } from "./audio-runtime.ts";
 
 /** The slice of the Web Audio API the engine uses, so tests can pass a fake that records what is scheduled. */
 interface SfxNode { connect(to: unknown): unknown }
@@ -111,12 +112,11 @@ export class Sfx implements StackSounds {
   }
 }
 
-/** The real thing: one AudioContext of the browser's, made on first use after unlock. */
+/** The real thing: the page's shared AudioContext, made on first use after unlock. */
 export function browserSfx(audible: () => boolean): Sfx {
-  const Ctor: typeof AudioContext | undefined = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   const base = import.meta.env.BASE_URL;
   return new Sfx({
-    create: () => (Ctor ? new Ctor() : null), audible, hidden: () => document.hidden,
+    create: () => audioRuntime.context(), audible, hidden: () => document.hidden,
     fetchBytes: path => fetch(base + path).then(res => { if (!res.ok) throw new Error(String(res.status)); return res.arrayBuffer(); }),
     random: Math.random,
   });

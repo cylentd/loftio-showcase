@@ -13,6 +13,8 @@ export interface ResidentPlay {
   carryTop(): number | undefined;
   /** A pointer let go. Returns the line to announce when play took the resident, or null to place it normally. */
   release(resident: Resident, time: number, scale: number, moved: boolean, mayFling: boolean): string | null;
+  /** A held resident is being put down in place (pointer or keyboard). Returns the line to announce when play took it, or null. */
+  place?(resident: Resident, from?: Point | null): string | null;
   /** A key while a resident is held by keyboard. Returns the line to announce, or null when the key is not play's. */
   key(resident: Resident, key: string, mayFling: boolean): string | null;
   /** Everyone home, or the room changed: end all play. */

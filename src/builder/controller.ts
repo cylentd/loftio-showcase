@@ -31,6 +31,7 @@ export type BuilderState = {
   refineSupported: false;
   usage: { used: number; cap: number } | null;
   tickets: number | null; // null when this builder has no ticket store (the standalone harness)
+  resumable: boolean; // the API has observe, so a failed request can be reattached instead of paid for again
 };
 
 type Dependencies = {
@@ -73,6 +74,7 @@ class BuilderController {
     this.current = {
       status: 'idle', stage: 'creating', selections: structuredClone(selections), preview: null, previewKept: false,
       saving: false, kept: [], error: null, refineSupported: false, usage: null, tickets: null,
+      resumable: !!dependencies.api.observe,
     };
   }
 

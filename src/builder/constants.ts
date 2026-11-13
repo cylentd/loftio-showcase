@@ -5,6 +5,13 @@ export const REQUEST_ID_MAX_LENGTH = 64;
 export const REQUEST_BODY_MAX_LENGTH = 4096;
 export const IMAGE_MAX_SIDE = 4096;
 export const IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+// Answered requestIds one generate handler instance keeps for replay, shared by every visitor it serves. A repeat
+// follows its first call within minutes, so only recent ids matter. 32 is above DEFAULT_LIMITS.sessionCap and the
+// online GLOBAL_DAILY_CAP, and bounds memory: each cached success holds a base64 image of up to IMAGE_MAX_BYTES.
+export const RESPONSE_CACHE_MAX = 32;
+// Set by the online gate on a call it let through without a cap slot because the id would replay. The generate
+// handler refuses such a call when the id has been evicted meanwhile, so no provider call ever runs without a slot.
+export const REPLAY_ONLY_HEADER = 'x-loftio-replay-only';
 export const MOCK_SIDE = 128;
 export const DATABASE_VERSION = 1;
 export const DATABASE_NAME = 'loftio-builder-mock';

@@ -7,7 +7,7 @@ export const SFX = {
   // C major pentatonic, one step per pile level. Any order of these notes sounds consonant, so any pile sounds pleasant.
   scaleSemitones: [0, 2, 4, 7, 9, 12],
   detuneCents: 15, // each play drifts up to this far either way so repeats are not robotic; 100 cents is one semitone
-  peak: 0.5, // voice loudness before master; the clip peaks near -1.5 dBFS, the room music plays at 0.35 and the rain at 0.245 of full scale
+  peak: 0.5, // voice loudness before master; the clip peaks near -1.5 dBFS, the room music plays at 0.35 and the rain at 0.196 of full scale
   master: 0.5, // all stacking sounds together: peak x master = 0.25, the owner's pick over the music bed on 2026-11-08 (0.64 was distracting)
   quietFactor: 0.3, // self-made piles: noticeably softer than a player's pile
   toppleGapS: 0.07, // stagger between voices of a cascade

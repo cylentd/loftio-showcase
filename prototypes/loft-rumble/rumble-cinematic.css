@@ -1,0 +1,38 @@
+:root {
+  --cinematic-surface: #000;
+  --cinematic-ink: #fff7e5;
+  --cinematic-control-size: 44px;
+  --cinematic-icon-size: 20px;
+  --cinematic-inset: 20px;
+  --cinematic-radius: 12px;
+  --cinematic-font-size: 13px;
+  --cinematic-focus: 2px;
+  --cinematic-shadow: 0 1px 3px #000, 0 0 8px #000;
+  --cinematic-icon-shadow: 0 1px 3px #000;
+  --cinematic-fade: 600ms;
+  --cinematic-easing: ease-out;
+  --cinematic-layer: 100;
+}
+.rumble-cinematic { position:fixed; inset:0; z-index:var(--cinematic-layer); background:var(--cinematic-surface); outline:none; }
+.rumble-cinematic video { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.rumble-cinematic button {
+  position:absolute; min-height:var(--cinematic-control-size); min-width:var(--cinematic-control-size);
+  padding:0; border:0; border-radius:var(--cinematic-radius);
+  background:transparent; color:var(--cinematic-ink); box-shadow:none;
+  font:inherit; font-size:var(--cinematic-font-size); cursor:pointer; text-shadow:var(--cinematic-shadow);
+}
+.rumble-cinematic .cinematic-skip {
+  bottom:calc(var(--cinematic-inset) + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+  padding-inline:var(--cinematic-inset); white-space:nowrap; opacity:1;
+  transition:opacity var(--cinematic-fade) var(--cinematic-easing);
+}
+.rumble-cinematic .cinematic-skip[data-faded="true"] { opacity:0; }
+.rumble-cinematic .cinematic-skip:focus-visible { opacity:1; transition:none; }
+.rumble-cinematic .cinematic-sound {
+  top:calc(var(--cinematic-inset) + env(safe-area-inset-top));
+  right:calc(var(--cinematic-inset) + env(safe-area-inset-right));
+  display:grid; place-items:center;
+}
+.rumble-cinematic .cinematic-sound svg { width:var(--cinematic-icon-size); height:var(--cinematic-icon-size); filter:drop-shadow(var(--cinematic-icon-shadow)); }
+.rumble-cinematic button:focus-visible { outline:var(--cinematic-focus) solid var(--cinematic-ink); outline-offset:var(--cinematic-focus); }
+@media (prefers-reduced-motion:reduce) { .rumble-cinematic .cinematic-skip { transition:none; } }

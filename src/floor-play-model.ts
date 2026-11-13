@@ -1,6 +1,6 @@
 import { FLOOR_PLAY as P } from "./floor-play-data.ts";
 import { PLACEMENT as FLOOR } from "./resident-movement-data.ts";
-import { TRAVEL_OBSTACLES } from "./travel-data.ts";
+import { TRAVEL_OBSTACLES, type Obstacle } from "./travel-data.ts";
 
 export type FloorBody = { x: number; y: number; z: number; vx: number; vy: number; vz: number; radius: number; edgeRadius?: number; impact: number; asleep: boolean };
 export type FloorView = { left: number; right: number; resolve?: (body: FloorBody) => void };
@@ -20,33 +20,60 @@ function limits(b: FloorBody, view?: FloorView) {
   return { left, right: Math.max(left, right), back: FLOOR.back + b.radius * P.depthScale, front: FLOOR.front - b.radius * P.depthScale };
 }
 
-/** Resolve feet against the painted floor and existing table footprints. */
-export function fitFloor(b: FloorBody, view?: FloorView): void {
+/** A footprint stops a body only while its feet are lower than the height of what the body is over: the tall objects on a prop
+ *  where it has them, the bare prop elsewhere. Unmeasured footprints always stop it. */
+const blocks = (b: FloorBody, o: Obstacle) => {
+  const overTall = !o.low || (b.x > o.low.tallLeft - b.radius && b.x < o.low.tallRight + b.radius);
+  return b.z <= (overTall ? o.clearance ?? Infinity : o.low!.clearance);
+};
+const within = (b: FloorBody, o: Obstacle) =>
+  b.x > o.left - b.radius && b.x < o.right + b.radius && b.y > o.back - b.radius * P.depthScale && b.y < o.front + b.radius * P.depthScale;
+const insideBlocker = (b: FloorBody) => TRAVEL_OBSTACLES.some(o => blocks(b, o) && within(b, o));
+
+/** A resident put down on a measured table's footprint walks off it, unless that spot is its own favorite (its arrival plays there).
+ *  Only the footprint itself counts, so every drop beside it keeps its exact position. */
+export function slidesOffTable(feet: { x: number; y: number }, interest: { x: number; y: number }, interestRadius: number): boolean {
+  const onTable = TRAVEL_OBSTACLES.some(o => o.clearance !== undefined && feet.x > o.left && feet.x < o.right && feet.y > o.back && feet.y < o.front);
+  return onTable && Math.hypot(feet.x - interest.x, feet.y - interest.y) > interestRadius;
+}
+
+/** Push a body out of one footprint by its nearest exit. `slide`: the most it may move this call, so a body that came down
+ *  inside walks out instead of jumping; Infinity snaps (a body that just walked in is only a step deep). */
+function leave(b: FloorBody, o: Obstacle, edge: ReturnType<typeof limits>, slide: number): void {
+  const left = o.left - b.radius, right = o.right + b.radius;
+  const back = o.back - b.radius * P.depthScale, front = o.front + b.radius * P.depthScale;
+  const exits = [
+    { x: left, y: b.y, vx: -Math.abs(b.vx) * P.bounce, vy: b.vy },
+    { x: right, y: b.y, vx: Math.abs(b.vx) * P.bounce, vy: b.vy },
+    { x: b.x, y: back, vx: b.vx, vy: -Math.abs(b.vy) * P.bounce },
+    { x: b.x, y: front, vx: b.vx, vy: Math.abs(b.vy) * P.bounce },
+  ].filter(p => p.x >= edge.left && p.x <= edge.right && p.y >= edge.back && p.y <= edge.front);
+  const away = (p: { x: number; y: number }) => Math.hypot(p.x - b.x, (p.y - b.y) / P.depthScale);
+  exits.sort((a, c) => away(a) - away(c));
+  const exit = exits[0];
+  if (!exit) return;
+  const distance = Math.hypot(exit.x - b.x, exit.y - b.y);
+  if (distance <= slide) { Object.assign(b, exit); b.impact = 1; return; }
+  b.x += (exit.x - b.x) / distance * slide; b.y += (exit.y - b.y) / distance * slide;
+  b.vx = exit.vx; b.vy = exit.vy; b.asleep = false;
+}
+
+/** Resolve feet against the painted floor and existing table footprints. `slide` 0 leaves footprints alone. */
+export function fitFloor(b: FloorBody, view?: FloorView, slide = Infinity): void {
   if (view?.resolve) { view.resolve(b); return; }
   const edge = limits(b, view);
   if (b.y < edge.back) { b.y = edge.back; b.vy = Math.abs(b.vy) * P.bounce; b.impact = 1; }
   if (b.y > edge.front) { b.y = edge.front; b.vy = -Math.abs(b.vy) * P.bounce; b.impact = 1; }
   if (b.x < edge.left) { b.x = edge.left; b.vx = Math.abs(b.vx) * P.bounce; b.impact = 1; }
   if (b.x > edge.right) { b.x = edge.right; b.vx = -Math.abs(b.vx) * P.bounce; b.impact = 1; }
-  for (const obstacle of TRAVEL_OBSTACLES) {
-    const left = obstacle.left - b.radius, right = obstacle.right + b.radius;
-    const back = obstacle.back - b.radius * P.depthScale, front = obstacle.front + b.radius * P.depthScale;
-    if (b.x <= left || b.x >= right || b.y <= back || b.y >= front) continue;
-    const exits = [
-      { x: left, y: b.y, vx: -Math.abs(b.vx) * P.bounce, vy: b.vy },
-      { x: right, y: b.y, vx: Math.abs(b.vx) * P.bounce, vy: b.vy },
-      { x: b.x, y: back, vx: b.vx, vy: -Math.abs(b.vy) * P.bounce },
-      { x: b.x, y: front, vx: b.vx, vy: Math.abs(b.vy) * P.bounce },
-    ].filter(p => p.x >= edge.left && p.x <= edge.right && p.y >= edge.back && p.y <= edge.front);
-    exits.sort((a, c) => Math.hypot(a.x - b.x, (a.y - b.y) / P.depthScale) - Math.hypot(c.x - b.x, (c.y - b.y) / P.depthScale));
-    if (exits[0]) { Object.assign(b, exits[0]); b.impact = 1; }
-  }
+  if (slide > 0) for (const o of TRAVEL_OBSTACLES) if (blocks(b, o) && within(b, o)) leave(b, o, edge, slide);
 }
 
 function advance(b: FloorBody, dt: number, view?: FloorView): void {
   b.impact = Math.max(0, b.impact - dt * P.impactDecay);
   if (b.asleep) return;
   const drag = Math.exp(-P.friction * dt); b.vx *= drag; b.vy *= drag;
+  const walkedIn = !TRAVEL_OBSTACLES.some(o => within(b, o));
   b.x += b.vx * dt; b.y += b.vy * dt;
   b.vz -= P.gravity * dt; b.z += b.vz * dt;
   if (b.z <= 0) {
@@ -54,8 +81,9 @@ function advance(b: FloorBody, dt: number, view?: FloorView): void {
     if (b.vz < -P.stopHop) { b.impact = 1; b.vz *= -P.hopBounce; }
     else b.vz = 0;
   }
-  fitFloor(b, view);
-  if (Math.hypot(b.vx, b.vy / P.depthScale) < P.stopSpeed && b.z === 0 && b.vz === 0) {
+  // Coming from outside, a body is at most a step deep and snaps out; one that was already over the footprint slides out.
+  fitFloor(b, view, walkedIn ? Infinity : P.slideSpeed * dt);
+  if (Math.hypot(b.vx, b.vy / P.depthScale) < P.stopSpeed && b.z === 0 && b.vz === 0 && !insideBlocker(b)) {
     b.vx = b.vy = 0; b.asleep = true;
   }
 }
@@ -88,6 +116,6 @@ export function stepFloor(bodies: FloorBody[], milliseconds: number, view?: Floo
     for (const b of active) advance(b, step / P.seconds, view);
     if (capture && previous) active = active.filter(b => !capture(previous.get(b)!, b));
     for (let i = 0; i < active.length; i++) for (let j = i + 1; j < active.length; j++) bump(active[i]!, active[j]!);
-    for (const b of active) if (!b.asleep) fitFloor(b, view);
+    for (const b of active) if (!b.asleep) fitFloor(b, view, 0);
   }
 }

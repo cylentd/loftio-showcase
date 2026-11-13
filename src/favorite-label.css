@@ -1,0 +1,10 @@
+/* The tag over a lit favorite spot. It never takes input and sits above every resident, held ones included. */
+:root { --favorite-label-gap: 8px; --favorite-label-layer: 2100; }
+.favorite-label {
+  position: absolute; top: 0; left: 0; z-index: var(--favorite-label-layer); pointer-events: none;
+  display: inline-flex; align-items: center; gap: var(--space-1); width: max-content; max-width: calc(100vw - 2 * var(--bubble-gutter));
+  padding: var(--space-1) var(--space-2); border: var(--border-width) solid var(--controls-edge); border-radius: var(--chip-radius);
+  background: var(--controls-surface); color: var(--controls-ink); box-shadow: var(--bubble-shadow);
+  font: var(--weight-strong) var(--controls-label-size) / var(--line-body) var(--font-body); white-space: nowrap;
+}
+.favorite-label .control-icon { width: var(--controls-icon); height: var(--controls-icon); flex: none; color: var(--controls-accent); }

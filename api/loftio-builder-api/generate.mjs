@@ -396,6 +396,7 @@ function crc32(bytes) {
 	for (const byte of bytes) crc = (CRC_TABLE[(crc ^ byte) & 255] ?? 0) ^ crc >>> 8;
 	return (crc ^ 4294967295) >>> 0;
 }
+var REPLAY_ONLY_HEADER = "x-loftio-replay-only";
 // game/src/builder/copy.ts
 var COPY = {
 	title: "Meet a new resident",
@@ -476,6 +477,11 @@ async function abortable(provider, request) {
 		signal?.removeEventListener("abort", onAbort);
 	}
 }
+var HTTP_BAD_GATEWAY$1 = 502;
+var HTTP_CONFLICT = 409;
+var HTTP_UNPROCESSABLE = 422;
+var HTTP_CLIENT_CLOSED = 499;
+var UNCACHED_STATUSES = [HTTP_BAD_GATEWAY$1, HTTP_CLIENT_CLOSED];
 var GenerateSession = class {
 	options;
 	used = 0;
@@ -489,7 +495,7 @@ var GenerateSession = class {
 		const prompt = renderPrompt(resolvedSelections);
 		let attempts = 0;
 		while (this.used < this.options.limits.sessionCap) {
-			if (signal.aborted) return failure$1(499, "aborted", COPY.aborted);
+			if (signal.aborted) return failure$1(HTTP_CLIENT_CLOSED, "aborted", COPY.aborted);
 			this.used++;
 			attempts++;
 			try {
@@ -532,10 +538,13 @@ var GenerateSession = class {
 			} catch (error) {
 				const kind = error instanceof ProviderError ? error.kind : "network";
 				if ((kind === "network" || kind === "corrupt") && attempts <= this.options.limits.technicalRetries && this.used < this.options.limits.sessionCap) continue;
-				return failure$1(kind === "aborted" ? 499 : kind === "safety" ? 422 : 502, kind, COPY[kind]);
+				return failure$1(kind === "aborted" ? HTTP_CLIENT_CLOSED : kind === "safety" ? HTTP_UNPROCESSABLE : HTTP_BAD_GATEWAY$1, kind, COPY[kind]);
 			}
 		}
 		return failure$1(429, "cap", COPY.cap);
+	}
+	replays(requestId) {
+		return this.cache.has(requestId);
 	}
 	async handle(request) {
 		if (request.method !== "POST") return failure$1(405, "invalid", COPY.method);
@@ -557,30 +566,55 @@ var GenerateSession = class {
 			if (cached.fingerprint !== fingerprint) return failure$1(409, "invalid", COPY.conflict);
 			return (await cached.response).clone();
 		}
-		if (request.signal.aborted) return failure$1(499, "aborted", COPY.aborted);
+		if (request.headers.has("x-loftio-replay-only")) return failure$1(HTTP_CONFLICT, "busy", COPY.busy);
+		if (request.signal.aborted) return failure$1(HTTP_CLIENT_CLOSED, "aborted", COPY.aborted);
 		if (this.used >= this.options.limits.sessionCap) return failure$1(429, "cap", COPY.cap);
 		if (this.concurrent >= this.options.limits.maxConcurrent) return failure$1(409, "busy", COPY.busy);
 		this.concurrent++;
-		const response = this.generate(requestId, validated.value, request.signal).finally(() => {
+		const response = this.generate(requestId, validated.value, request.signal).then(async (result) => {
+			if (result.ok && this.options.onGenerated) try {
+				await this.options.onGenerated(await result.clone().json());
+			} catch {}
+			if (UNCACHED_STATUSES.includes(result.status)) this.forget(requestId, entry);
+			entry.settled = true;
+			return result;
+		}).catch((error) => {
+			this.forget(requestId, entry);
+			entry.settled = true;
+			throw error;
+		}).finally(() => {
 			this.concurrent--;
 		});
-		this.cache.set(requestId, {
+		const entry = {
 			fingerprint,
+			settled: false,
 			response
-		});
+		};
+		this.cache.set(requestId, entry);
+		this.evict();
 		return (await response).clone();
+	}
+	forget(requestId, entry) {
+		if (this.cache.get(requestId) === entry) this.cache.delete(requestId);
+	}
+	evict() {
+		for (const [id, entry] of this.cache) {
+			if (this.cache.size <= 32) return;
+			if (entry.settled) this.cache.delete(id);
+		}
 	}
 };
 function createGenerateHandler(options) {
 	const session = new GenerateSession(options);
-	return (request) => session.handle(request);
+	return Object.assign((request) => session.handle(request), { replays: (requestId) => session.replays(requestId) });
 }
 // game/src/builder/server/online-copy.ts
 var ONLINE_COPY = {
 	human: "We couldn't confirm you're a person. Refresh the page and try again.",
 	globalCap: "Loftio is out of magic for today. Come back tomorrow.",
 	visitorCap: `You've made 3 residents today. Come back tomorrow for more.`,
-	unconfigured: "The online builder isn't set up yet."
+	unconfigured: "The online builder isn't set up yet.",
+	unavailable: "Loftio can't make residents right now. Try again in a little while."
 };
 // game/src/builder/server/online-handler.ts
 var HTTP_BAD_REQUEST$1 = 400;
@@ -617,6 +651,9 @@ async function readBody(request) {
 		return null;
 	}
 }
+function isReplay(generate, requestId) {
+	return typeof requestId === "string" && generate.replays?.(requestId) === true;
+}
 async function isHuman(verify, token, ip) {
 	try {
 		return Boolean(await verify(token, ip));
@@ -641,22 +678,23 @@ async function outcome(response) {
 	}
 }
 function createOnlineHandler(options) {
-	return async function handle(request) {
-		if (request.method !== "POST") return failure(HTTP_METHOD_NOT_ALLOWED, "invalid", COPY.method);
-		const body = await readBody(request);
-		if (!body) return failure(HTTP_BAD_REQUEST$1, "invalid", COPY.invalid);
-		const ip = clientIp(request);
-		if (!await isHuman(options.verifyHuman, body["turnstileToken"], ip)) return failure(HTTP_FORBIDDEN, "invalid", ONLINE_COPY.human);
-		let reservation;
-		try {
-			reservation = await options.caps.reserve(await options.visitorKey(ip));
-		} catch {
-			return failure(HTTP_UNAVAILABLE$1, "busy", COPY.busy);
+	const pending = /* @__PURE__ */ new Map();
+	async function admit(request, body, ip) {
+		let reservation = null;
+		if (!isReplay(options.generate, body.requestId)) {
+			try {
+				reservation = await options.caps.reserve(await options.visitorKey(ip));
+			} catch {
+				return failure(HTTP_UNAVAILABLE$1, "busy", ONLINE_COPY.unavailable);
+			}
+			if (!reservation.ok) return failure(HTTP_TOO_MANY, "cap", reservation.reason === "visitor" ? ONLINE_COPY.visitorCap : ONLINE_COPY.globalCap);
 		}
-		if (!reservation.ok) return failure(HTTP_TOO_MANY, "cap", reservation.reason === "visitor" ? ONLINE_COPY.visitorCap : ONLINE_COPY.globalCap);
 		const forwarded = new Request(request.url, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				...reservation ? {} : { [REPLAY_ONLY_HEADER]: "1" }
+			},
 			body: JSON.stringify({
 				requestId: body.requestId,
 				selections: body.selections
@@ -677,8 +715,25 @@ function createOnlineHandler(options) {
 				headers: { "Cache-Control": "no-store" }
 			});
 		}
-		if (result.kind && RELEASING_KINDS.includes(result.kind)) await reservation.release().catch(() => {});
+		if (result.kind && RELEASING_KINDS.includes(result.kind) && reservation?.ok) await reservation.release().catch(() => {});
 		return response;
+	}
+	return async function handle(request) {
+		if (request.method !== "POST") return failure(HTTP_METHOD_NOT_ALLOWED, "invalid", COPY.method);
+		const body = await readBody(request);
+		if (!body) return failure(HTTP_BAD_REQUEST$1, "invalid", COPY.invalid);
+		const ip = clientIp(request);
+		if (!await isHuman(options.verifyHuman, body["turnstileToken"], ip)) return failure(HTTP_FORBIDDEN, "invalid", ONLINE_COPY.human);
+		const id = typeof body.requestId === "string" ? body.requestId : null;
+		if (id === null) return admit(request, body, ip);
+		for (let earlier = pending.get(id); earlier; earlier = pending.get(id)) await earlier.catch(() => {});
+		const run = admit(request, body, ip);
+		pending.set(id, run);
+		try {
+			return await run;
+		} finally {
+			if (pending.get(id) === run) pending.delete(id);
+		}
 	};
 }
 async function visitorKeyFor(ip, salt) {

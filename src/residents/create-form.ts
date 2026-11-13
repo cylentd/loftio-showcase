@@ -54,8 +54,8 @@ function stepSection(title: string, index: number, uid: string) {
 /** grant adds a test ticket; passed in mock mode only, where images are free placeholders. */
 export function residentForm(builder: ReturnType<typeof createBuilder>, mode: BuilderMode, grant?: () => void, exit: () => void = () => {}) {
   const uid = `resident-wizard-${formCount++}`;
-  // Only the local worker can reattach to a request; elsewhere a failed build's button starts a new one.
-  const action = (state: ReturnType<typeof builder.state>) => createAction({ ...state, resumable: mode === 'local' });
+  // Only an API with observe can reattach to a request; without it a failed build's button starts a new one.
+  const action = (state: ReturnType<typeof builder.state>) => createAction({ ...state, resumable: state.resumable === true });
   const wizard = createWizard(builder, Math.random);
   const form = document.createElement('form'); form.className = 'resident-form resident-wizard';
   const cards: { button: HTMLButtonElement; field: SelectionField; value: string | null }[] = [];
@@ -87,12 +87,15 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const confirm = document.createElement('div'); confirm.className = 'wizard-confirm'; confirm.setAttribute('role', 'group');
   const question = document.createElement('p'); question.id = `${uid}-confirm`; question.tabIndex = -1;
   confirm.setAttribute('aria-labelledby', question.id);
-  const yes = worldButton(RESIDENT_COPY.confirmYes, () => { if (!armed) return; confirming = false; void wizard.make(); });
+  const yes = worldButton(RESIDENT_COPY.confirmYes, () => { if (!armed) return; stopConfirm(); void wizard.make(); });
   yes.classList.add('world-primary');
-  const no = worldButton(RESIDENT_COPY.confirmNo, () => { confirming = false; update(); submit.focus(); });
+  const no = worldButton(RESIDENT_COPY.confirmNo, () => { stopConfirm(); update(); submit.focus(); });
   const choices = document.createElement('div'); choices.className = 'wizard-confirm-choices'; choices.append(no, yes);
   confirm.append(question, choices);
   let confirming = false, armed = false;
+  let armTimer: ReturnType<typeof setTimeout> | undefined; // the open question's window; only one may run
+  // Closes the open question and cancels its window, so a stale window cannot arm a later question.
+  function stopConfirm() { clearTimeout(armTimer); armTimer = undefined; confirming = false; }
   let lastStatus = builder.state().status;
   // No tickets: this panel takes Bring to life's place, so there is no dead button to press.
   const out = document.createElement('div'); out.className = 'wizard-out'; out.setAttribute('role', 'status');
@@ -134,7 +137,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   }
   function show(focus: boolean) {
     const current = wizard.step;
-    confirming = false; // leaving the summary drops an open question; the picks may change
+    stopConfirm(); // leaving the summary drops an open question; the picks may change
     steps.forEach((step, index) => { step.section.hidden = index !== current; });
     summary.section.hidden = current !== SUMMARY_STEP;
     dice.hidden = current === SUMMARY_STEP;
@@ -149,7 +152,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     if (!action(builder.state()).confirmBeforeCreate) { void wizard.make(); return; }
     if (confirming) return;
     confirming = true; armed = false; update(); question.focus({ preventScroll: true });
-    setTimeout(() => { armed = true; update(); }, CONFIRM_ARM_MS);
+    armTimer = setTimeout(() => { armTimer = undefined; armed = true; update(); }, CONFIRM_ARM_MS);
   });
 
   function update() {

@@ -61,7 +61,11 @@ export function residentRegistry(storage: Storage, newId: () => string, key = ST
       change(id, { name: residentName(value) });
     },
     remove(id: string) { change(id, { inRoom: false }); },
-    defer(id: string) { change(id, { arrival: 'saved' }); },
+    defer(id: string) {
+      const entry = residents.find(item => item.id === id);
+      if (entry?.arrival !== 'waiting') return false;
+      change(id, { arrival: 'saved' }); return true;
+    },
     position(id: string, room: 'desktop' | 'portrait', position: Position) {
       if (!point(position)) throw Error('Invalid resident position');
       const entry = residents.find(item => item.id === id);

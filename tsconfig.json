@@ -9,7 +9,9 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "noUncheckedIndexedAccess": true,
+    "erasableSyntaxOnly": true,
     "skipLibCheck": true
   },
-  "include": ["src", "showcase"]
+  "include": ["src", "showcase"],
+  "exclude": ["src/characters/server"]
 }

@@ -1,5 +1,5 @@
 import { FLOOR_PLAY as P } from "./floor-play-data";
-import { floorBody, fitFloor, launchFloor, stepFloor, type FloorBody } from "./floor-play-model";
+import { floorBody, fitFloor, launchFloor, slidesOffTable, stepFloor, type FloorBody } from "./floor-play-model";
 import { floorPosition } from "./resident-movement";
 import { PLACEMENT } from "./resident-movement-data";
 import { heightAt, type Resident } from "./resident";
@@ -14,7 +14,11 @@ export class LobbyFidget {
   private flights = new Map<Resident, FloorBody>();
   private stackable = new Set<Resident>();
   readonly stacks: ResidentStacks;
-  constructor(private scene: Scene, private look: Look, sound?: StackSounds, onFull?: (resident: Resident) => void) {
+  private scene: Scene;
+  private look: Look;
+  constructor(scene: Scene, look: Look, sound?: StackSounds, onFull?: (resident: Resident) => void) {
+    this.scene = scene;
+    this.look = look;
     this.stacks = new ResidentStacks(scene, (r, v) => this.throwResident(r, v, false), (r, now) => this.land(r, now), sound, onFull);
   }
 
@@ -30,15 +34,36 @@ export class LobbyFidget {
 
   throwResident(resident: Resident, velocity: { x: number; y: number }, canStack = true): void {
     if (canStack) this.stackable.add(resident); else this.stackable.delete(resident);
-    if (!resident.held) resident.pickUp();
+    resident.holdFor("play");
     const ground = floorPosition(resident.pos);
     const flight = floorBody(ground.x, ground.y, this.radius(resident, ground.y));
     flight.edgeRadius = flight.radius * P.screenRadiusRatio / P.radiusRatio;
-    fitFloor(flight, this.view());
     flight.z = Math.max(0, flight.y - resident.pos.y + resident.lift);
+    fitFloor(flight, this.view(), 0);
     launchFloor(flight, velocity);
     this.flights.set(resident, flight);
     this.draw(resident, flight);
+  }
+
+  /** A resident put down inside the middle table's footprint walks off it (nearest edge, small steps) instead of standing in the
+   *  table drawn behind it. True when it took the resident; under Still it only moves the resident out at once and returns false. */
+  slideOffTable(resident: Resident, from?: { x: number; y: number } | null): boolean {
+    const feet = floorPosition(resident.pos);
+    if (!slidesOffTable(feet, resident.cast.interest, PLACEMENT.interestRadius)) return false;
+    const flight = floorBody(feet.x, feet.y, this.radius(resident, feet.y));
+    flight.edgeRadius = flight.radius * P.screenRadiusRatio / P.radiusRatio;
+    if (this.look.frozen) {
+      fitFloor(flight, this.view());
+      Object.assign(resident.pos, { x: flight.x, y: flight.y });
+      return false;
+    }
+    if (!resident.held) resident.pickUp();
+    this.stackable.delete(resident);
+    const lift = from && from.y < feet.y ? feet.y - from.y + (resident.falling ? 0 : resident.lift) : resident.lift;
+    Object.assign(flight, { z: lift, asleep: false });
+    this.flights.set(resident, flight);
+    this.draw(resident, flight);
+    return true;
   }
 
   catch(resident: Resident, now = 0): boolean {
@@ -48,7 +73,13 @@ export class LobbyFidget {
   }
 
   reset(now: number, clearStacks = true): void {
-    for (const resident of this.flights.keys()) this.land(resident, now);
+    const view = this.view();
+    for (const [resident, b] of this.flights) {
+      // Landing at once (Still, a room change) must not leave anyone inside the table they were flying over.
+      b.z = 0; fitFloor(b, view);
+      Object.assign(resident.pos, { x: b.x, y: b.y });
+      this.land(resident, now);
+    }
     this.flights.clear();
     this.stackable.clear();
     if (clearStacks) this.stacks.reset(now);
@@ -68,7 +99,8 @@ export class LobbyFidget {
     const bodies = new Map(this.flights), view = this.view();
     for (const resident of this.scene.residents) {
       if (bodies.has(resident)) continue;
-      if ((resident.held && !this.stacks.isBase(resident)) || resident.falling || resident.walking || resident.climbing || resident.seatSupport.lift > 0) continue;
+      // Only a pile's base, which play holds, stays a floor body while held: a hand or parcel owns the rest.
+      if ((resident.holder !== null && !(resident.holder === "play" && this.stacks.isBase(resident))) || resident.falling || resident.walking || resident.climbing || resident.seatSupport.lift > 0) continue;
       if (resident.pos.y < PLACEMENT.back || resident.pos.y > PLACEMENT.front) continue;
       const radius = this.radius(resident, resident.pos.y);
       if (resident.pos.x - radius < view.left || resident.pos.x + radius > view.right) continue;
@@ -91,7 +123,7 @@ export class LobbyFidget {
       if (!this.flights.has(resident)) {
         if (b.asleep) continue;
         this.stacks.topple(resident, { x: b.vx, y: b.vy });
-        resident.pickUp(); this.flights.set(resident, b);
+        resident.pickUp(false, "play"); this.flights.set(resident, b);
       }
       this.draw(resident, b);
       if (b.asleep) { this.land(resident, now); this.flights.delete(resident); }

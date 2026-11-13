@@ -18,3 +18,9 @@
 #demo-results dd{margin:0;font-size:var(--demo-value);font-weight:bold;font-variant-numeric:tabular-nums}
 #demo-replay{min-height:var(--demo-button);background:var(--primary);color:var(--background);font-weight:bold}
 #demo-replay:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+/* On the stage the result sits on the same paper sheet as the pause menu, so its title and numbers read over any arena art. */
+[data-rumble-demo] #demo-results{background:var(--stage-sheet-surface);color:var(--stage-sheet-ink);border-color:var(--stage-sheet-edge);box-shadow:var(--stage-sheet-shadow)}
+[data-rumble-demo] #demo-results h2{color:var(--stage-sheet-ink)}
+[data-rumble-demo] #demo-results :is(p,dt){color:var(--stage-sheet-muted)}
+[data-rumble-demo] #demo-replay{border:var(--stage-border) solid var(--stage-sheet-edge);background:var(--stage-sheet-accent);color:var(--stage-sheet-ink)}
+[data-rumble-demo] #demo-replay:focus-visible{outline-color:var(--stage-sheet-toggle)}

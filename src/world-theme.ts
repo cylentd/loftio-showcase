@@ -1,5 +1,5 @@
 // tray / trayDeep: the lightest and darkest tones of the music dock's surface. Every skin draws the dock from these two
-// and mixes of them, so trayInk (song title, tile labels) is contrast-checked against both (tests/world-theme.test.ts).
+// and mixes of them, so trayInk (song title, tile labels) is contrast-checked against both (tests/component/world-theme.test.ts).
 export const WORLD_THEMES = {
   base: { paper: '#fff8e9', ink: '#30281f', muted: '#625342', wood: '#715032', edge: '#9a754b', accent: '#37563e', selected: '#e4ebd8',
     tray: '#7f5831', trayDeep: '#5a3b24', trayInk: '#fff8e9' },

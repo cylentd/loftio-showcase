@@ -5,6 +5,8 @@ export const FAVORITE_LIGHT = {
   luminance: [0.2126, 0.7152, 0.0722], channelMax: 255, matrixStride: 5, pixelStride: 4,
   feather: 5, padding: 20, periodMs: 2800, minimumAlpha: 0.82, steadyAlpha: 0.95,
 };
+/** Favorites whose furniture is painted over the residents (the lantern sits in the centre-table prop), so their light must be drawn at that depth too. */
+export const FAVORITE_IN_FRONT = ["chomper"];
 export const FAVORITE_ART: Record<string, number[][]> = roomData({
   hoodie: [
     [187, 574, 211, 565, 298, 565, 317, 577, 322, 615, 280, 621, 217, 628, 196, 626],

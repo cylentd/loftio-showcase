@@ -30,7 +30,14 @@ export class Look {
   private readonly motionButton = document.createElement("button");
   private readonly lookButton = document.createElement("button");
 
-  constructor(private scroller: HTMLElement, private worldEl: HTMLElement, private focusX: number) {
+  private scroller: HTMLElement;
+  private worldEl: HTMLElement;
+  private focusX: number;
+
+  constructor(scroller: HTMLElement, worldEl: HTMLElement, focusX: number) {
+    this.scroller = scroller;
+    this.worldEl = worldEl;
+    this.focusX = focusX;
     this.controls();
     this.layout();
     addEventListener("resize", () => this.layout());

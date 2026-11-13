@@ -41,8 +41,10 @@ export const PORTRAIT_NODES = [
   { id: "couch-approach", x: 420, y: 840, zone: "ground" },
   { id: "couch", x: 170, y: 735, zone: "couch" },
 ];
-export const PORTRAIT_OBSTACLES = [
-  { left: 470, right: 780, back: 580, front: 665 },
+export const PORTRAIT_OBSTACLES: { left: number; right: number; back: number; front: number; clearance?: number; low?: undefined }[] = [
+  // Entire centre prop: footprint front 665 minus terrarium top 481 (PORTRAIT_TABLE), including objects above the tabletop.
+  // `low: undefined` is explicit because the room data swap keeps a desktop key the portrait entry omits; the bare table is unmeasured here.
+  { left: 470, right: 780, back: 580, front: 665, clearance: 184, low: undefined }, // magic-ok: measured footprint from the painting, sourced above
   { left: 160, right: 420, back: 490, front: 605 },
   { left: 0, right: 350, back: 600, front: 930 },
 ];

@@ -3,6 +3,7 @@ import { ROOM_AUDIO } from "./copy";
 import { icon } from "./icons";
 import { installSoundtrack } from "./soundtrack";
 import { installRainSound } from "./rain-sound";
+import { loadAudioChoices, rememberChoice, type Channel } from "./audio-preferences";
 
 /** How long sound takes to fade up after the title, matched to the title's 1.2 s exit so the room and its sound arrive together. */
 const ENTER_FADE_MS = 1500;
@@ -21,6 +22,9 @@ function fadeIn(tracks: Soundtrack[]): void {
 export function installRoomAudio() {
   const music = installSoundtrack();
   const tracks = [music.model, installRainSound()];
+  const channels: Channel[] = ["music", "rain"];
+  const chosen = loadAudioChoices();
+  const remember = (on: boolean) => { for (const channel of channels) rememberChoice(channel, { on }); };
   const button = document.createElement("button"); button.className = "room-audio room-action"; button.type = "button";
   const sync = () => {
     const playing = tracks.some(track => track.playing);
@@ -53,13 +57,16 @@ export function installRoomAudio() {
     retryBlocked();
   };
   button.addEventListener("click", () => {
-    if (tracks.some(track => track.desired)) void Promise.all(tracks.map(track => track.stop()));
+    const stopping = tracks.some(track => track.desired);
+    remember(!stopping);
+    if (stopping) void Promise.all(tracks.map(track => track.stop()));
     else void start();
   });
   for (const track of tracks) track.subscribe(sync);
   document.addEventListener("click", unlock, true);
   document.addEventListener("keydown", unlock, true);
-  sync(); void start();
+  // A channel the person switched off stays off until they switch it on; the other still starts.
+  sync(); void start(tracks.filter((_, index) => chosen[channels[index]!].on !== false));
   // Passing the title is a user gesture, so sound the browser blocked on load can start then, fading up with the room.
   // The play button and playlist go to the now-playing pill in the corner tray.
   return {

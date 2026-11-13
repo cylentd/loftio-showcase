@@ -37,15 +37,23 @@ export function turnstileTokens({ siteKey, scriptUrl = TURNSTILE_SCRIPT_URL, doc
     doc.head.append(script);
   });
 
-  return async () => {
-    // A failed load is not cached, so the next Create can try again.
-    ready ??= load().catch(error => { ready = null; throw error; });
-    const { api, id } = await ready;
+  // One widget, one waiter slot: overlapping calls queue and run the widget in turn.
+  let queue: Promise<unknown> = Promise.resolve();
+  const run = async (loaded: Promise<{ api: Widget; id: string }>) => {
+    const { api, id } = await loaded;
     return new Promise<string>((resolve, reject) => {
       const timer = setTimeout(() => settle(waiting => waiting.reject(new Error('Turnstile timed out.'))), TURNSTILE_TIMEOUT_MS);
       const done = (finish: () => void) => { clearTimeout(timer); try { api.reset(id); } catch { /* widget already gone */ } finish(); };
       waiter = { resolve: token => done(() => resolve(token)), reject: error => done(() => reject(error)) };
       try { api.execute(id); } catch (error) { settle(waiting => waiting.reject(error as Error)); }
     });
+  };
+  return () => {
+    // The script starts loading at once; a failed load is not cached, so the next Create can try again.
+    ready ??= load().catch(error => { ready = null; throw error; });
+    const loaded = ready;
+    const result = queue.then(() => run(loaded));
+    queue = result.catch(() => undefined);
+    return result;
   };
 }

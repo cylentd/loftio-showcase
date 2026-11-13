@@ -16,7 +16,18 @@ export class ResidentStacks {
   private elapsed = 0;
   private now = 0;
   private nextLimitNotice = 0;
-  constructor(private scene: Scene, private release: Release, private land: (resident: Resident, now: number) => void, private sound?: StackSounds, private onFull?: (resident: Resident) => void) {}
+  private scene: Scene;
+  private release: Release;
+  private land: (resident: Resident, now: number) => void;
+  private sound?: StackSounds;
+  private onFull?: (resident: Resident) => void;
+  constructor(scene: Scene, release: Release, land: (resident: Resident, now: number) => void, sound?: StackSounds, onFull?: (resident: Resident) => void) {
+    this.scene = scene;
+    this.release = release;
+    this.land = land;
+    this.sound = sound;
+    this.onFull = onFull;
+  }
 
   contains(r: Resident): boolean { return this.piles.some(p => p.members.includes(r)); }
   /** Residents in the pile `r` stands in, or 0. */
@@ -28,7 +39,7 @@ export class ResidentStacks {
       if (r === resident || r.walking || r.climbing) return false;
       const pile = this.piles.find(p => p.members.includes(r));
       if (pile) return pile.members.at(-1) === r;
-      return !r.held && r.seatSupport.lift === 0 && r.pos.y >= PLACEMENT.back && r.pos.y <= PLACEMENT.front;
+      return r.holder === null && r.seatSupport.lift === 0 && r.pos.y >= PLACEMENT.back && r.pos.y <= PLACEMENT.front;
     });
   }
 
@@ -73,8 +84,8 @@ export class ResidentStacks {
 
   private attach(resident: Resident, target: Resident): boolean {
     let pile = this.piles.find(p => p.members.includes(target));
-    if (!pile) { target.pickUp(); pile = newPile([target]); this.piles.push(pile); }
-    if (!resident.held) resident.pickUp();
+    if (!pile) { target.pickUp(false, "play"); pile = newPile([target]); this.piles.push(pile); }
+    resident.holdFor("play");
     playerOwned(pile); pile.age = 0;
     addMember(pile, resident, this.sound);
     this.update(0, false);
@@ -107,8 +118,8 @@ export class ResidentStacks {
   autoJoin(climber: Resident, base: Resident): boolean {
     if (!canAutoJoin(this.piles, base, climber)) return false;
     let pile = this.piles.find(p => p.members.includes(base));
-    if (!pile) { base.pickUp(); pile = newPile([base], true); this.piles.push(pile); }
-    climber.pickUp();
+    if (!pile) { base.pickUp(false, "play"); pile = newPile([base], true); this.piles.push(pile); }
+    climber.pickUp(false, "play");
     pile.age = 0;
     addMember(pile, climber, this.sound);
     this.update(0, false);

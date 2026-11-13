@@ -1,4 +1,5 @@
 import { DELIVERY as TUNE } from './delivery-constants';
+import { audioRuntime } from '../audio-runtime';
 import type { RevealAudioPreference } from './unboxing-sound';
 
 export function deliverySound(audio: RevealAudioPreference) {
@@ -7,8 +8,8 @@ export function deliverySound(audio: RevealAudioPreference) {
   const unlock = () => {
     if (!audio.playing) return;
     try {
-      context ??= new AudioContext();
-      if (context.state === 'suspended') void context.resume().catch(() => {});
+      context ??= audioRuntime.context();
+      void audioRuntime.resume();
     } catch {}
   };
   document.addEventListener('pointerdown', unlock, { passive: true });

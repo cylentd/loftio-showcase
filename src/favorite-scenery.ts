@@ -1,5 +1,5 @@
 import { ColorMatrixFilter, Container, Sprite, Texture } from "pixi.js";
-import { FAVORITE_ART, FAVORITE_LIGHT } from "./favorite-scenery-data";
+import { FAVORITE_ART, FAVORITE_IN_FRONT, FAVORITE_LIGHT } from "./favorite-scenery-data";
 import { favoriteLightMatrix } from "./favorite-light-model";
 
 function illuminatedPainting(room: Texture, polygons: number[][]) {
@@ -34,18 +34,17 @@ function illuminatedPainting(room: Texture, polygons: number[][]) {
 export class FavoriteScenery {
   readonly root = new Container();
   private readonly furniture;
-  private readonly foregroundExposure = new ColorMatrixFilter();
   private selected: string[] = [];
-  constructor(room: Texture, private readonly foreground: Container) {
+  /** `front`: the painted prop that hides the room behind the residents; a favorite inside it is lit there, on its own mask only. */
+  constructor(room: Texture, front: Container) {
     this.furniture = Object.entries(FAVORITE_ART).map(([id, polygons]) => {
-      const { root: sprite, maskTexture, filter } = illuminatedPainting(room, polygons); this.root.addChild(sprite);
+      const { root: sprite, maskTexture, filter } = illuminatedPainting(room, polygons);
+      (FAVORITE_IN_FRONT.includes(id) ? front : this.root).addChild(sprite);
       return { id, sprite, maskTexture, filter };
     });
   }
   get active(): string[] { return [...this.selected]; }
   destroy(): void {
-    this.foreground.filters = [];
-    this.foregroundExposure.destroy();
     for (const { maskTexture, filter } of this.furniture) {
       maskTexture.destroy(true);
       filter.destroy();
@@ -56,9 +55,5 @@ export class FavoriteScenery {
     const wave = (1 - Math.cos(now / FAVORITE_LIGHT.periodMs * Math.PI * 2)) / 2;
     const alpha = frozen ? FAVORITE_LIGHT.steadyAlpha : FAVORITE_LIGHT.minimumAlpha + (1 - FAVORITE_LIGHT.minimumAlpha) * wave;
     for (const { id, sprite } of this.furniture) { sprite.visible = ids.includes(id); sprite.alpha = alpha; }
-    if (ids.includes("chomper")) {
-      this.foregroundExposure.matrix = favoriteLightMatrix(alpha);
-      this.foreground.filters = [this.foregroundExposure];
-    } else this.foreground.filters = [];
   }
 }

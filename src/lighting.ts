@@ -17,7 +17,10 @@ export class Lighting {
   private renderedFlickers = "";
   private readonly renderer: Renderer;
 
-  constructor(warm: Texture, moonlit: Texture, dot: Texture, renderer: Renderer, readonly timeline = new LightingTimeline()) {
+  readonly timeline: LightingTimeline;
+
+  constructor(warm: Texture, moonlit: Texture, dot: Texture, renderer: Renderer, timeline = new LightingTimeline()) {
+    this.timeline = timeline;
     this.renderer = renderer;
     const day = new Sprite(warm);
     this.night = new Sprite(moonlit);

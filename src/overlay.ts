@@ -23,12 +23,17 @@ export class Overlay {
   private returnFocus: HTMLElement | null = null;
   private readonly labels = new Map<string, string>();
 
+  private readonly layer: HTMLElement;
+  private readonly onLater: () => void;
+
   constructor(
-    private readonly layer: HTMLElement,
+    layer: HTMLElement,
     ids: string[],
     onPress: (id: string) => void,
-    private readonly onLater: () => void,
+    onLater: () => void,
   ) {
+    this.layer = layer;
+    this.onLater = onLater;
     for (const id of ids) {
       const b = el("button", "hit");
       b.type = "button";

@@ -46,7 +46,7 @@ export function installDebug(shell: HTMLElement, app: Application, scene: Scene,
     poseResident: (id: string, x: number, y: number) => {
       const resident = scene.residents.find((member) => member.cast.id === id);
       if (!resident) throw new Error("Unknown fixture resident");
-      resident.walking = false;
+      resident.halt();
       Object.assign(resident.pos, { x, y });
       resident.update(0, runtime.clock, false);
       runtime.update(0);

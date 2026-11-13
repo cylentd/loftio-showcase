@@ -57,11 +57,15 @@
     document.addEventListener('pointerdown',clear,{capture:true,once:true});
     document.addEventListener('keydown',clear,{capture:true,once:true});
   }
-  function reveal(ready,draw){
+  function reveal(ready,draw,cinematic){
     const backdrop=new Image();backdrop.src=new URL('assets/camera-storybook/arena.webp',location.href).href;
     const images=[...document.images,backdrop];
     Promise.all([Promise.resolve(ready).catch(()=>{}),...images.map(image=>image.decode().catch(()=>{}))])
-      .then(()=>{draw();arrive()});
+      .then(()=>cinematic.done).then(continueToTitle=>{
+        draw();
+        if(!continueToTitle){delete document.documentElement.dataset.rumblePending;return;}
+        arrive();document.getElementById('menu-toggle').focus({preventScroll:true});
+      });
   }
   function install({s,names,reset:restart,draw,ready}){
     if(new URLSearchParams(location.search).get('lab')==='1')return;
@@ -100,7 +104,9 @@
     document.getElementById('demo-combo-label').textContent=copy.combo;
     const replay=document.getElementById('demo-replay');replay.textContent=copy.replay;
     replay.addEventListener('click',()=>{restart();draw();document.getElementById('menu-toggle').focus({preventScroll:true})});
-    restart();draw();reveal(ready,draw);
+    restart();draw();
+    const cinematic=root.LoftRumbleCinematic.play({main:document.querySelector('main'),setBlocked:on=>{s.cinematic=on}});
+    reveal(ready,draw,cinematic);
   }
   root.LoftRumbleDemo=Object.freeze({active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install});
 })(globalThis);

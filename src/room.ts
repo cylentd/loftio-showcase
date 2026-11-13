@@ -13,6 +13,7 @@ import { Overlay } from "./overlay";
 import { Runtime } from "./runtime";
 import { css, makeScene } from "./scene";
 import { installRoomAudio } from "./room-audio";
+import { guardPinch } from "./gameplay-gesture";
 import { MAX_RESOLUTION } from "./tune";
 import { SceneSettings } from "./scene-settings";
 import { installSceneSettings } from "./scene-settings-view";
@@ -49,6 +50,7 @@ async function start(intro: ReturnType<typeof installIntro>, features: readonly 
   const shell = document.querySelector<HTMLElement>("#grove")!;
   const scroller = document.querySelector<HTMLElement>("#scroller")!;
   const worldEl = document.querySelector<HTMLElement>("#world")!;
+  guardPinch(scroller, () => window.visualViewport?.scale ?? 1);
   const params = new URLSearchParams(location.search);
   applyWorldTheme(document.documentElement, params.get('theme'));
   applyWorldArt(document.documentElement, document.baseURI);

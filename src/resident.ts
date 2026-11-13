@@ -15,6 +15,7 @@ import { ChairBooster } from "./chair-booster";
 import { cloudPose } from "./cloud-pose";
 import { touchPose } from "./tactile";
 import { TACTILE } from "./tactile-constants";
+import { INITIAL, motionOf, next, type Holder, type LifeEvent, type Lifecycle } from "./resident-lifecycle";
 
 /** `drop`: for a fall, the world px from the release height down to the feet. */
 type Action = { kind: "hop" | "look" | "wiggle" | "nod" | "press" | "settle" | "fall"; t: number; dur: number; drop?: number };
@@ -71,16 +72,19 @@ export class Resident {
   readonly shove: Point = { x: 0, y: 0 };
   wanderAfter = 0;
   at: "home" | "interest" = "home";
-  walking = false;
-  held = false;
+  /** Still, walking, paused or held: every change goes through `next` in resident-lifecycle.ts. */
+  private life: Lifecycle = INITIAL;
+  get walking(): boolean { return motionOf(this.life) === "walking"; }
+  get held(): boolean { return this.life.kind === "held"; }
+  /** Who holds it, or null when free. */
+  get holder(): Holder | null { return this.life.kind === "held" ? this.life.holder : null; }
+  private get paused(): boolean { return motionOf(this.life) === "paused"; }
+  private send(event: LifeEvent): void { this.life = next(this.life, event); }
   private carryHeight = 0;
   private carryTime = 0;
-  private carryOrigin: Point | null = null;
   private lighting = 0;
   placed = false;
   private hops: (Point & { climb: boolean })[] = [];
-  private paused = false;
-  private carriedMotion: { walking: boolean; paused: boolean } | null = null;
   private hopIndex = 0;
   private hopT = 0;
   private facing = 1;
@@ -104,14 +108,23 @@ export class Resident {
     if (!this.touching) this.pressure = reduced ? 0 : this.pressure * Math.exp(-dt / TACTILE.releaseMs);
   }
 
+  readonly cast: CastMember;
+  private readonly palette: Palette;
+  private readonly rand: () => number;
+  private readonly renderStyle: RenderStyle;
+
   constructor(
-    readonly cast: CastMember,
+    cast: CastMember,
     texture: Texture,
     dot: Texture,
-    private readonly palette: Palette,
-    private readonly rand: () => number,
-    private readonly renderStyle: RenderStyle = {},
+    palette: Palette,
+    rand: () => number,
+    renderStyle: RenderStyle = {},
   ) {
+    this.cast = cast;
+    this.palette = palette;
+    this.rand = rand;
+    this.renderStyle = renderStyle;
     this.phase = rand() * TAU;
     this.pos = { ...cast.home };
     this.home = { ...cast.home };
@@ -141,20 +154,23 @@ export class Resident {
     this.sprite.tint = residentLighting(mixColour(this.palette.tintBack, this.palette.tintFront, depth), blend);
   }
 
-  /** `caught`: taken out of a feature's play mid-air, so the carry starts from the current lift. */
-  pickUp(caught = false): void {
+  /** `caught`: taken out of a feature's play mid-air, so the carry starts from the current lift. `by`: who holds it now. */
+  pickUp(caught = false, by: Holder = "hand"): void {
     this.carryStyle?.start(caught, caught ? this.lift - this.height * PLACEMENT.lift : 0);
     this.carryTime = 0;
-    this.carryOrigin = { ...this.pos };
     this.carryHeight = this.height;
     this.carrySupportLift = this.supportLift;
     this.shove.x = this.shove.y = 0;
-    this.held = true;
+    this.send({ type: "pickUp", at: this.pos, by });
     this.turn.snap(this.facing);
-    this.carriedMotion = { walking: this.walking, paused: this.paused };
-    this.walking = this.paused = false;
     this.action = this.queued = null;
   }
+
+  /** A held resident passes to `to` without a new pick-up: no carry restart, same origin. */
+  handOver(to: Holder): void { this.send({ type: "handOver", to }); }
+
+  /** Held by `by` from now on: a hand-over when already held, else a pick-up. */
+  holdFor(by: Holder): void { if (this.held) this.handOver(by); else this.pickUp(false, by); }
 
   pull(dx: number, dy: number): void { this.carryStyle?.pull(dx, dy, this.carryHeight); }
 
@@ -171,13 +187,10 @@ export class Resident {
   }
 
   putDown(placed: boolean, animate: boolean, now = 0): void {
-    this.held = false;
-    this.carryOrigin = null;
+    this.send({ type: "putDown", placed });
     this.placed ||= placed;
-    if (!placed && this.carriedMotion) Object.assign(this, this.carriedMotion);
-    if (placed) this.hops = [];
-    this.carriedMotion = null;
     if (placed) {
+      this.hops = [];
       Object.assign(this.home, this.pos);
       this.at = "home";
       this.wanderAfter = now + WANDER.afterDropMs;
@@ -195,9 +208,8 @@ export class Resident {
   get falling(): boolean { return this.action?.kind === "fall" && this.action.t < fallMs(this.action.drop ?? 0); }
 
   resetHome(): void {
-    this.carryOrigin = null;
-    this.carriedMotion = null;
-    this.held = this.placed = this.walking = this.paused = false;
+    this.send({ type: "reset" });
+    this.placed = false;
     this.shove.x = this.shove.y = 0;
     this.action = this.queued = null;
     this.at = "home";
@@ -207,8 +219,8 @@ export class Resident {
   }
 
   get seatClaims(): Point[] {
-    const current = this.carryOrigin ?? this.pos;
-    const target = this.walking || this.paused || this.carriedMotion ? this.hops.at(-1) : undefined;
+    const current = this.life.kind === "held" ? this.life.origin : this.pos;
+    const target = this.walking || this.paused || this.held ? this.hops.at(-1) : undefined;
     return target ? [{ ...current }, { x: target.x, y: target.y }] : [{ ...current }];
   }
 
@@ -229,22 +241,21 @@ export class Resident {
   }
 
   get climbing(): boolean { return (this.walking || this.paused) && !!this.hops[this.hopIndex + 1]?.climb; }
-  get ladderReserved(): boolean { return (this.walking || this.paused || !!this.carriedMotion) && this.hops.slice(this.hopIndex + 1).some(point => point.climb); }
+  get ladderReserved(): boolean { return (this.walking || this.paused || this.held) && this.hops.slice(this.hopIndex + 1).some(point => point.climb); }
 
   stopWalking(): void {
-    this.paused = this.walking;
-    this.walking = false;
+    this.send({ type: "stop" });
     this.action = this.queued = null;
   }
 
-  resumeWalking(): void {
-    if (!this.paused) return;
-    this.walking = true;
-    this.paused = false;
-  }
+  resumeWalking(): void { this.send({ type: "resume" }); }
+
+  /** Ends a walk where it stands, with no arrival. Only the debug hook poses a resident this way. */
+  halt(): void { this.send({ type: "halt" }); }
 
   walkTo(target: Point, to: "home" | "interest", ladderAvailable = true, seatClaims: readonly Point[] = []): boolean {
-    if (this.falling || !seatAvailable(target, seatClaims)) return false;
+    // A held resident does not walk: refused before the hop list or `at` change.
+    if (this.held || this.falling || !seatAvailable(target, seatClaims)) return false;
     const route = travelRoute(this.pos, target);
     if (!route.length || (!ladderAvailable && route.some(leg => leg.motion === "climb"))) return false;
     this.hops = [{ ...this.pos, climb: false }];
@@ -257,8 +268,7 @@ export class Resident {
       });
     }
     this.hopIndex = this.hopT = 0;
-    this.walking = true;
-    this.paused = false;
+    this.send({ type: "walk" });
     this.at = to;
     this.action = null;
     return true;
@@ -344,7 +354,7 @@ export class Resident {
       this.hopT = 0;
       this.hopIndex += 1;
       if (this.hopIndex >= this.hops.length - 1) {
-        this.walking = false;
+        this.send({ type: "arrive" });
         this.hopT = 0;
         const end = this.hops[this.hops.length - 1];
         if (end) Object.assign(this.pos, end);

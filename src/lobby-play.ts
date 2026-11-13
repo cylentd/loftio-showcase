@@ -19,7 +19,14 @@ import type { RoomContext } from "./room";
 /** Lobby tossing, six-resident piles and the three-high piles residents make themselves, plugged into the shared room's ResidentPlay hooks. Game-only. */
 class LobbyPlay implements ResidentPlay {
   private samples: Sample[] = [];
-  constructor(readonly fidget: LobbyFidget, private auto: AutoStacker, private maySelfStack: () => boolean) {}
+  readonly fidget: LobbyFidget;
+  private auto: AutoStacker;
+  private maySelfStack: () => boolean;
+  constructor(fidget: LobbyFidget, auto: AutoStacker, maySelfStack: () => boolean) {
+    this.fidget = fidget;
+    this.auto = auto;
+    this.maySelfStack = maySelfStack;
+  }
 
   catch(resident: Resident, now: number): boolean { return this.fidget.catch(resident, now); }
 
@@ -39,6 +46,8 @@ class LobbyPlay implements ResidentPlay {
     if (placement) return placement === "full" ? FIDGET_COPY.stackBlocked : FIDGET_COPY.stacked;
     return null;
   }
+
+  place(resident: Resident, from?: Point | null): string | null { return this.fidget.slideOffTable(resident, from) ? FIDGET_COPY.slid : null; }
 
   key(resident: Resident, key: string, mayFling: boolean): string | null {
     if (key.toLowerCase() === "s") {

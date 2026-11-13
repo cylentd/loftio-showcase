@@ -3,3 +3,7 @@ dist/
 .vercel/
 .env*
 dist-showcase/
+dist-admin/
+admin/.vercel/
+admin/api/
+admin/public/
