@@ -237,7 +237,7 @@ const A={radius:18,burstDamage:8,burstCount:3,boltSpeed:540,shockDamage:36,shock
 const specialBonus={springy:0,heavy:A.heavySpecial,piercing:A.pierceSpecial}; // first-contact bonus each special adds, for the cue rail
 const clockText=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
 function newBody(id){const [x,y]=START[id];return{id,x:s.w*x,y:s.h*y,vx:0,vy:0,angle:0,moving:false,glide:null,walls:0,cool:0,inside:false,used:[],charge:1,boost:null,special:null,specialTriggered:false,squash:null,counter:0,pulse:0,ping:0,stun:0}}
-function reset(){camera?.resetScene();window.LoftRumbleDemo?.reset(s);music.setPaused(false);cancelHold();for(const id in cardState)delete cardState[id];
+function reset(){camera?.resetScene();cues.reset();window.LoftRumbleDemo?.reset(s);music.setPaused(false);cancelHold();for(const id in cardState)delete cardState[id];
  const stageLayout=tutorial.layout(s.demo?window.LoftRumbleStageLayoutData.options.find(layout=>layout.id===window.LoftRumbleStageLayoutData.defaultId):window.LoftRumbleStageLayouts?.current());if(stageLayout)FEEL.bumpers=stageLayout.bumpers.map(point=>[...point]);
 
  s.bodies=Object.fromEntries(ids.map(id=>[id,newBody(id)]));s.positions=s.bodies;
@@ -289,7 +289,8 @@ function chargeSpecial(id,amount){const was=s.specialCharge[id];if(s.phase!=='pl
 const comboRate=()=>1+Math.min(FEEL.comboChargeCap,(s.hits||0)*FEEL.comboCharge);
 const hitsAnchor=()=>({x:s.w-FEEL.barInset,y:C.hudTop+FEEL.comboTop});
 function comboHit(){if(s.phase!=='play')return;s.hits++;s.hitsIdle=0;s.hitsPeak=Math.max(s.hitsPeak,s.hits);s.hitsPop=FEEL.comboPopLife;s.hitsLost=null;
-  const m=FEEL.comboMilestones.indexOf(s.hits);if(m<0)return;const a=hitsAnchor();s.popups=s.popups.filter(p=>!COPY.comboMiles.includes(p.text));
+  // The live fight pops the milestone word on the field instead (2026-11-14).
+  const m=FEEL.comboMilestones.indexOf(s.hits);if(m<0||cues.onCombo(m,s.lastHit??enemy()))return;const a=hitsAnchor();s.popups=s.popups.filter(p=>!COPY.comboMiles.includes(p.text));
   s.popups.push({x:a.x,y:a.y+FEEL.comboPopGap+FEEL.popupBig/2,text:COPY.comboMiles[m],big:true,hud:true,align:'right',color:'chip',bounce:!still(),life:C.popupLife})}
 function breakCombo(why){if(!s.hits)return;s.hitBreaks[why]=(s.hitBreaks[why]??0)+1;s.hitsLost={n:s.hits,life:FEEL.comboLostLife,shatter:why!=='timeout'};s.hits=0;s.hitsIdle=0}
 // Camera experiment only: the last factor is the combo payoff (camera-payoff.js). Without the experiment it is 1.
@@ -297,7 +298,7 @@ function damage(b,weak){const hit=Math.round(profile(b).damage*(weak?C.weakMulti
  if(camera?.predicting)camera.predictionHits[b.id]={weak};
  s.hp=Math.max(0,s.hp-hit);b.pulse=.2;const e=enemy(),a=Math.atan2(b.y-e.y,b.x-e.x),cx=e.x+Math.cos(a)*C.enemyRadius,cy=e.y+Math.sin(a)*C.enemyRadius;s.lastHit={x:cx,y:cy};
  collisionEffect(cx,cy,weak);if(b.boost&&!b.boostHit){b.boostHit=true;burst(cx,cy,FEEL.boostSparks,FEEL.weakSparkSpeed,b.trail??'warning',Math.PI*2,0,FEEL.boostSparkSize)}enemyImpact(hit,weak,Math.cos(a),Math.sin(a),cx,cy);if(camera)window.LoftRumbleStats.record(s,names[b.id],null,hit,weak);addTally(names[b.id],hit,weak);if(b.walls)s.tally.walls=Math.max(s.tally.walls??0,b.walls);
- s.popups.push({x:cx,y:cy-FEEL.popupSize,text:String(hit),weak,label:weak?'Weak!':'',life:C.popupLife});if(s.hp===0)sparks(e.x,e.y);health();chargeSpecial(b.id,hit);comboHit();cues.onHit(b,weak,hit);tutorial.onHit(weak);return hit}
+ s.popups.push({x:cx,y:cy-FEEL.popupSize,text:String(hit),weak,label:weak&&!cues.installed()?'Weak!':'',life:C.popupLife});if(s.hp===0)sparks(e.x,e.y);health();chargeSpecial(b.id,hit);comboHit();cues.onHit(b,weak,hit);tutorial.onHit(weak);return hit}
 // Hits pile into one combo: the model (s.hp) drops at once; the total flies into the bar RT.comboWindow after the last hit.
 function addTally(source,amount,weak){s.tally??={total:0,parts:[]};s.tally.total+=amount;let part=s.tally.parts.find(p=>p.source===source);if(!part)s.tally.parts.push(part={source,amount:0,weak:0});part.amount+=amount;if(weak)part.weak++;s.comboT=RT.comboWindow}
 function collide(b){const e=enemy(),t=profile(b),dx=b.x-e.x,dy=b.y-e.y,distance=Math.hypot(dx,dy),reach=C.radius+C.enemyRadius;if(distance>=reach+2){b.inside=false;return}if(distance>reach)return;const nx=distance?dx/distance:-1,ny=distance?dy/distance:0,toward=b.vx*nx+b.vy*ny;if(toward>=0&&!b.inside)return;const angle=Math.atan2(dy,dx),delta=Math.atan2(Math.sin(angle-e.angle),Math.cos(angle-e.angle));
@@ -314,8 +315,9 @@ const enemyCost=b=>(1-profile(b).bounce)*profile(b).range*FEEL.enemyBudgetCost;
 function abilityDamage(amount,label,by,owner){if(s.hp<=0)return;if(camera){amount=Math.round(amount*window.LoftRumblePayoff.multiplier(s.hits));window.LoftRumbleStats.record(s,owner?names[owner]:label,owner?label:null,amount)}s.hp=Math.max(0,s.hp-amount);if(by)chargeSpecial(by,amount);const e=enemy();collisionEffect(e.x,e.y,true);enemyImpact(amount,false,0,-1,e.x,e.y,false);addTally(label,amount,false);health();comboHit()}
 // A moving resident touching a resting one triggers the resting one's ability, once per fling per teammate.
 function activateAlly(m,o){if(stunned(m)||stunned(o))return;m.used.push(o.id);if(s.tutor){s.tutor.bump=true;tutorCheck()}const a={id:o.id,kind:kind(o.id),x:o.x,y:o.y},hpBefore=s.hp;contactFeedback(m,a);collisionEffect(a.x,a.y,true);abilityAt(a,m);cues.onAlly(m,o,hpBefore-s.hp);tutorial.onAlly();
- // Every activation splashes in place. The first in a battle also queues a bottom toast naming the ability; nothing pauses.
- if(!s.introduced[a.id]){s.introduced[a.id]=true;s.toasts.push({id:a.id,kind:a.kind,life:FEEL.toastLife})}s.splash[a.id]=FEEL.splashTime
+ // Every activation splashes in place. The first in a battle also names the ability: a portrait cut-in in the live fight
+ // (2026-11-14), else a bottom toast (Training, the lab). Nothing pauses.
+ if(!s.introduced[a.id]){s.introduced[a.id]=true;if(!cues.onAllyIntro(a.id))s.toasts.push({id:a.id,kind:a.kind,life:FEEL.toastLife})}s.splash[a.id]=FEEL.splashTime
 }
 // One ability effect at a point; its damage credits m (the resident whose launch set it off).
 function abilityAt(a,m){const e=enemy(),label=abilities[a.kind],inRange=Math.hypot(e.x-a.x,e.y-a.y)<=A.shockRange+C.enemyRadius;
@@ -605,7 +607,7 @@ function tutorText(){const t=s.tutor,w=s.warn;if(!t||s.phase!=='play'||cues.inst
 // Ready ping (round 16): a recharged resident pops its ring and dock card and ticks once. Reduced motion: a brief highlight, no pop.
 function readyPing(id){s.bodies[id].ping=FEEL.pingLife;vibrate(FEEL.readyVibrate);if(camera?.predicting)return;const card=document.querySelector('[data-resident="'+id+'"]');if(card){card.classList.remove('ping');void card.offsetWidth;card.classList.add('ping')}}
 // The first time any special charges, a one-time hint says how to use it.
-function specialReady(id){roster();const rb=s.bodies[id];if(rb&&!still())burst(rb.x,rb.y,FEEL.readyBurst,FEEL.readyBurstSpeed,'warning');if(!cues.installed())message(names[id]+COPY.ready_sr)}
+function specialReady(id){roster();const rb=s.bodies[id];if(rb&&!still())burst(rb.x,rb.y,FEEL.readyBurst,FEEL.readyBurstSpeed,'warning');if(!cues.installed())message(names[id]+COPY.ready_sr);cues.onReady(id)}
 // Release: grade the gauge (Timing on); a charged resident plays its special's cut-in (battle paused), then flings. Only a release is graded.
 // Perfect streak: counts consecutive Perfects for the PERFECT xN pop only; damage stays at the grade. Any other release resets it.
 // A release before the gauge shows (gaugeDelay) is a normal shot: no grade, and the streak is left as it was.
@@ -806,7 +808,7 @@ function drawBodies(font,onlyId=null,extras=true,ground=true){if(extras)drawFlas
   if(extras)drawBodyEffects(font);
 }
 function drawBodyEffects(font){
-  if(camera)for(const id of ids)window.LoftRumbleStun.draw(ctx,s.bodies[id],{clock:s.time,reduced:still(),upright:camera.shallow?camera.uprightScale:1,colour:colors.warning});
+  if(camera&&!cues.drawsStun())for(const id of ids)window.LoftRumbleStun.draw(ctx,s.bodies[id],{clock:s.time,reduced:still(),upright:camera.shallow?camera.uprightScale:1,colour:colors.warning});
   for(const bolt of s.bolts){if(bolt.delay<=0){circle(bolt.x,bolt.y,7,colors.primary);circle(bolt.x,bolt.y,3,colors.foreground)}}
   for(const f of s.teamEffects){const age=1-f.life/A.effectLife;ctx.globalAlpha=1-age;ctx.strokeStyle=colors.primary;ctx.lineWidth=f.type==='beam'?10*(1-age)+2:3;ctx.beginPath();if(f.type==='beam'){ctx.moveTo(f.x,f.y);ctx.lineTo(f.tx,f.ty)}else ctx.arc(f.x,f.y,10+age*f.r,0,Math.PI*2);ctx.stroke();ctx.fillStyle=colors.primary;ctx.font='bold 13px '+font;ctx.textAlign='center';ctx.fillText(f.label,clamp(f.x,65,s.w-65),f.y-38-age*15);ctx.globalAlpha=1}
 }
@@ -1157,7 +1159,8 @@ new ResizeObserver(resizeScene).observe(stage);addEventListener('resize',resizeS
   if(s.demo&&!tutorial.installed())document.getElementById('replay-tutorial').remove()} // no Training without ?training, so no Replay either
 // The cue rail joins the page once Training is not running (at once for a returning player, on Skip or Done for a first visit).
 function installCues(){if(!s.demo||cues.installed()||!tutorial.settled()||tutorial.state().status==='running')return;
-  cues.install({s,RT,ids,names,abilities,specials,specialBonus,kind,stunned,inZone,hudTop:C.hudTop,paused:()=>tutorial.state().status==='running',
+  cues.install({s,RT,ids,names,abilities,specials,specialBonus,kind,stunned,inZone,hudTop:C.hudTop,weakMultiplier:C.weakMultiplier,paused:()=>tutorial.state().status==='running',
+    place:p=>{const at=camera?camera.projection.project(p):p;return{x:board.offsetLeft+at.x*s.scale,y:board.offsetTop+at.y*s.scale}}, // a logical point in arena CSS px
     camera:()=>camera,rootDanger:()=>camera?camera.punishDanger():[],rootWarn:()=>s.cameraScene?.punish?.warn??null})}
 artwork?.ready.then(()=>{resize();draw()});requestAnimationFrame(frame);
 for(const gesture of ['pointerdown','keydown'])addEventListener(gesture,startAudio,{once:true,capture:true});

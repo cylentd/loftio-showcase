@@ -1,73 +1,237 @@
-/* Loft Rumble cue rail: what is coming and what just happened, in words, under the boss bar. Every value is a token below or in rumble-stage.css. */
+/* Loft Rumble cues. The rail holds sentences for screen readers only (since 2026-11-14); the field shows the live fight's
+   events where they happen: an attack name at the boss bar, markers and spirals over residents, one moment at a time.
+   Every value is a token below or in rumble-stage.css. */
 :root[data-rumble-demo] {
-  --cue-small: 13px;
-  --cue-line: 1.35;
   --cue-pill: 999px;
   --cue-pad: 4px 10px;
   --cue-gap: 4px;
   --cue-inset: 8px;
-  /* Keeps the rail left of the combo badge at the top right: the badge is centred barInset 14 from the right edge and is comboBadgeWidth 100 wide, so it reaches 64 canvas px in; plus the inset. */
-  --cue-clear: 72px;
   --cue-surface: var(--stage-chrome-surface);
   --cue-ink: var(--stage-dock-ink);
   --cue-danger-surface: #7b2a20f2;
   --cue-danger-edge: #f3b6a2;
-  --cue-stun-surface: #3d3552f2;
-  --cue-ready-edge: var(--stage-sheet-accent);
   --cue-shadow: 0 2px 6px #0007;
   --cue-layer: 3;
   /* The standard visually hidden box: one pixel, clipped to nothing. */
   --cue-hidden-size: 1px;
   --cue-hidden-clip: inset(50%);
+  /* Field. The attack name: one or two words at the boss bar, the size of the old danger line's emphasis. */
+  --field-name: 15px;
+  --field-tracking: .06em;
+  --field-bold: 800;
+  --field-heavy: 900;
+  --field-leading: 1.2;
+  --field-tight: 1;
+  /* Target marker: its prompt asks it to read at 40 px tall. The spiral is a little wider than a 46 px sprite's head. */
+  --field-marker: 40px;
+  --field-spiral: 30px;
+  --field-spin: .45s;
+  /* Word pop: plain text in the UI font until its plate exists; the plate adds padding round the word. */
+  --field-word: 26px;
+  --field-word-pad: 6px 22px;
+  /* The arrival title's treatment (rumble-stage.css): gold ink, plum outline, stacked depth, so it reads over sand and snow. */
+  --field-word-ink: var(--stage-arrival-ink);
+  --field-word-outline: var(--stage-arrival-outline);
+  --field-word-stroke: 5px;
+  --field-word-depth: var(--stage-arrival-depth);
+  /* Word pop: starts at this scale and overshoots to the next before it settles at full size. */
+  --field-word-from: .6;
+  --field-word-over: 1.1;
+  /* Cut-in: a band from the left edge with the ally's portrait, low in the arena where the old toast sat. */
+  --field-cutin-bottom: 18%;
+  --field-cutin-height: 56px;
+  --field-cutin-art: 48px;
+  --field-cutin-name: 18px;
+  --field-cutin-edge: var(--stage-sheet-accent);
+  --field-cutin-pad: 4px 18px 4px 12px;
+  --field-cutin-radius: 0 var(--cue-pill) var(--cue-pill) 0;
+  /* Dock: the ready glow and the stun ring on the 36 px avatar. The ring sits 4 px outside the avatar on each side. */
+  --field-glow: 10px;
+  --field-glow-ring: 2px;
+  --field-ring: 3px;
+  --field-ring-size: calc(var(--stage-avatar) + 8px);
+  --field-ring-track: #0006;
+  --field-mask: #000;
+  --field-stamp-grow: 1.35;
+  /* Keyframe stops (the percentages in each @keyframes below) cannot read a custom property, so they stay literal:
+     each moment's length is the token, --moment-life from rumble-cues-data.js, and the stops are its phases. */
 }
 
-/* The rail never takes pointer input. */
+/* The rail never takes pointer input, and nothing in it is drawn: both lists are for screen readers. */
 [data-rumble-demo] .rumble-cues {
-  position: absolute;
-  z-index: var(--cue-layer);
-  top: calc(var(--cue-top, 0px) + var(--cue-inset));
-  left: var(--cue-inset);
-  right: var(--cue-clear);
-  display: grid;
-  gap: var(--cue-gap);
-  pointer-events: none;
-  font-family: var(--font-sans);
-}
-[data-rumble-demo] .rumble-cue-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  justify-items: center;
-  gap: var(--cue-gap);
-}
-[data-rumble-demo] .rumble-cue-list:empty { display: none; }
-/* News (hits, bumps, specials, outcomes) is for screen readers only: off screen, still in the accessibility tree. */
-[data-rumble-demo] .rumble-cue-news {
   position: absolute;
   width: var(--cue-hidden-size);
   height: var(--cue-hidden-size);
   overflow: hidden;
   clip-path: var(--cue-hidden-clip);
   white-space: nowrap;
+  pointer-events: none;
 }
-[data-rumble-demo] .rumble-cue {
-  max-width: 100%;
-  box-sizing: border-box;
+[data-rumble-demo] .rumble-cue-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-rumble-demo] .rumble-cue-news { position: absolute; }
+
+/* The field. */
+[data-rumble-demo] .rumble-field {
+  position: absolute;
+  inset: 0;
+  z-index: var(--cue-layer);
+  pointer-events: none;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+[data-rumble-demo] .rumble-field [hidden],
+[data-rumble-demo] .roster .rumble-ready[hidden],
+[data-rumble-demo] .roster .rumble-stun-ring[hidden] { display: none; }
+[data-rumble-demo] .rumble-attack-name {
+  position: absolute;
+  top: calc(var(--cue-top, 0px) + var(--cue-inset));
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
   padding: var(--cue-pad);
-  border: var(--stage-border) solid var(--stage-edge);
+  border: var(--stage-border) solid var(--cue-danger-edge);
   border-radius: var(--cue-pill);
+  background: var(--cue-danger-surface);
+  color: var(--cue-ink);
+  box-shadow: var(--cue-shadow);
+  font-size: var(--field-name);
+  font-weight: var(--field-bold);
+  letter-spacing: var(--field-tracking);
+  line-height: var(--field-leading);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Sprites placed by their anchor (--x, --y): a marker's tip and a spiral's centre sit on it. */
+[data-rumble-demo] .rumble-marker,
+[data-rumble-demo] .rumble-spiral {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  background-repeat: no-repeat;
+  background-position: 0 0;
+}
+[data-rumble-demo] .rumble-marker {
+  height: var(--field-marker);
+  width: calc(var(--field-marker) * var(--cell-ratio, 1));
+  transform: translate(-50%, -100%);
+  background-size: 200% 100%;
+}
+[data-rumble-demo] .rumble-marker.flash { background-position: 100% 0; }
+[data-rumble-demo] .rumble-spiral {
+  height: var(--field-spiral);
+  width: calc(var(--field-spiral) * var(--cell-ratio, 1));
+  transform: translate(-50%, -50%);
+  background-size: 300% 100%;
+  animation: rumble-spiral var(--field-spin) steps(3, jump-none) infinite;
+}
+@keyframes rumble-spiral { to { background-position: 100% 0; } }
+
+/* Moments. Their length comes from rumble-cues-data.js through --moment-life. */
+[data-rumble-demo] .rumble-moment[data-moment=word] {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, -100%);
+  padding: var(--field-word-pad);
+  background: none center / 100% 100% no-repeat;
+  color: var(--field-word-ink);
+  font-size: var(--field-word);
+  font-weight: var(--field-heavy);
+  letter-spacing: var(--field-tracking);
+  line-height: var(--field-tight);
+  -webkit-text-stroke: var(--field-word-stroke) var(--field-word-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--field-word-depth);
+  white-space: nowrap;
+  animation: rumble-word var(--moment-life) ease-out both;
+}
+/* On its plate the word sits flat: the plate supplies the edge. */
+[data-rumble-demo] .rumble-moment[data-moment=word][data-plate] { text-shadow: none; }
+@keyframes rumble-word {
+  0% { opacity: 0; scale: var(--field-word-from); }
+  20% { opacity: 1; scale: var(--field-word-over); }
+  30% { scale: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+[data-rumble-demo] .rumble-moment[data-moment=cutin] {
+  position: absolute;
+  left: 0;
+  bottom: var(--field-cutin-bottom);
+  display: flex;
+  align-items: center;
+  gap: var(--cue-inset);
+  height: var(--field-cutin-height);
+  padding: var(--field-cutin-pad);
+  box-sizing: border-box;
+  border: var(--stage-border) solid var(--field-cutin-edge);
+  border-left: 0;
+  border-radius: var(--field-cutin-radius);
   background: var(--cue-surface);
   color: var(--cue-ink);
   box-shadow: var(--cue-shadow);
-  font-size: var(--cue-small);
-  font-weight: 600;
-  line-height: var(--cue-line);
-  text-align: center;
+  animation: rumble-cutin var(--moment-life) ease-out both;
 }
-[data-rumble-demo] .rumble-cue[data-rumble-cue=danger] {
-  border-color: var(--cue-danger-edge);
-  background: var(--cue-danger-surface);
+[data-rumble-demo] .rumble-moment[data-moment=cutin] img {
+  width: var(--field-cutin-art);
+  height: var(--field-cutin-art);
+  object-fit: contain;
 }
-[data-rumble-demo] .rumble-cue[data-rumble-cue=stun] { background: var(--cue-stun-surface); }
-[data-rumble-demo] .rumble-cue[data-rumble-cue=special-ready] { border-color: var(--cue-ready-edge); }
+[data-rumble-demo] .rumble-moment[data-moment=cutin] b {
+  font-size: var(--field-cutin-name);
+  font-weight: var(--field-bold);
+  white-space: nowrap;
+}
+@keyframes rumble-cutin {
+  0% { translate: -100% 0; }
+  18% { translate: 0 0; }
+  82% { translate: 0 0; opacity: 1; }
+  100% { translate: -100% 0; opacity: 0; }
+}
+
+/* Dock: READY takes the status line; the portrait glows gold (the special's colour). A stun drains a ring round it. */
+[data-rumble-demo] .roster .rumble-ready {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  justify-self: start;
+  color: var(--warning);
+  font-size: var(--stage-state-size);
+  font-weight: var(--field-bold);
+  letter-spacing: var(--field-tracking);
+  line-height: var(--field-tight);
+}
+[data-rumble-demo] .roster .rumble-ready[data-moment] { animation: rumble-stamp var(--moment-life) ease-out; }
+@keyframes rumble-stamp { 0% { scale: var(--field-stamp-grow); opacity: 0; } 40% { scale: 1; opacity: 1; } }
+[data-rumble-demo] .roster .card.rumble-special-ready .dock-charge,
+[data-rumble-demo] .roster .card.danger .rumble-ready { visibility: hidden; }
+[data-rumble-demo] .roster .card.rumble-special-ready .dock-charge { display: none; }
+[data-rumble-demo] .roster .card.rumble-special-ready .portrait {
+  border-radius: var(--cue-pill);
+  box-shadow: 0 0 0 var(--field-glow-ring) var(--warning), 0 0 var(--field-glow) var(--warning);
+}
+/* The ring is the card's child laid over the portrait's grid cell, so the portrait's grey filter never reaches it. */
+[data-rumble-demo] .roster .rumble-stun-ring {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-self: center;
+  justify-self: center;
+  width: var(--field-ring-size);
+  height: var(--field-ring-size);
+  border-radius: var(--cue-pill);
+  background: conic-gradient(var(--warning) calc(var(--stun-left, 1) * 1turn), var(--field-ring-track) 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--field-ring)), var(--field-mask) calc(100% - var(--field-ring)));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-rumble-demo] .rumble-spiral,
+  [data-rumble-demo] .roster .rumble-ready[data-moment] { animation: none; }
+  [data-rumble-demo] .rumble-moment[data-moment=word] { animation-name: rumble-fade; }
+  [data-rumble-demo] .rumble-moment[data-moment=cutin] { animation-name: rumble-fade; }
+}
+@keyframes rumble-fade { 0%, 100% { opacity: 0; } 15%, 85% { opacity: 1; } }
