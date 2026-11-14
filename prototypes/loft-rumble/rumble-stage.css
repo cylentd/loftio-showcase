@@ -322,6 +322,7 @@
 }
 [data-rumble-demo] #menu #help-toggle { grid-column: 1 / -1; }
 [data-rumble-demo] #menu :is(#reset, #replay-tutorial) { border: 0; font-size: var(--stage-name-size); color: var(--stage-sheet-muted); padding-inline: 0; }
+[data-rumble-demo] #menu:not(:has(#replay-tutorial)) #reset { grid-column: 1 / -1; } /* Replay is removed without ?training; New battle takes the whole row */
 [data-rumble-demo] #menu > button:hover { background-color: var(--stage-sheet-rule); }
 [data-rumble-demo] #menu #pause:hover { background-color: var(--warning); }
 [data-rumble-demo] :is(#menu, #help-panel) button:focus-visible { outline: var(--stage-dock-gap) solid var(--stage-sheet-toggle); outline-offset: var(--stage-dock-gap); }
@@ -383,4 +384,25 @@
 @media (prefers-reduced-motion: reduce) {
   [data-rumble-demo][data-rumble-arriving] main { animation: none; }
   [data-rumble-demo] .battle-arrival { display: none; }
+}
+
+/* Buttons the help sheet holds without a class (the Training replay): the same outlined look as the sheet's other controls. */
+[data-rumble-demo] #help-panel button:not([class]) {
+  flex: 1 1 0;
+  min-width: max-content;
+  min-height: var(--stage-control);
+  padding: 0 var(--stage-sheet-gap);
+  border: var(--stage-border) solid var(--stage-sheet-rule);
+  border-radius: var(--stage-radius);
+  background: transparent;
+  color: var(--stage-sheet-ink);
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--stage-sheet-copy);
+  font-weight: 600;
+}
+[data-rumble-demo] #help-panel button:not([class]):hover { background-color: var(--stage-sheet-rule); }
+[data-rumble-demo] #help-panel button:not([class]):focus-visible {
+  outline: var(--stage-dock-gap) solid var(--stage-sheet-toggle);
+  outline-offset: var(--stage-dock-gap);
 }

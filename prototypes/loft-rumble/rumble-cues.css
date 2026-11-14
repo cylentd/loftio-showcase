@@ -1,0 +1,73 @@
+/* Loft Rumble cue rail: what is coming and what just happened, in words, under the boss bar. Every value is a token below or in rumble-stage.css. */
+:root[data-rumble-demo] {
+  --cue-small: 13px;
+  --cue-line: 1.35;
+  --cue-pill: 999px;
+  --cue-pad: 4px 10px;
+  --cue-gap: 4px;
+  --cue-inset: 8px;
+  /* Keeps the rail left of the combo badge at the top right: the badge is centred barInset 14 from the right edge and is comboBadgeWidth 100 wide, so it reaches 64 canvas px in; plus the inset. */
+  --cue-clear: 72px;
+  --cue-surface: var(--stage-chrome-surface);
+  --cue-ink: var(--stage-dock-ink);
+  --cue-danger-surface: #7b2a20f2;
+  --cue-danger-edge: #f3b6a2;
+  --cue-stun-surface: #3d3552f2;
+  --cue-ready-edge: var(--stage-sheet-accent);
+  --cue-shadow: 0 2px 6px #0007;
+  --cue-layer: 3;
+  /* The standard visually hidden box: one pixel, clipped to nothing. */
+  --cue-hidden-size: 1px;
+  --cue-hidden-clip: inset(50%);
+}
+
+/* The rail never takes pointer input. */
+[data-rumble-demo] .rumble-cues {
+  position: absolute;
+  z-index: var(--cue-layer);
+  top: calc(var(--cue-top, 0px) + var(--cue-inset));
+  left: var(--cue-inset);
+  right: var(--cue-clear);
+  display: grid;
+  gap: var(--cue-gap);
+  pointer-events: none;
+  font-family: var(--font-sans);
+}
+[data-rumble-demo] .rumble-cue-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  justify-items: center;
+  gap: var(--cue-gap);
+}
+[data-rumble-demo] .rumble-cue-list:empty { display: none; }
+/* News (hits, bumps, specials, outcomes) is for screen readers only: off screen, still in the accessibility tree. */
+[data-rumble-demo] .rumble-cue-news {
+  position: absolute;
+  width: var(--cue-hidden-size);
+  height: var(--cue-hidden-size);
+  overflow: hidden;
+  clip-path: var(--cue-hidden-clip);
+  white-space: nowrap;
+}
+[data-rumble-demo] .rumble-cue {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: var(--cue-pad);
+  border: var(--stage-border) solid var(--stage-edge);
+  border-radius: var(--cue-pill);
+  background: var(--cue-surface);
+  color: var(--cue-ink);
+  box-shadow: var(--cue-shadow);
+  font-size: var(--cue-small);
+  font-weight: 600;
+  line-height: var(--cue-line);
+  text-align: center;
+}
+[data-rumble-demo] .rumble-cue[data-rumble-cue=danger] {
+  border-color: var(--cue-danger-edge);
+  background: var(--cue-danger-surface);
+}
+[data-rumble-demo] .rumble-cue[data-rumble-cue=stun] { background: var(--cue-stun-surface); }
+[data-rumble-demo] .rumble-cue[data-rumble-cue=special-ready] { border-color: var(--cue-ready-edge); }

@@ -179,7 +179,7 @@
   border-color: var(--danger);
   background: var(--art-danger-surface);
 }
-.loft-art #menu, .loft-art #help-panel, .loft-art #tip {
+.loft-art #menu, .loft-art #help-panel {
   color: var(--controls-ink);
   background: var(--controls-bg);
   border-color: var(--controls-edge);
@@ -191,7 +191,7 @@
   overflow-y: auto;
 }
 .loft-art #help-panel { line-height: var(--line-body); }
-.loft-art #menu button, .loft-art #tip button {
+.loft-art #menu button {
   min-height: var(--tap-min);
   color: var(--controls-ink);
   background: var(--controls-surface);
@@ -200,7 +200,7 @@
   box-shadow: var(--bubble-rim);
   font-weight: var(--weight-strong);
 }
-.loft-art #menu button:hover, .loft-art #tip button:hover {
+.loft-art #menu button:hover {
   background: var(--controls-hover);
 }
 .loft-art #menu button[aria-pressed=true] {

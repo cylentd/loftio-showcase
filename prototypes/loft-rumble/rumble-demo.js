@@ -19,13 +19,14 @@
   }
   const interval=(state,rules)=>state.demo?.enraged?data.enragedInterval:rules.attackEvery;
   function trackWarning(state,warning,inside){
-    if(!active(state)||!state.tutor||warning.def.id==='pulse')return;
+    if(!active(state)||warning.def.id==='pulse')return;
     warning.threatened=Object.keys(state.bodies).filter(id=>inside(warning,state.bodies[id]));
   }
   function observeImpact(state,warning,hits){
-    if(!active(state)||!state.tutor||warning.def.id==='pulse')return false;
+    if(!active(state)||warning.def.id==='pulse')return false;
     if(!warning.threatened?.some(id=>!hits.includes(id)))return false;
-    state.tutor.zone=true;return true;
+    if(state.tutor)state.tutor.zone=true;
+    return true;
   }
   const clock=seconds=>Math.floor(seconds/data.secondsPerMinute)+':'+String(Math.floor(seconds%data.secondsPerMinute)).padStart(2,'0');
   function present(state,ready){

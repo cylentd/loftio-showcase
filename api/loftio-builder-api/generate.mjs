@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-// game/src/builder/server/online-config.ts
+// .claude/worktrees/showcase-export/game/src/builder/server/online-config.ts
 var CAP_KEY_TTL_SECONDS = 172800;
 var IMAGE_SIZE = "1024x1024";
 var OPENAI_EDITS_URL = "https://api.openai.com/v1/images/edits";
@@ -22,11 +22,11 @@ var ENV = {
 	turnstileSecret: "TURNSTILE_SECRET_KEY",
 	visitorSalt: "LOFTIO_VISITOR_SALT"
 };
-// game/src/builder/utc-day.ts
+// .claude/worktrees/showcase-export/game/src/builder/utc-day.ts
 var DAY_LENGTH = 10;
 /** The UTC calendar day a daily allowance or cap counts against, as "YYYY-MM-DD". */
 var utcDay = (date) => date.toISOString().slice(0, DAY_LENGTH);
-// game/src/builder/server/caps.ts
+// .claude/worktrees/showcase-export/game/src/builder/server/caps.ts
 function createCaps({ store, now, globalCap = 25, visitorCap = 3 }) {
 	async function bump(key) {
 		const count = await store.incr(key, CAP_KEY_TTL_SECONDS);
@@ -100,7 +100,7 @@ function upstashStore({ url, token, fetcher = fetch }) {
 		}
 	};
 }
-// game/src/builder/provider.ts
+// .claude/worktrees/showcase-export/game/src/builder/provider.ts
 var ProviderError = class extends Error {
 	kind;
 	constructor(kind, message) {
@@ -205,7 +205,7 @@ var CATALOG = {
 		])
 	]
 };
-// game/src/builder/surprise-data.ts
+// .claude/worktrees/showcase-export/game/src/builder/surprise-data.ts
 var CREATIVE_SURPRISE = {
 	creature: {
 		id: "invented-creature",
@@ -223,7 +223,7 @@ var CREATIVE_SURPRISE = {
 		prompt: "Invent an unexpected signature detail beyond the preset accessories. Respect all explicit selections and integrate the detail into the character; no held objects or scenery."
 	}
 };
-// game/src/builder/selections.ts
+// .claude/worktrees/showcase-export/game/src/builder/selections.ts
 var GROUPS = {
 	creature: CATALOG.creatures,
 	personality: CATALOG.personalities,
@@ -273,7 +273,7 @@ function resolveSelections(selections, rng) {
 		palette: pick(CATALOG.palettes, selections.palette, rng)
 	};
 }
-// game/src/builder/prompt-template.ts
+// .claude/worktrees/showcase-export/game/src/builder/prompt-template.ts
 var PROMPT_TEMPLATE = `# Loftio Character Builder — Runtime Image Prompt v4.2
 
 Create **one** original resident for Loftio, a cozy, whimsical world of lovable collectible creatures.
@@ -315,7 +315,7 @@ Use the **original-six sheet as a world/style reference** and the **exploratory 
 
 Create a delightful, original Loftio resident that someone would want as their own companion. Favor emotional appeal and cohesive individuality over mechanical novelty. **Generate exactly one character image.**
 `;
-// game/src/builder/prompt.ts
+// .claude/worktrees/showcase-export/game/src/builder/prompt.ts
 var PROMPT_VERSION = "v4.2";
 var REFERENCE_IDS = [{
 	id: "loftio-original-six",
@@ -336,7 +336,7 @@ function renderPrompt(resolved) {
 	};
 	return PROMPT_TEMPLATE.replace(/\{\{(\w+)\}\}/g, (match, name) => slots[name] ?? match);
 }
-// game/src/builder/png.ts
+// .claude/worktrees/showcase-export/game/src/builder/png.ts
 var SIGNATURE = [
 	137,
 	80,
@@ -397,7 +397,7 @@ function crc32(bytes) {
 	return (crc ^ 4294967295) >>> 0;
 }
 var REPLAY_ONLY_HEADER = "x-loftio-replay-only";
-// game/src/builder/copy.ts
+// .claude/worktrees/showcase-export/game/src/builder/copy.ts
 var COPY = {
 	title: "Meet a new resident",
 	intro: "Choose a few sparks of personality. Keep the ones you love.",
@@ -452,7 +452,7 @@ var COPY = {
 };
 ({ ...COPY });
 ({ ...COPY });
-// game/src/builder/server/generate-handler.ts
+// .claude/worktrees/showcase-export/game/src/builder/server/generate-handler.ts
 var failure$1 = (status, kind, message) => Response.json({
 	ok: false,
 	error: {
@@ -608,7 +608,7 @@ function createGenerateHandler(options) {
 	const session = new GenerateSession(options);
 	return Object.assign((request) => session.handle(request), { replays: (requestId) => session.replays(requestId) });
 }
-// game/src/builder/server/online-copy.ts
+// .claude/worktrees/showcase-export/game/src/builder/server/online-copy.ts
 var ONLINE_COPY = {
 	human: "We couldn't confirm you're a person. Refresh the page and try again.",
 	globalCap: "Loftio is out of magic for today. Come back tomorrow.",
@@ -616,7 +616,7 @@ var ONLINE_COPY = {
 	unconfigured: "The online builder isn't set up yet.",
 	unavailable: "Loftio can't make residents right now. Try again in a little while."
 };
-// game/src/builder/server/online-handler.ts
+// .claude/worktrees/showcase-export/game/src/builder/server/online-handler.ts
 var HTTP_BAD_REQUEST$1 = 400;
 var HTTP_FORBIDDEN = 403;
 var HTTP_METHOD_NOT_ALLOWED = 405;
@@ -741,7 +741,7 @@ async function visitorKeyFor(ip, salt) {
 	const digest = await crypto.subtle.digest("SHA-256", bytes);
 	return Array.from(new Uint8Array(digest), (byte) => byte.toString(HEX_RADIX).padStart(2, "0")).join("");
 }
-// game/src/builder/server/openai-provider.ts
+// .claude/worktrees/showcase-export/game/src/builder/server/openai-provider.ts
 var SAFETY_CODES = ["moderation_blocked", "content_policy_violation"];
 var HTTP_BAD_REQUEST = 400;
 var PROVIDER_ID = "openai-images";
@@ -833,7 +833,7 @@ function openaiProvider(options) {
 		generate
 	};
 }
-// game/src/builder/server/turnstile-verify.ts
+// .claude/worktrees/showcase-export/game/src/builder/server/turnstile-verify.ts
 var TURNSTILE_TOKEN_MAX_LENGTH = 2048;
 function turnstileVerifier(options) {
 	const { secret, fetcher = fetch, expectedHostname } = options;
@@ -859,7 +859,7 @@ function turnstileVerifier(options) {
 		}
 	};
 }
-// game/src/builder/server/vercel-entry.ts
+// .claude/worktrees/showcase-export/game/src/builder/server/vercel-entry.ts
 var nodeProcess = globalThis.process;
 var HTTP_UNAVAILABLE = 503;
 var REQUIRED_ENV = [
