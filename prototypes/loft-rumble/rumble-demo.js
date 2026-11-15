@@ -54,6 +54,16 @@
     breakdown.replaceChildren(...breakdownRows(state.fightStats[id]));
     button.after(breakdown);button.setAttribute('aria-expanded','true');
   }
+  // Throws, specials and teammates set off under the name, so a supporter's share shows without opening the row.
+  function rowCounts(entry){
+    const line=make('span',{className:'damage-counts'});
+    Object.entries(root.LoftRumbleStats.counts(entry)).forEach(([key,value],index)=>{
+      const count=make('span',{textContent:copy.rowCounts[key]+' '+value});count.dataset.count=key;
+      if(index)line.append(copy.countSeparator);
+      line.append(count);
+    });
+    return line;
+  }
   function renderDamage(state){
     const list=document.getElementById('demo-damage-list'),breakdown=document.getElementById('demo-breakdown');
     breakdown.hidden=true;document.getElementById('demo-damage').append(breakdown);
@@ -63,7 +73,7 @@
       button.dataset.damageRow=row.id;button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','demo-breakdown');
       const total=make('span',{className:'damage-total',textContent:String(row.total)});total.dataset.damageTotal='';
       const bar=make('span',{className:'damage-bar'});bar.setAttribute('aria-hidden','true');bar.style.setProperty('--fill',String(row.fill));
-      button.append(portrait(row.id),make('span',{className:'damage-name',textContent:residentNames[row.id]??row.id}),total,bar);
+      button.append(portrait(row.id),make('span',{className:'damage-name',textContent:residentNames[row.id]??row.id}),total,rowCounts(state.fightStats[row.id]),bar);
       button.addEventListener('click',()=>toggleBreakdown(state,row.id,button));
       item.append(button);return item;
     }));

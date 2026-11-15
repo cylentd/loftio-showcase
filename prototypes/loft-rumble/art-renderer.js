@@ -321,7 +321,8 @@
         paint(ctx, 'fx-hit-spark', enemy.x, enemy.y, metrics.hitSize);
       }
     }
-    if (state.shield.down > feel.shieldReform - feel.shieldFade) {
+    // The living-magic shards (boss-fight.js) replace this burst once their art loads.
+    if (state.shield.down > feel.shieldReform - feel.shieldFade && !available('bramble-shield-shards')) {
       ctx.globalAlpha = (state.shield.down - feel.shieldReform + feel.shieldFade) / feel.shieldFade;
       paint(ctx, 'fx-shield-shatter', enemy.x, enemy.y, metrics.effectSize);
     }

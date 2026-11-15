@@ -76,7 +76,18 @@ window.LoftRumbleArtConfig = Object.freeze({
     "fx-shockwave-crescent",
     "fx-puff-beam-strip",
     "fx-puff-beam-impact",
-    "fx-ally-contact"
+    "fx-ally-contact",
+    "bramble-torso",
+    "bramble-crown",
+    "bramble-arm-socket-left",
+    "bramble-arm-socket-right",
+    "bramble-shield-intact",
+    "bramble-shield-cracked",
+    "bramble-shield-side",
+    "bramble-shield-rear",
+    "bramble-shield-shards",
+    "bramble-beam-strip",
+    "bramble-beam-source"
   ],
   metrics: Object.freeze({
     frames: 4, bossSize: 2.25, bumperSize: 2.8, hornWidth: 1.65,

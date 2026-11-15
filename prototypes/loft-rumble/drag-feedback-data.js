@@ -6,13 +6,20 @@
     dragWidth:1.25,dragAlpha:.45,dragFadeStop:.35,thumbRadius:1.75,
     aimRadius:3.6,aimOutline:'#18291f',aimOutlineWidth:2.2,aimAlphaMin:.85,
     launchLife:.2,launchRadius:22,launchSpread:22,launchWidth:3,
-    // Fling vs sling (docs/product/LOFT-RUMBLE-FLING-AND-SPECIALS.md, section 1); logic in drag-feedback.js, `fling`.
+    // Throw style setting: one throw mode at a time (owner, 2026-11-15; spec section 1). Logic in drag-feedback.js, `throwStyle`.
+    throwStyle:Object.freeze({
+      styles:Object.freeze(['fling','sling']),
+      fallback:'fling',               // the default, and what an unknown saved value reads as
+      storageKey:'loftRumbleThrow'    // localStorage, read and written like loftRumbleMusic
+    }),
+    // Fling and sling input (docs/product/LOFT-RUMBLE-FLING-AND-SPECIALS.md, section 1); logic in drag-feedback.js, `fling`.
     fling:Object.freeze({
-      // Sling hold: the finger must stay below the minimum swipe speed this long before aim dots and the gauge show. Spec: about 0.15 s.
+      // Hold: the finger must stay below the minimum swipe speed this long before the gauge runs (both modes) and the sling's
+      // aim dots show. Spec: about 0.15 s.
       holdStill:.15,
-      // Fling-power switch, the one tuning value: 'full', 'speed' or 'speed-floor'. Default speed-floor; swipe fatigue is
-      // the risk a casual play-test settles (owner, 2026-11-14).
-      powerMode:'speed-floor',
+      // Fling-power switch: 'full', 'speed' or 'speed-floor'. 'full' since 2026-11-15: fling and sling reach the same distance,
+      // so the throw style is an input choice, never an advantage (owner; was speed-floor, which gave casual swipes 70%).
+      powerMode:'full',
       powerFloor:.7,         // speed-floor: any real swipe gets at least this share of full power (spec section 1)
       fullSpeed:1500,        // arena units/s of swipe that gives full power in speed modes; first guess (a comfortable phone swipe), to tune in the play-test
       // Copied from FIDGET in game/src/fidget-data.ts (same values, same meaning):

@@ -16,6 +16,8 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','r
       time:'Fight time',combo:'Best combo',replay:'Play Again', // owner's pick, 2026-11-15
       // End-screen damage list and breakdown: labels and numbers only.
       damage:'Damage',hitMark:'×',setOff:'Teammates set off',
+      // A collapsed row's counts, in order (owner, 2026-11-15). "Throws", not "Flung": it counts sling releases too.
+      rowCounts:Object.freeze({throws:'Throws',specials:'Specials',setOff:'Set off'}),countSeparator:' · ',
       parts:Object.freeze({direct:'Direct hits',weak:'Weak spot',walls:'Wall bounce',ability:'Ability',special:'Special'}),zone:'Fling out of the danger zone',
       teamHelp:'Fling any ready resident, even while others are moving. Bump a teammate to fire its ability. Each enemy hit builds your combo. Your combo expires after 2.5 seconds without a hit. Beam and Slam stun residents caught in their zones, including moving ones. A stun stops that resident, not your whole combo. A full gold portrait makes its next fling a special.',
       aimHelp:'Hit the gold weak spot for 3× damage. Wall bounces add damage, up to ×2. Release on the gold timing mark for bonus damage. Watch Bramble charge a Beam or crouch for a Slam, then fling residents clear of the marked ground. Collect hearts to heal. At low health, Bramble attacks faster.',

@@ -165,7 +165,8 @@
   // restart replaces it with fresh(). Pure: no DOM, no game globals.
   // The five parts in display order, each with the counter shown beside it (null: the part has no count of its own).
   const parts=Object.freeze([['direct','hits'],['weak','weakHits'],['walls',null],['ability','abilities'],['special','specials']]);
-  const counters=['hits','weakHits','abilities','setOff','specials'];
+  // throws: launches (fling or sling, with or without a special) of the resident, owner 2026-11-15.
+  const counters=['hits','weakHits','abilities','setOff','specials','throws'];
   const blank=()=>Object.fromEntries([...parts.map(([part])=>[part,0]),...counters.map(key=>[key,0])]);
   const fresh=ids=>Object.fromEntries(ids.map(id=>[id,blank()]));
   // A hit is base × weak multiplier × wall multiplier (the Perfect boost and combo payoff stay in base). The wall bonus
@@ -174,7 +175,8 @@
     const unwalled=Math.round(amount/walls),direct=Math.round(amount/walls/weak);
     return {direct,weak:unwalled-direct,walls:amount-unwalled};
   }
-  // kind 'hit': by's own contact. 'ability': owner's ability fired, by's launch set it off. 'special': by's special bonus.
+  // kind 'throw': by was launched (special: it carried a special). 'hit': by's own contact. 'ability': owner's ability
+  // fired, by's launch set it off. 'special': the bonus damage of by's special.
   function credit(ledger,event){
     if(event.kind==='hit'){
       const entry=ledger[event.by],cut=split(event.amount,event.weak,event.walls);
@@ -184,10 +186,15 @@
       ledger[event.owner].ability+=event.amount;ledger[event.owner].abilities+=1;
       if(event.by&&event.by!==event.owner)ledger[event.by].setOff+=1;
     }else if(event.kind==='special'){
-      ledger[event.by].special+=event.amount;ledger[event.by].specials+=1;
+      ledger[event.by].special+=event.amount;
+    }else if(event.kind==='throw'){
+      // A special counts when fired, not on its bonus damage: Overdrive adds speed only (bug, owner 2026-11-15).
+      ledger[event.by].throws+=1;if(event.special)ledger[event.by].specials+=1;
     }
     return ledger;
   }
+  // The counts a collapsed end-screen row shows beside its damage total, in display order.
+  const counts=entry=>({throws:entry.throws,specials:entry.specials,setOff:entry.setOff});
   const totalOf=entry=>parts.reduce((sum,[part])=>sum+entry[part],0);
   const breakdown=entry=>parts.map(([key,count])=>({key,damage:entry[key],count:count?entry[count]:null}));
   // One row per resident, biggest total first (ties keep team order), with its bar length against the biggest.
@@ -196,5 +203,5 @@
     const top=list[0]?.total??0;
     return list.map(row=>({...row,fill:top?row.total/top:0}));
   }
-  root.LoftRumbleStats={settings,stars,record,mark,summary,lines,rows,cardHeight,draw,parts,fresh,split,credit,total:totalOf,breakdown,board};
+  root.LoftRumbleStats={settings,stars,record,mark,summary,lines,rows,cardHeight,draw,parts,fresh,split,credit,counts,total:totalOf,breakdown,board};
 })(globalThis);
