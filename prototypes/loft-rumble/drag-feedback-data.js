@@ -25,6 +25,14 @@
       minSamples:2,
       msPerSecond:1000
     }),
+    // Steady sling aim (spec section 1, as built; logic in drag-feedback.js, `aim`). The sling aims from a point that trails the
+    // finger and moves only once the finger is more than steadyPx CSS px from it, so finger noise never turns the shot.
+    aim:Object.freeze({
+      // 3 CSS px: just above the 1-2 px of touch noise in the iPhone report (owner, 2026-11-15), so 2 px of sideways noise on a
+      // 45 px pull turns the sling 0.4 degrees instead of 2.1 (phone measure, 390x844 at devicePixelRatio 3). A deliberate move
+      // still turns it at once: no delay, and at most 3 px of slack on a reversal.
+      steadyPx:3
+    }),
     copy:Object.freeze({on:'Rumble on',off:'Rumble off'}),
     cues:Object.freeze({
       grab:Object.freeze({buzz:10,freq:320,to:460,life:.045,gain:.035}),

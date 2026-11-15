@@ -41,7 +41,7 @@
 [data-rumble-demo] #demo-replay{border:var(--rf-rim) solid var(--rf-ink);border-radius:0;background:var(--rf-teal);color:var(--rf-ink);clip-path:var(--rf-plate)}
 [data-rumble-demo] #demo-results button:focus-visible{outline:var(--rf-rim) solid var(--rf-pearl);outline-offset:calc(var(--rf-rim) * -2);clip-path:none}
 
-/* Damage per resident: the body scrolls, the Play again button stays in view (standards L4). */
+/* Damage per resident: the body scrolls, the Play Again button stays in view (standards L4). */
 #demo-damage{flex:0 1 auto!important;min-height:0;overflow:auto;text-align:left;border-top:var(--rf-rim) solid var(--rf-channel);padding-top:var(--rf-tight)}
 #demo-damage h3{margin:0 0 var(--rf-tight);font-size:var(--demo-label);font-weight:normal}
 #demo-damage-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--rf-tight)}

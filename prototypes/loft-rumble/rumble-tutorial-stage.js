@@ -171,7 +171,7 @@
       else if(!beat.paced&&timer>=beat.seconds*script.stallShare)send('idle');
     }else if(state.phase==='cheer'&&timer>=(beat.cheer??script.cheerSeconds))send('cheerDone');
   }
-  // The page's own reset (Play again, a layout change): Training quits unless this module asked for it. The round-16 tutor and
+  // The page's own reset (Play Again, a layout change): Training quits unless this module asked for it. The round-16 tutor and
   // the practice cue rail are retired for good, so no reset leaves their text behind.
   function reset(){
     if(!host)return;

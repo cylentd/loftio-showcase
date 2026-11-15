@@ -150,7 +150,7 @@
     root.LoftRumbleCuesView.install({copy,art:data.art,plate:data.field.plate,cells:data.field.cells,life:data.moment});
     render();
   }
-  // A new battle (Play again) clears moments the last one left.
+  // A new battle (Play Again) clears moments the last one left.
   function reset(){moment=null;waiting=null;stunTotal={};events=[]}
 
   root.LoftRumbleCues=Object.freeze({install,reset,installed:()=>!!host,danger:()=>!!host&&!paused()&&dangerCues().length>0,

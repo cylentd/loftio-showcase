@@ -74,5 +74,15 @@
     return{mode:'fling',angle:Math.atan2(v.y,v.x),speed:v.speed,power:power(F.powerMode,v.speed),graded:false};
   }
   const fling=Object.freeze({MODES,track,push,swipe,holding,power,release});
-  root.LoftRumbleDragFeedback=Object.freeze({create,fling});
+  // Steady sling aim. Pure. The aim point stays put while the finger is within radius of it; past that it is pulled along to
+  // exactly radius behind the finger. Finger noise smaller than the radius never moves it, a real move moves it at once.
+  // Flings never read it: they use the swipe samples above.
+  function follow(at,x,y,radius){
+    const dx=x-at.x,dy=y-at.y,gap=Math.hypot(dx,dy);
+    if(gap<=radius)return at;
+    const keep=radius/gap;
+    return Object.freeze({x:x-dx*keep,y:y-dy*keep});
+  }
+  const aim=Object.freeze({follow});
+  root.LoftRumbleDragFeedback=Object.freeze({create,fling,aim});
 })(globalThis);

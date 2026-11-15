@@ -13,7 +13,7 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','r
       enrage:'Bramble is enraged!',enrageSub:'Attacks come faster. Watch the windup.',
       victory:'Bramble defeated!',defeat:'Team knocked out',
       winHint:'Try another run. Build a longer chain.',lossHint:'Chain teammates. Watch the windups.',
-      time:'Fight time',combo:'Best combo',replay:'Play again',
+      time:'Fight time',combo:'Best combo',replay:'Play Again', // owner's pick, 2026-11-15
       // End-screen damage list and breakdown: labels and numbers only.
       damage:'Damage',hitMark:'×',setOff:'Teammates set off',
       parts:Object.freeze({direct:'Direct hits',weak:'Weak spot',walls:'Wall bounce',ability:'Ability',special:'Special'}),zone:'Fling out of the danger zone',
