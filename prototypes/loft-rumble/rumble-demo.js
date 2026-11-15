@@ -28,6 +28,52 @@
     if(state.tutor)state.tutor.zone=true;
     return true;
   }
+  // ---- End-screen damage: one row per resident, tap a row to open its breakdown under it. ----
+  // Built once per showing, not per frame, so a tap target never vanishes under the finger.
+  let residentNames={};
+  const make=(tag,props={})=>Object.assign(document.createElement(tag),props);
+  function portrait(id){
+    const art=document.querySelector(`[data-resident="${id}"] .portrait img`);
+    return art?make('img',{src:art.src,alt:'',className:'damage-face'}):make('span',{className:'damage-face'});
+  }
+  function breakdownRows(entry){
+    const stats=root.LoftRumbleStats,rows=stats.breakdown(entry).map(part=>{
+      const value=make('dd'),amount=make('span',{textContent:String(part.damage)});amount.dataset.partDamage='';value.append(amount);
+      value.append(make('span',{className:'damage-count',textContent:part.count===null?'':copy.hitMark+part.count}));
+      return [make('dt',{textContent:copy.parts[part.key]}),value];
+    });
+    rows.push([make('dt',{textContent:copy.setOff}),make('dd',{className:'damage-count',textContent:copy.hitMark+entry.setOff})]);
+    return rows.map(pair=>{const line=make('div');line.append(...pair);return line;});
+  }
+  function toggleBreakdown(state,id,button){
+    const list=document.getElementById('demo-damage-list'),breakdown=document.getElementById('demo-breakdown');
+    const opening=button.getAttribute('aria-expanded')!=='true';
+    for(const row of list.querySelectorAll('[data-damage-row]'))row.setAttribute('aria-expanded','false');
+    breakdown.hidden=!opening;
+    if(!opening)return;
+    breakdown.replaceChildren(...breakdownRows(state.fightStats[id]));
+    button.after(breakdown);button.setAttribute('aria-expanded','true');
+  }
+  function renderDamage(state){
+    const list=document.getElementById('demo-damage-list'),breakdown=document.getElementById('demo-breakdown');
+    breakdown.hidden=true;document.getElementById('demo-damage').append(breakdown);
+    const ids=Object.keys(state.fightStats);
+    list.replaceChildren(...root.LoftRumbleStats.board(state.fightStats,ids).map(row=>{
+      const item=make('li'),button=make('button',{type:'button',className:'damage-row'});
+      button.dataset.damageRow=row.id;button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','demo-breakdown');
+      const total=make('span',{className:'damage-total',textContent:String(row.total)});total.dataset.damageTotal='';
+      const bar=make('span',{className:'damage-bar'});bar.setAttribute('aria-hidden','true');bar.style.setProperty('--fill',String(row.fill));
+      button.append(portrait(row.id),make('span',{className:'damage-name',textContent:residentNames[row.id]??row.id}),total,bar);
+      button.addEventListener('click',()=>toggleBreakdown(state,row.id,button));
+      item.append(button);return item;
+    }));
+  }
+  function buildDamage(){
+    const section=make('section',{id:'demo-damage'});section.setAttribute('aria-labelledby','demo-damage-title');
+    const breakdown=make('dl',{id:'demo-breakdown',hidden:true});
+    section.append(make('h3',{id:'demo-damage-title',textContent:copy.damage}),make('ul',{id:'demo-damage-list'}),breakdown);
+    const replay=document.getElementById('demo-replay');replay.before(section);
+  }
   const clock=seconds=>Math.floor(seconds/data.secondsPerMinute)+':'+String(Math.floor(seconds%data.secondsPerMinute)).padStart(2,'0');
   function present(state,ready){
     if(!active(state))return;
@@ -40,7 +86,9 @@
     document.getElementById('demo-result-hint').textContent=state.won?copy.winHint:copy.lossHint;
     document.getElementById('demo-time').textContent=clock(state.time);
     document.getElementById('demo-combo').textContent=String(state.hitsPeak);
-    if(wasHidden)document.getElementById('demo-replay').focus({preventScroll:true});
+    if(!wasHidden)return;
+    renderDamage(state);
+    document.getElementById('demo-replay').focus({preventScroll:true});
   }
   function arrive(){
     delete document.documentElement.dataset.rumblePending;
@@ -103,6 +151,7 @@
     document.getElementById('help').textContent=copy.aimHelp;
     document.getElementById('demo-time-label').textContent=copy.time;
     document.getElementById('demo-combo-label').textContent=copy.combo;
+    residentNames=names;buildDamage();
     const replay=document.getElementById('demo-replay');replay.textContent=copy.replay;
     replay.addEventListener('click',()=>{restart();draw();document.getElementById('menu-toggle').focus({preventScroll:true})});
     restart();draw();

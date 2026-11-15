@@ -71,7 +71,12 @@ window.LoftRumbleArtConfig = Object.freeze({
     "fx-heal",
     "fx-special-ring",
     "fx-cutin-swoosh",
-    "fx-hit-spark-sheet"
+    "fx-hit-spark-sheet",
+    "fx-seed-projectile",
+    "fx-shockwave-crescent",
+    "fx-puff-beam-strip",
+    "fx-puff-beam-impact",
+    "fx-ally-contact"
   ],
   metrics: Object.freeze({
     frames: 4, bossSize: 2.25, bumperSize: 2.8, hornWidth: 1.65,

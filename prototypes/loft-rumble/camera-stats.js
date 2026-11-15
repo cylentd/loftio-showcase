@@ -159,5 +159,42 @@
     text(copy.again,settings.smallFont+1,'muted-foreground',centre,y+settings.footerBand/2+2,'center','normal');
     ctx.restore();
   }
-  root.LoftRumbleStats={settings,stars,record,mark,summary,lines,rows,cardHeight,draw};
+  // ---- Per-resident damage ledger for the live fight's end screen (owner, 2026-11-14). ----
+  // Every point of damage the boss takes is credited to exactly one resident, so the residents' totals add up to the
+  // boss's lost HP and each breakdown adds up to its resident's total. It lives in fight state (s.fightStats) and a
+  // restart replaces it with fresh(). Pure: no DOM, no game globals.
+  // The five parts in display order, each with the counter shown beside it (null: the part has no count of its own).
+  const parts=Object.freeze([['direct','hits'],['weak','weakHits'],['walls',null],['ability','abilities'],['special','specials']]);
+  const counters=['hits','weakHits','abilities','setOff','specials'];
+  const blank=()=>Object.fromEntries([...parts.map(([part])=>[part,0]),...counters.map(key=>[key,0])]);
+  const fresh=ids=>Object.fromEntries(ids.map(id=>[id,blank()]));
+  // A hit is base × weak multiplier × wall multiplier (the Perfect boost and combo payoff stay in base). The wall bonus
+  // comes off first, then the weak-spot bonus; rounding leftovers stay in direct, so the three always sum to amount.
+  function split(amount,weak,walls){
+    const unwalled=Math.round(amount/walls),direct=Math.round(amount/walls/weak);
+    return {direct,weak:unwalled-direct,walls:amount-unwalled};
+  }
+  // kind 'hit': by's own contact. 'ability': owner's ability fired, by's launch set it off. 'special': by's special bonus.
+  function credit(ledger,event){
+    if(event.kind==='hit'){
+      const entry=ledger[event.by],cut=split(event.amount,event.weak,event.walls);
+      for(const part of ['direct','weak','walls'])entry[part]+=cut[part];
+      entry.hits+=1;if(event.weak>1)entry.weakHits+=1;
+    }else if(event.kind==='ability'){
+      ledger[event.owner].ability+=event.amount;ledger[event.owner].abilities+=1;
+      if(event.by&&event.by!==event.owner)ledger[event.by].setOff+=1;
+    }else if(event.kind==='special'){
+      ledger[event.by].special+=event.amount;ledger[event.by].specials+=1;
+    }
+    return ledger;
+  }
+  const totalOf=entry=>parts.reduce((sum,[part])=>sum+entry[part],0);
+  const breakdown=entry=>parts.map(([key,count])=>({key,damage:entry[key],count:count?entry[count]:null}));
+  // One row per resident, biggest total first (ties keep team order), with its bar length against the biggest.
+  function board(ledger,ids){
+    const list=ids.map(id=>({id,total:totalOf(ledger[id])})).sort((left,right)=>right.total-left.total);
+    const top=list[0]?.total??0;
+    return list.map(row=>({...row,fill:top?row.total/top:0}));
+  }
+  root.LoftRumbleStats={settings,stars,record,mark,summary,lines,rows,cardHeight,draw,parts,fresh,split,credit,total:totalOf,breakdown,board};
 })(globalThis);
