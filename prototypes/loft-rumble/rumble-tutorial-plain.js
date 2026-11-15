@@ -3,29 +3,43 @@
 // rumble-tutorial-copy.js and sets window.LoftRumbleTutorialView; the stage prefers that. No art is drawn here.
 //
 // The view contract: onBeat(snapshot), called on every change, where snapshot is
-//   {state: {status, beat, phase, tries}, anchor: {id, x, y} | null, gesture: {id, from, to, launch} | null}
-// anchor x, y are pixels inside the board, beside the acting resident. gesture is the ghost hand's drag in arena units,
-// set only while a beat is showing its demonstration; to is the point the hand pulls back to, and launch is the shot's angle.
+//   {state: {status, beat, phase, tries}, style: 'fling' | 'sling', top, anchor: {id, x, y} | null,
+//    gesture: {id, from, to, launch, motion} | null}
+// style is the throw style in use; the stage calls onBeat again when it changes. top is the px height of the HUD drawn
+// across the board's top (the boss bar), so nothing is placed over it. anchor x, y are pixels inside the board,
+// beside the acting resident. gesture is the ghost hand's drag in arena units, set only while a beat is showing its
+// demonstration; to is where the hand ends, launch is the shot's angle, and motion is 'swipe' (fling: the hand moves toward
+// the shot) or 'pull' (sling: it pulls back against it).
 (function(root){
   'use strict';
   // Placeholder words until the copy file exists. Selectors for tests are data attributes, never these words.
   const copy={skip:'Skip training',replay:'Replay training',
     confirm:{title:'Restart this fight for Training?',body:'Replaying Training starts a fresh fight and drops the one in progress.',accept:'Restart',cancel:'Cancel'},
-    line:{intro:{show:'Training'},sling:{show:'Pull back, then let go',try:'Pull back, then let go',cheer:'Nice sling!'},
-      chain:{show:'Sling into a teammate',try:'Sling into a teammate',cheer:'Chain!'},
-      weak:{show:'Hit the gold spot',try:'Hit the gold spot',cheer:'Weak spot!'},
-      dodge:{show:'Sling Chomper out of the lane',try:'Sling Chomper out of the lane',cheer:'Dodged!'},
-      special:{show:'Sling Puff for a special',try:'Sling Puff for a special',cheer:'Special!'},
-      graduate:{show:'Training complete',cheer:'Ready to Rumble'}}};
+    line:{intro:{show:'Training'},weak:{show:'Hit the gold spot',try:'Hit the gold spot',cheer:'Weak spot!'},
+      graduate:{show:'Training complete',cheer:'Ready to Rumble'}},
+    // Beats that name the gesture, keyed by throw style (one style at a time, owner 2026-11-15). The beat id 'sling' is the
+    // first lesson's name in the script, whatever the style.
+    byStyle:{
+      fling:{sling:{show:'Swipe toward Bramble',try:'Swipe toward Bramble',cheer:'Nice fling!'},
+        chain:{show:'Fling into a teammate',try:'Fling into a teammate',cheer:'Chain!'},
+        dodge:{show:'Fling Chomper out of the lane',try:'Fling Chomper out of the lane',cheer:'Dodged!'},
+        special:{show:'Fling Puff for a special',try:'Fling Puff for a special',cheer:'Special!'}},
+      sling:{sling:{show:'Pull back, then let go',try:'Pull back, then let go',cheer:'Nice sling!'},
+        chain:{show:'Sling into a teammate',try:'Sling into a teammate',cheer:'Chain!'},
+        dodge:{show:'Sling Chomper out of the lane',try:'Sling Chomper out of the lane',cheer:'Dodged!'},
+        special:{show:'Sling Puff for a special',try:'Sling Puff for a special',cheer:'Special!'}}}};
   let line=null,arenaSkip=null,menuSkip=null,dialog=null;
   const make=(tag,text,data)=>{const node=document.createElement(tag);node.textContent=text;if(data)node.dataset.tutorial=data;return node};
 
   function install({skip,replay,closeMenus}){
     const arena=document.getElementById('arena'),menu=document.getElementById('menu'),help=document.getElementById('help-panel');
     line=document.createElement('p');line.hidden=true;line.setAttribute('aria-live','polite');
-    Object.assign(line.style,{position:'absolute',pointerEvents:'none',transform:'translate(-50%,-150%)',margin:0,padding:'var(--gap)',background:'var(--card)',color:'var(--foreground)',borderRadius:'var(--radius)'});
+    // The dock's plate and ink: the line and Skip sit over bright arena art, so they carry their own surface (contrast, L9).
+    const plate={background:'var(--stage-chrome-surface)',color:'var(--stage-dock-ink)',borderRadius:'var(--radius)'};
+    Object.assign(line.style,plate,{position:'absolute',pointerEvents:'none',whiteSpace:'nowrap',transform:'translate(-50%,-150%)',margin:0,padding:'var(--gap)'});
     arenaSkip=make('button',copy.skip,'skip');arenaSkip.type='button';arenaSkip.onclick=skip;
-    Object.assign(arenaSkip.style,{position:'absolute',top:'var(--gap)',right:'var(--gap)'});
+    // Top right of the board, under the boss bar (onBeat sets top): the arena's own corners hold the HP readout and team bar.
+    Object.assign(arenaSkip.style,plate,{position:'absolute',right:'var(--gap)',minHeight:'var(--stage-control)'});
     arena.append(line,arenaSkip);
     menuSkip=make('button',copy.skip,'skip');menuSkip.type='button';
     menuSkip.onclick=()=>{closeMenus();skip()};
@@ -55,15 +69,19 @@
     dialog.showModal();dialog.querySelector('[data-tutorial="confirm-cancel"]').focus({preventScroll:true});
   }
 
-  function onBeat({state,anchor}){
+  function onBeat({state,anchor,style,top}){
     const on=state.status==='running';
     line.hidden=arenaSkip.hidden=menuSkip.hidden=!on;
     if(!on)return;
     line.dataset.tutorialBeat=state.beat;line.dataset.tutorialPhase=state.phase;
-    line.textContent=copy.line[state.beat][state.phase]??copy.line[state.beat].show;
-    const board=document.getElementById('board');
-    Object.assign(line.style,{left:board.offsetLeft+anchor.x+'px',top:board.offsetTop+anchor.y+'px'});
+    const words=copy.byStyle[style][state.beat]??copy.line[state.beat];
+    line.textContent=words[state.phase]??words.show;
+    // Centred over the resident, but kept inside the board so a resident near a wall never pushes the words off it.
+    const board=document.getElementById('board'),half=line.offsetWidth/2;
+    const x=Math.min(Math.max(anchor.x,half),board.offsetWidth-half);
+    Object.assign(line.style,{left:board.offsetLeft+x+'px',top:board.offsetTop+anchor.y+'px'});
+    arenaSkip.style.top='calc('+(board.offsetTop+top)+'px + var(--gap))';
   }
 
-  root.LoftRumbleTutorialPlain={install,onBeat,confirmReplay};
+  root.LoftRumbleTutorialPlain={install,onBeat,confirmReplay,copy};
 })(globalThis);

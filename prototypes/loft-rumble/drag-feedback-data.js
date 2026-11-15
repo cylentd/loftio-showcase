@@ -10,7 +10,24 @@
     throwStyle:Object.freeze({
       styles:Object.freeze(['fling','sling']),
       fallback:'fling',               // the default, and what an unknown saved value reads as
-      storageKey:'loftRumbleThrow'    // localStorage, read and written like loftRumbleMusic
+      storageKey:'loftRumbleThrow',   // localStorage, read and written like loftRumbleMusic
+      // Player-facing words keyed by style (unit B): the settings control, the board's label and the page's hints. A style's
+      // words never describe the other style's gesture (throw-style-copy.test.cjs).
+      copy:Object.freeze({
+        label:'Throw',
+        names:Object.freeze({fling:'Fling',sling:'Sling'}),
+        board:Object.freeze({
+          fling:"Swipe any ready resident toward the enemy's gold weak spot to fling it, or drag, hold still to aim along the drag and let go. Several can move at once. Drag back to the start to cancel.",
+          sling:"Press on any ready resident, pull back and release to sling it at the enemy's gold weak spot. Several can move at once. Drag back to the start to cancel."
+        }),
+        start:Object.freeze({fling:'Swipe a resident toward the enemy.',sling:'Drag from any resident, pull back, release.'}),
+        cancel:Object.freeze({fling:'Fling cancelled.',sling:'Sling cancelled.'}),
+        tutor:Object.freeze({fling:'Swipe to fling',sling:'Pull back, release'}),   // the lab's first-battle step, 4 words max
+        roster:Object.freeze({   // the team dock's screen-reader label
+          fling:'Residents. SPECIAL means the next fling fires the special.',
+          sling:'Residents. SPECIAL means the next sling fires the special.'
+        })
+      })
     }),
     // Fling and sling input (docs/product/LOFT-RUMBLE-FLING-AND-SPECIALS.md, section 1); logic in drag-feedback.js, `fling`.
     fling:Object.freeze({

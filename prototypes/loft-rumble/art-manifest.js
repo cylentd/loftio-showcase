@@ -24,7 +24,12 @@ window.LoftRumbleArtConfig = Object.freeze({
       rootPaths: [[0.2, -36, 0.8, -18, 0.1, 6, 0.7, 24], [0.4, -9, 0.7, -5, 0.7, -12, 0.9, -16]],
     }),
   }),
+  // Living-magic ordinary bumpers (owner's ui-v1 pack, LM6a). A bumper takes skin index % 3 of its layout index.
+  bumperSkins: Object.freeze(["bumper-lm-bloom", "bumper-lm-mushroom", "bumper-lm-rune-stone"]),
   assets: [
+    "bumper-lm-bloom",
+    "bumper-lm-mushroom",
+    "bumper-lm-rune-stone",
     "bumper-mushroom",
     "bumper-mushroom-hit",
     "bumper-stump",

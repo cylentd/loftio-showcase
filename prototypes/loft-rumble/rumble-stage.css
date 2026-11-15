@@ -56,6 +56,7 @@
   --stage-sheet-toggle-width: 32px;
   --stage-sheet-toggle-height: 20px;
   --stage-sheet-toggle-dot: 12px;
+  --stage-throw-option: 72px; /* each Fling / Sling segment: wide enough for either word at 14px, over the 44px target */
   --stage-sheet-shadow: 0 16px 64px #0008;
   --stage-dock-pad: 8px;
   --stage-dock-gap: 4px;
@@ -321,6 +322,40 @@
   background: radial-gradient(circle at calc(100% - var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-surface) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle);
 }
 [data-rumble-demo] #menu #help-toggle { grid-column: 1 / -1; }
+/* Throw style (unit B): a labelled row like the toggles, with a two-option segmented control on the right. */
+[data-rumble-demo] #menu #throw-style {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--stage-sheet-gap);
+  border-bottom: var(--stage-border) solid var(--stage-sheet-rule);
+  padding-bottom: var(--stage-sheet-gap);
+  color: var(--stage-sheet-ink);
+  font-size: var(--stage-sheet-copy);
+  font-weight: 500;
+  line-height: 1.4;
+}
+[data-rumble-demo] #throw-style .throw-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--stage-throw-option), auto));
+  border: var(--stage-border) solid var(--stage-sheet-rule);
+  border-radius: var(--stage-radius);
+}
+[data-rumble-demo] #throw-style button {
+  min-width: var(--stage-throw-option);
+  min-height: var(--stage-control);
+  padding: 0 var(--stage-sheet-gap);
+  border: var(--stage-border) solid transparent;
+  border-radius: var(--stage-radius);
+  background: transparent;
+  color: var(--stage-sheet-ink);
+  box-shadow: none;
+  font: inherit;
+  white-space: nowrap;
+}
+[data-rumble-demo] #throw-style button:hover { background-color: var(--stage-sheet-rule); }
+[data-rumble-demo] #throw-style button[aria-pressed=true] { border-color: var(--stage-sheet-edge); background: var(--stage-sheet-accent); font-weight: 600; }
 [data-rumble-demo] #menu :is(#reset, #replay-tutorial) { border: 0; font-size: var(--stage-name-size); color: var(--stage-sheet-muted); padding-inline: 0; }
 [data-rumble-demo] #menu:not(:has(#replay-tutorial)) #reset { grid-column: 1 / -1; } /* Replay is removed without ?training; New battle takes the whole row */
 [data-rumble-demo] #menu > button:hover { background-color: var(--stage-sheet-rule); }
@@ -342,6 +377,9 @@
   [data-rumble-demo] #menu { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   [data-rumble-demo] #menu :is(#sound, #music, #haptics) { grid-column: span 2; }
   [data-rumble-demo] #menu :is(#reset, #replay-tutorial) { grid-column: span 3; }
+  /* Throw style shares How to play's row, so the landscape sheet keeps its height (Music toggle follow-up, 2026-11-10). */
+  [data-rumble-demo] #menu :is(#throw-style, #help-toggle) { grid-column: span 3; }
+  [data-rumble-demo] #menu #throw-style { padding-bottom: 0; border-bottom: 0; }
 }
 
 [data-rumble-demo][data-rumble-arriving] main {

@@ -19,9 +19,11 @@
     ctx.moveTo(origin.x,origin.y);ctx.lineTo(pointer.x,pointer.y);ctx.stroke();
     ctx.fillStyle=colors.foreground;ctx.beginPath();ctx.arc(pointer.x,pointer.y,config.thumbRadius,0,Math.PI*2);ctx.fill();
   }
-  function draw(ctx,{feedback,body,pointer,origin,colors,reduced}){
+  // style is the throw style in use. Sling keeps its rubber-band pull line ("keep rubber band", owner 2026-11-15); a fling
+  // aims along the drag, where the line would lie over its aim dots, so fling draws none.
+  function draw(ctx,{feedback,body,pointer,origin,colors,reduced,style}){
     ctx.save();launch(ctx,feedback.launch,colors,reduced);ctx.globalAlpha=1;
-    if(body&&feedback.held?.armed)dragLine(ctx,pointer,origin,colors);
+    if(body&&feedback.held?.armed&&style!=='fling')dragLine(ctx,pointer,origin,colors);
     ctx.restore();
   }
   function aimDot(ctx,{x,y,color,alpha}){

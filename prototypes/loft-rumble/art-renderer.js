@@ -247,7 +247,32 @@
     return true;
   }
 
-  function bumper(ctx, skin, position, radius, hit) {
+  const bumperSkin = index => config.bumperSkins[index % config.bumperSkins.length];
+
+  // Painted bumper art centred on the collider. `upright` undoes the camera's floor squash, as for the boss and residents,
+  // because the art is already drawn in perspective. Before the image loads, the stone drawing below stands in.
+  function bumperArt(ctx, skin, position, radius, hit, upright) {
+    const image = config.bumperSkins.includes(skin) && available(skin);
+    const style = window.LoftRumbleBattleMaterialConfig;
+    if (!image || !style) return false;
+    const width = radius * style.bumperArtWidth, height = width * image.naturalHeight / image.naturalWidth;
+    const impact = Math.max(0, Math.min(1, hit));
+    ctx.save();
+    ctx.translate(position.x, position.y);
+    ctx.fillStyle = style.shadow;
+    ctx.beginPath();
+    const cast = style.bumperArtShadow;
+    ctx.ellipse(radius * cast.x, radius * cast.y, radius * cast.width, radius * cast.depth, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.scale(1, upright);
+    if (impact > 0) ctx.filter = 'brightness(' + (1 + impact * style.bumperArtHitGlow) + ')';
+    ctx.drawImage(image, -width / 2, -height / 2, width, height);
+    ctx.restore();
+    return true;
+  }
+
+  function bumper(ctx, skin, position, radius, hit, upright = 1) {
+    if (bumperArt(ctx, skin, position, radius, hit, upright)) return true;
     if (window.LoftRumbleBattleMaterials) return window.LoftRumbleBattleMaterials.bumper(ctx, skin, position, radius, hit);
     const impact = Math.max(0, Math.min(1, hit));
     const coreRadius = radius * (1 - impact * arena.compression);
@@ -334,5 +359,5 @@
     ctx.restore();
   }
 
-  window.LoftRumbleArt = Object.freeze({ available, ready, metrics, paint, frame, horn, shield, bar, bumper, beam, panel, effects });
+  window.LoftRumbleArt = Object.freeze({ available, ready, metrics, paint, frame, horn, shield, bar, bumper, bumperSkin, beam, panel, effects });
 })();

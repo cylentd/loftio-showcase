@@ -36,7 +36,7 @@
 
   // ---- Shield views ----
   // Screen angles, y down: +pi/2 faces the camera. Each view owns a quarter of the orbit; within `blend` of a boundary the
-  // two neighbours cross-fade linearly, so their weights always sum to one.
+  // two neighbours share a weight linearly, summing to one. Only shieldLook's strongest view is drawn (no cross-fade).
   const VIEWS=Object.freeze([
     {view:'front',centre:QUARTER_TURN,mirror:false},{view:'rear',centre:-QUARTER_TURN,mirror:false},
     {view:'side',centre:0,mirror:true},{view:'side',centre:Math.PI,mirror:false}
@@ -51,6 +51,13 @@
     }
     return out;
   }
+  // What is drawn: only the strongest view, opaque. Its weight (1 in its own band, 0.5 at a boundary) sets how much of its
+  // width shows, from 1 down to turnSquash at the boundary, where the neighbour takes over at the same width.
+  function shieldLook(angle,F){
+    const top=shieldViews(angle,F).reduce((a,v)=>v.weight>a.weight?v:a),T=F.shield.turnSquash;
+    return {view:top.view,mirror:top.mirror,depth:top.depth,squash:T+(1-T)*(2*top.weight-1)};
+  }
+  const squashBox=(box,k)=>({...box,left:box.left+box.width*(1-k)*HALF,width:box.width*k});
   function shieldTexture(view,phase,F){
     if(view==='front')return phase==='cracked'?F.textures.cracked:F.textures.front;
     return F.textures[view];
@@ -84,11 +91,23 @@
     return S.crackShake*(1-state.t/S.crackLife)*Math.cos(TURN*S.crackShakeHz*state.t);
   }
   // The break sprite: where the plate was when it broke (the angle keeps turning while it is down), or null.
+  function breakPoint(shield,feel,plate,life){
+    const since=feel.shieldReform-shield.down;
+    if(!(shield.down>0)||since<0||since>=life)return null;
+    const at=shield.angle-since*TURN/feel.shieldTurn;
+    return {gx:Math.cos(at)*plate,gy:Math.sin(at)*plate,k:since/life};
+  }
   function shards(shield,feel,plate,reduced,F){
-    const S=F.shield.shards,since=feel.shieldReform-shield.down;
-    if(!(shield.down>0)||since<0||since>=S.life)return null;
-    const k=since/S.life,at=shield.angle-since*TURN/feel.shieldTurn;
-    return {gx:Math.cos(at)*plate,gy:Math.sin(at)*plate,alpha:1-k*k,grow:reduced?0:S.grow*(1-(1-k)*(1-k)),drop:reduced?0:S.dropShare*k*k};
+    const S=F.shield.shards,p=breakPoint(shield,feel,plate,reduced?S.reducedLife:S.life);if(!p)return null;
+    const k=p.k,fade=k<S.hold?0:(k-S.hold)/(1-S.hold);
+    return {gx:p.gx,gy:p.gy,alpha:1-fade*fade,scale:S.scale,grow:reduced?0:S.grow*(1-(1-k)*(1-k)),drop:reduced?0:S.dropShare*k*k};
+  }
+  // The break flash at the same point: radius in logical units, ring alpha, core disc alpha, ring line width (px).
+  function breakFlash(shield,feel,plate,reduced,F){
+    const S=F.shield.flash,p=breakPoint(shield,feel,plate,S.life);if(!p)return null;
+    const k=p.k,ease=1-(1-k)*(1-k);
+    return {gx:p.gx,gy:p.gy,radius:plate*(S.start+(reduced?0:S.grow*ease)),alpha:1-k,
+      core:S.coreAlpha*Math.max(0,1-k/S.coreShare),width:S.width*(1-k)+1};
   }
 
   // ---- Beam both ways ----
@@ -116,6 +135,6 @@
     return {points:[{x,y},{x:-x,y:-y}],size,alpha,angle};
   }
 
-  root.LoftRumbleBossFightModel=Object.freeze({rigBase,rigState,pose,shieldViews,shieldTexture,shieldBox,
-    SHIELD_PHASES,shieldInitial,shieldNext,crackShake,shards,beamSegments,beamSources});
+  root.LoftRumbleBossFightModel=Object.freeze({rigBase,rigState,pose,shieldViews,shieldLook,squashBox,shieldTexture,shieldBox,
+    SHIELD_PHASES,shieldInitial,shieldNext,crackShake,shards,breakFlash,beamSegments,beamSources});
 })(typeof window!=='undefined'?window:globalThis);

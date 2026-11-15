@@ -1,9 +1,15 @@
 (function(root){
   'use strict';
-  function create(makeAudio=()=>new Audio()){
+  // The next track index: random, never the previous one (-1 for none); a one-track list returns its only track.
+  function pick(count,previous,random=Math.random){
+    const others=Array.from({length:count},(_,i)=>i).filter(i=>i!==previous);
+    if(!others.length)return 0;
+    return others[Math.floor(random()*others.length)];
+  }
+  function create(makeAudio=()=>new Audio(),random=Math.random){
     const config=root.LoftRumbleMusicData;
     // trackIndex lives for the page session only; heard is true once the current track has been offered to the player.
-    let media=null,context=null,source=null,unlocked=false,enabled=true,paused=false,hidden=false,trackIndex=0,heard=false;
+    let media=null,context=null,source=null,unlocked=false,enabled=true,paused=false,hidden=false,trackIndex=pick(config.tracks.length,-1,random),heard=false;
     function sync(){
       if(!unlocked||!enabled||paused||hidden){media?.pause();return}
       try{
@@ -19,7 +25,7 @@
     function startFight(){
       if(!heard)return;
       heard=false;
-      const next=(trackIndex+1)%config.tracks.length;
+      const next=pick(config.tracks.length,trackIndex,random);
       if(next!==trackIndex){media.src=config.tracks[next];media.pause()}
       trackIndex=next;
       sync();
@@ -32,5 +38,5 @@
       startFight,
     });
   }
-  root.LoftRumbleMusic=Object.freeze({create});
+  root.LoftRumbleMusic=Object.freeze({create,pick});
 })(globalThis);

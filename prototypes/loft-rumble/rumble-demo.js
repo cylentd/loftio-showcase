@@ -126,7 +126,7 @@
         arrive();document.getElementById('menu-toggle').focus({preventScroll:true});
       });
   }
-  function install({s,names,reset:restart,draw,ready}){
+  function install({s,names,reset:restart,again,draw,ready}){
     if(new URLSearchParams(location.search).get('lab')==='1')return;
     s.demo={enraged:false};document.documentElement.dataset.rumbleDemo='';
     if(document.documentElement.hasAttribute('data-published-rumble')){
@@ -151,19 +151,17 @@
     const title=document.createElement('h2');title.id='pause-title';title.textContent=copy.pausedTitle;
     menu.setAttribute('aria-labelledby',title.id);
     menu.prepend(brand,title);
-    menu.append(pause,document.getElementById('sound'),document.getElementById('music'),document.getElementById('haptics'),help,document.getElementById('replay-tutorial'),document.getElementById('reset'));
+    menu.append(pause,document.getElementById('sound'),document.getElementById('music'),document.getElementById('haptics'),document.getElementById('throw-style'),help,document.getElementById('replay-tutorial'),document.getElementById('reset'));
     const helpPanel=document.getElementById('help-panel'),helpTitle=document.createElement('h2');
     helpTitle.id='battle-help-title';helpTitle.textContent=copy.helpMenu;helpTitle.tabIndex=-1;helpTitle.autofocus=true;
     helpPanel.setAttribute('aria-labelledby',helpTitle.id);helpPanel.prepend(helpTitle);
     const helpClose=document.createElement('button');helpClose.className='help-resume';helpClose.textContent=copy.resume;
     helpClose.onclick=()=>help.click();helpPanel.append(helpClose);
-    document.getElementById('team-help').textContent=copy.teamHelp;
-    document.getElementById('help').textContent=copy.aimHelp;
     document.getElementById('demo-time-label').textContent=copy.time;
     document.getElementById('demo-combo-label').textContent=copy.combo;
     residentNames=names;buildDamage();
     const replay=document.getElementById('demo-replay');replay.textContent=copy.replay;
-    replay.addEventListener('click',()=>{restart();draw();document.getElementById('menu-toggle').focus({preventScroll:true})});
+    replay.addEventListener('click',()=>{(again||restart)();draw();document.getElementById('menu-toggle').focus({preventScroll:true})});
     restart();draw();
     const cinematic=root.LoftRumbleCinematic.play({main:document.querySelector('main'),setBlocked:on=>{s.cinematic=on}});
     reveal(ready,draw,cinematic);

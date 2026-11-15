@@ -5,7 +5,7 @@
   // Each function returns false when its textures are not loaded, so the page keeps its old drawing for that frame.
   // Geometry and state: boss-fight-model.js; numbers: boss-fight-data.js.
   const F=()=>root.LoftRumbleBossFightData,M=()=>root.LoftRumbleBossFightModel,R=()=>root.LoftRumbleBossRigData,Rig=()=>root.LoftRumbleBossRig;
-  const HALF=.5;
+  const HALF=.5,TURN=Math.PI*2;
   const looks=new WeakMap();  // the shield's look state per fight shield object: {state, clock}
 
   function textures(image,names){const out=names.map(image);return out.every(Boolean)?out:null;}
@@ -34,25 +34,35 @@
     else ctx.drawImage(image,box.left,box.top,box.width,box.height);
     ctx.restore();
   }
-  // One depth layer of the shield: 'rear' before the boss is drawn, 'front' after it. Also the break shards (front).
-  // o: {layer, shield, enemy, plate, arc, feel, clock, upright, reduced, alive, image(name)}
+  // The break, front layer: the white core and amber ring at the plate's middle height, then the shards with a rim glow.
+  // tint: the page's colour tokens {ring, edge, flash, rim}; without them only the shards draw (the page owns the colours).
+  function shatter(ctx,o,sh,d,m){
+    const T=d.textures,front=m.shieldBox('front',sh.angle,o.plate,o.arc,o.upright,o.image(T.front),d);
+    const flash=o.tint&&m.breakFlash(sh,o.feel,o.plate,o.reduced,d),bits=m.shards(sh,o.feel,o.plate,o.reduced,d);
+    if(flash){const lift=front.height*d.shield.front.wall*HALF;
+      ctx.save();ctx.translate(o.enemy.x+flash.gx,o.enemy.y+flash.gy);ctx.scale(1,o.upright);
+      if(flash.core>0){ctx.globalAlpha=flash.core;ctx.fillStyle=o.tint.flash;ctx.beginPath();ctx.arc(0,-lift,flash.radius,0,TURN);ctx.fill();}
+      const ring=(colour,alpha,width)=>{ctx.globalAlpha=alpha;ctx.strokeStyle=colour;ctx.lineWidth=width;ctx.beginPath();ctx.arc(0,-lift,flash.radius,0,TURN);ctx.stroke();};
+      ring(o.tint.edge,flash.alpha*d.shield.flash.edgeAlpha,flash.width+d.shield.flash.edge);ring(o.tint.ring,flash.alpha,flash.width);
+      ctx.restore();}
+    if(!bits)return;
+    const image=o.image(T.shards),width=front.width*(bits.scale+bits.grow),height=width*image.height/image.width;
+    ctx.save();if(o.tint){ctx.shadowColor=o.tint.rim;ctx.shadowBlur=d.shield.shards.rimBlur;}
+    sprite(ctx,image,o.enemy.x+bits.gx,o.enemy.y+bits.gy,{left:-width*HALF,top:-height*(1-bits.drop),width,height,mirror:false},o.upright,bits.alpha);
+    ctx.restore();
+  }
+  // One depth layer of the shield: 'rear' before the boss is drawn, 'front' after it. Also the break (front).
+  // The turning plate is one opaque sprite (shieldLook); only the page's re-form fade-in (`up`) changes its alpha.
+  // o: {layer, shield, enemy, plate, arc, feel, clock, upright, reduced, alive, tint, image(name)}
   function shield(ctx,o){
     const d=F(),m=M(),T=d.textures;
     if(!textures(o.image,[T.front,T.cracked,T.side,T.rear,T.shards]))return false;
     const sh=o.shield,state=advance(sh,o.clock);
     if(!o.alive)return true;
-    if(sh.down>0){
-      const bits=o.layer==='front'&&m.shards(sh,o.feel,o.plate,o.reduced,d);if(!bits)return true;
-      const image=o.image(T.shards),width=m.shieldBox('front',sh.angle,o.plate,o.arc,o.upright,o.image(T.front),d).width*(1+bits.grow),height=width*image.height/image.width;
-      sprite(ctx,image,o.enemy.x+bits.gx,o.enemy.y+bits.gy,{left:-width*HALF,top:-height*(1-bits.drop),width,height,mirror:false},o.upright,bits.alpha);
-      return true;
-    }
-    const shake=m.crackShake(state,o.reduced,d);
-    for(const v of m.shieldViews(sh.angle,d)){
-      if(v.depth!==o.layer)continue;
-      const image=o.image(m.shieldTexture(v.view,state.phase,d)),box=m.shieldBox(v.view,sh.angle,o.plate,o.arc,o.upright,image,d);
-      sprite(ctx,image,o.enemy.x+box.gx+shake,o.enemy.y+box.gy,box,o.upright,v.weight*sh.up);
-    }
+    if(sh.down>0){if(o.layer==='front')shatter(ctx,o,sh,d,m);return true;}
+    const v=m.shieldLook(sh.angle,d);if(v.depth!==o.layer)return true;
+    const image=o.image(m.shieldTexture(v.view,state.phase,d)),box=m.squashBox(m.shieldBox(v.view,sh.angle,o.plate,o.arc,o.upright,image,d),v.squash);
+    sprite(ctx,image,o.enemy.x+box.gx+m.crackShake(state,o.reduced,d),o.enemy.y+box.gy,box,o.upright,sh.up);
     return true;
   }
 

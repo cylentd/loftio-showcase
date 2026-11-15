@@ -16,6 +16,13 @@
     faceOffset: 0.18, rimLightWidth: 0.07, rimLightStart: 1.08, rimLightEnd: 1.86,
     cutWidth: 0.035, stoneCuts: [[0.78, 0.91], [1.92, 0.87], [3.9, 0.9]],
     capRim: 0.79, capInset: 0.08, capSheen: 0.58,
+    // Living-magic bumper art (LM6a). The opaque body spans 174 of each 192 px texture (alpha bbox, 2026-11-15), so a width of
+    // 2.2 radii puts the body's edge on the collider (32 units at radius 16). The pack README's 2.6 left it 4 units past the
+    // collider on each side; the full-screen boss-layout reference draws them smaller still. A hit brightens the art by up to 35%.
+    bumperArtWidth: 2.2, bumperArtHitGlow: 0.35,
+    // Its contact shadow, in radii, on the floor plane: collider-wide, nudged right and down away from the upper-left light.
+    // The stone's 1.22-wide shadow read as a hole round the smaller painted body (captures, 2026-11-15).
+    bumperArtShadow: Object.freeze({ x: 0.1, y: 0.3, width: 1, depth: 0.34 }),
     uiTokens: Object.freeze({
       surface: '--scene-actions-bg', recess: '--scene-actions-bg', worldEdge: '--scene-actions-edge',
       frameLight: '--controls-surface', frameShade: '--controls-edge', frameEdge: '--controls-edge',

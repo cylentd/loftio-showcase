@@ -13,6 +13,7 @@
   const predicting=()=>!!host?.camera()?.predicting;
   const paused=()=>!!host?.paused();  // Training coaches in its own words, so the cues stay quiet while it runs
   const live=()=>!!host&&!predicting()&&!paused();
+  const style=()=>host.throwStyle(); // the throw style in use, read each time a cue is written (one style at a time)
   const list=ids=>{const named=ids.map(id=>host.names[id]);return named.length<2?named.join(''):named.slice(0,-1).join(copy.listSep)+copy.and+named.at(-1)};
 
   function cue(kind,text){
@@ -41,7 +42,7 @@
   function onFling(id){
     if(!live())return;
     const body=host.s.bodies[id];
-    if(body?.special==='springy')cue('special-effect',fill(copy.cue.effect,{name:host.names[id],special:host.specials.springy,effect:copy.launchEffect.springy}));
+    if(body?.special==='springy')cue('special-effect',fill(copy.cue.effect,{name:host.names[id],special:host.specials.springy,effect:copy.launchEffect.springy[style()]}));
   }
   function onHit(body,weak,amount){
     if(!live())return;
@@ -115,7 +116,7 @@
   function readyCues(){
     return ready().map(id=>{
       const trait=host.kind(id);
-      return {kind:'special-ready',text:fill(copy.cue.ready,{name:host.names[id],special:host.specials[trait],effect:fill(copy.effect[trait],{amount:host.specialBonus[trait]})})};
+      return {kind:'special-ready',text:fill(copy.cue.ready,{name:host.names[id],special:host.specials[trait],throw:copy.throwWord[style()],effect:fill(copy.effect[trait],{amount:host.specialBonus[trait]})})};
     });
   }
 

@@ -91,13 +91,15 @@
     const lane=s.warn.angle+script.escapeTurn;
     return {x:actor.x+Math.cos(lane),y:actor.y+Math.sin(lane)};
   }
-  // The ghost hand's drag, in arena units: from the resident to the point it is pulled back to.
+  // The ghost hand's drag, in arena units, for the throw style in use: from the resident to where the hand ends, swiped
+  // toward the shot (fling) or pulled back against it (sling). motion names which, for the view.
   function gesture(){
     const beat=spec(),goal=running()&&state.phase==='show'&&beat.aim?target(beat.aim):null;
     if(!goal)return null;
     const actor=host.s.bodies[beat.aim.actor],launch=Math.atan2(goal.y-actor.y,goal.x-actor.x);
-    return {id:beat.aim.actor,from:{x:actor.x,y:actor.y},launch,
-      to:{x:actor.x-Math.cos(launch)*script.demoPull,y:actor.y-Math.sin(launch)*script.demoPull}};
+    const hand=script.demoHand[host.throwStyle()],reach=hand.along*script.demoPull;
+    return {id:beat.aim.actor,from:{x:actor.x,y:actor.y},launch,motion:hand.motion,
+      to:{x:actor.x+Math.cos(launch)*reach,y:actor.y+Math.sin(launch)*reach}};
   }
   // Pixels inside the board, beside the acting resident (the arena's middle when the beat has none).
   function anchor(){
@@ -106,7 +108,7 @@
     return {id:id??null,x:at.x*s.scale,y:at.y*s.scale};
   }
   function snapshot(){
-    return {state,gesture:gesture(),anchor:running()?anchor():null};
+    return {state,style:host.throwStyle(),top:host.hudTop*host.s.scale,gesture:gesture(),anchor:running()?anchor():null};
   }
   function announce(){
     if(view&&!predicting())view.onBeat(snapshot());
@@ -198,6 +200,9 @@
     else restart();
   }
 
+  // The throw style changed: the view redraws its line and the ghost hand for the new style.
+  function restyle(){if(host)announce()}
+
   root.LoftRumbleTutorialStage=Object.freeze({install,installed:()=>!!host,settled,state:()=>state,view:()=>view,
-    harmless:running,replay,layout,reset,step,tick,onGrab,onFling,onHit,onAlly,onSpecial,onImpact});
+    harmless:running,replay,layout,reset,step,tick,onGrab,onFling,onHit,onAlly,onSpecial,onImpact,restyle});
 })(globalThis);

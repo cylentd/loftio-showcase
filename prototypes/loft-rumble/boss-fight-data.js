@@ -27,13 +27,25 @@
       // Side (its own canvas, the left-hand plate; mirrored for the right): content 0.099-0.901 wide, 0.038-0.962 tall,
       // centred at half height.
       side:freeze({spanX:.802,spanY:.924,centreY:.5}),
-      // Radians either side of a view boundary over which the two views cross-fade, so a turn never pops.
-      blend:.2,
+      // Radians either side of a view boundary over which the plate turns: the one opaque view narrows to turnSquash of
+      // its width at the boundary, swaps to its neighbour at that same width, and widens back (a card turning). The
+      // 2026-11-15 cross-fade read as a fading ghost (owner); turnSquash 0.3 tuned by eye in the shield-readable captures.
+      blend:.2,turnSquash:.3,
       // A new crack shakes the plate this many px for this long (brief: squash, sharp timing). Reduced motion: none.
       crackLife:.25,crackShake:2.5,crackShakeHz:28,
-      // Break: the shard sprite (one fragment cluster, spec) bursts where the plate broke, spreads to grow x its
-      // width, drops dropShare of its height to the floor and fades out over life. It is drawn at the plate's width.
-      shards:freeze({life:.6,grow:.35,dropShare:.25})
+      // Break: the shard sprite (one fragment cluster, spec) bursts where the plate broke at scale x the plate's width,
+      // spreads by grow more, drops dropShare of its height to the floor, holds full strength for its first hold share
+      // and fades out over life (reduced motion: reducedLife, no spread, no drop). A rimBlur px glow in the page's
+      // seed-glow token lifts it off the bark boss and the sand. Owner, 2026-11-15: the 0.6 s plate-sized burst was
+      // hard to see; sizes and times tuned by eye in docs/testing/ui/rumble-boss-shield-readable.
+      // (scale 1.5 covered the boss's face in the first capture.)
+      shards:freeze({life:1,reducedLife:.5,hold:.4,scale:1.25,grow:.5,dropShare:.25,rimBlur:8}),
+      // Break flash: a white core disc (coreShare of life) and an amber ring (the page's warning token) at the plate's
+      // middle height. Radii in plate radii: the ring starts at start and grows by grow (reduced motion: no growth).
+      // width: the ring's line in px at its start, thinning as it fades.
+      // (start 0.35 hid the ring under the shards in the first capture.) The amber alone was faint on the sand at
+      // 1500x920, so a dark edge (the page's foreground token) edge px wider at edgeAlpha of the ring's alpha sits under it.
+      flash:freeze({life:.45,coreShare:.35,coreAlpha:.9,start:.6,grow:1.3,width:7,edge:3,edgeAlpha:.55})
     }),
     beam:freeze({
       // The strip's glow is 0.274 of its height (rows 0.370-0.644); its bright core is 0.068 (0.466-0.534). The glow is

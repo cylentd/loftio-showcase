@@ -42,7 +42,7 @@
         weakKind:'weak spot ×3',
         ally:'{actor} bumped {ally}: {ability} hit Bramble for {amount}',
         allyLaunch:'{actor} bumped {ally}: {ability} fired',
-        ready:'{name} {special} ready: next sling {effect}',
+        ready:'{name} {special} ready: next {throw} {effect}',   // {throw}: throwWord for the style in use
         effect:'{name} {special}: {effect}',
         stun:'{names} stunned for {seconds} s',
         danger:'{attack} on {names} in {seconds} s: move out',
@@ -62,7 +62,9 @@
         heavy:'adds +{amount} on impact',
         piercing:'adds +{amount} piercing damage'
       }),
-      launchEffect:Object.freeze({springy:'faster and farther this sling'}),
+      // Keyed by throw style (one style at a time, owner 2026-11-15): read when the cue is written, so a switch shows at once.
+      throwWord:Object.freeze({fling:'fling',sling:'sling'}),
+      launchEffect:Object.freeze({springy:Object.freeze({fling:'faster and farther this fling',sling:'faster and farther this sling'})}),
       // Words on the field: names and single words only, never a sentence (owner, 2026-11-14).
       field:Object.freeze({
         rootSnap:'Root snap',              // the close-range danger's name at the boss bar

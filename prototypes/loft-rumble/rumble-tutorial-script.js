@@ -48,7 +48,13 @@
   const REGRANT_SECONDS=1.5;  // sim seconds a missed special waits before Puff's portrait refills (the old practice's value)
   const SHIELD_HOLD=3600;     // seconds of "shield down" written whenever it drops below half: Training never blocks a sling
   const PARK_X=-.5;           // parked residents stand this fraction of the arena width left of its edge
-  const DEMO_PULL=45;         // logical units the ghost hand drags back; past FEEL.cancelRadius (30), so the shot is a real sling
+  const DEMO_PULL=45;         // logical units the ghost hand drags; past FEEL.cancelRadius (30), so the shot is a real throw
+  // The ghost hand per throw style (one style at a time, owner 2026-11-15): sling pulls back against the shot, fling swipes
+  // along it. along: +1 moves the hand toward the shot, -1 away from it.
+  const DEMO_HAND=Object.freeze({
+    fling:Object.freeze({motion:'swipe',along:1}),
+    sling:Object.freeze({motion:'pull',along:-1})
+  });
   root.LoftRumbleTutorialScript=Object.freeze({
     flagParam:'training',                // Training runs only on a page opened with ?training, until the real view (U5) lands
     storageKey:'loftRumbleTraining',     // versioned record {version,status}; the old practice keys are never read or written
@@ -64,6 +70,7 @@
     shieldHold:SHIELD_HOLD,
     parkX:PARK_X,
     demoPull:DEMO_PULL,
+    demoHand:DEMO_HAND,
     escapeTurn:Math.PI/2                 // the dodge demo slings Chomper at a right angle to the locked lane
   });
 })(globalThis);
