@@ -42,8 +42,10 @@
       }
     }
     ctx.restore();
+    // The living-magic boss draws its own hop shadow (boss-fight.js shadow); a second flat oval under it reads as a smudge.
+    const rigShadow=!!root.LoftRumbleBossFight?.ownsShadow(ctx,{enabled:root.LoftRumbleStorybook.enabled(session),image:name=>session.game.artwork?.available(name)});
     ctx.save();ctx.fillStyle=config.shadowColor;ctx.globalAlpha=config.contactShadowAlpha;
-    for(const body of [...session.enemies().map(target=>({...target,y:bounds(session,target).groundY})),...ids.map(id=>({...s.bodies[id],radius:C.radius}))]){
+    for(const body of [...(rigShadow?[]:session.enemies()).map(target=>({...target,y:bounds(session,target).groundY})),...ids.map(id=>({...s.bodies[id],radius:C.radius}))]){
       ctx.beginPath();ctx.ellipse(body.x,body.y,body.radius,body.radius*config.contactShadowHeight,0,0,Math.PI*2);ctx.fill();
     }
     ctx.restore();

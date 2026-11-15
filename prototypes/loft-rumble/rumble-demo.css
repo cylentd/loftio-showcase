@@ -1,64 +1,122 @@
+@import url('results-tokens.css');
 [data-rumble-demo] #menu > [hidden]{display:none!important}
 .top .demo-back{grid-column:1/-1;grid-row:3;display:flex;align-items:center;min-height:var(--control);color:var(--foreground);font-size:var(--text-sm);text-decoration:underline}
 .demo-back:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* Results screen, living magic (LM6c; owner's results kit, assets/living-magic/results-v1/README.md; approved concept in the
+   Codex worktree, references/approved-results-screen.png). Layers, back to front: plum material tiled at its natural scale,
+   the thin root frame (nine-slice), then content. This viewport scene pins the celebration and action footer while only
+   damage scrolls. L4's footer guarantee applies; the modal's outer clearance does not. Escape never dismisses it. */
 #demo-results{
-  --demo-width:320px;--demo-pad:20px;--demo-gap:16px;--demo-title:25px;--demo-value:28px;--demo-label:13px;--demo-button:46px;
-  position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:min(var(--demo-width),calc(100% - var(--demo-pad)*2));box-sizing:border-box;
-  max-height:calc(100% - var(--demo-gap)*2);overflow:auto;overflow-wrap:anywhere;
-  padding:var(--demo-pad);border:1px solid var(--border);border-radius:var(--radius);
-  background:linear-gradient(var(--card),var(--card)),var(--background);color:var(--foreground);display:grid;gap:var(--demo-gap);text-align:center;
+  position:fixed;z-index:2;inset:0;width:100%;height:100%;
+  box-sizing:border-box;padding:calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-top)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-right)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-bottom)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-left));
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto;isolation:isolate;background:var(--lm-plum);
+  color:var(--lm-cream);font-family:var(--font-body);text-align:center;overflow-wrap:anywhere;
+  animation:lm-results-in var(--lm-in) ease-out both;
 }
 #demo-results[hidden]{display:none}
-#demo-results h2{margin:0;font-size:var(--demo-title);color:var(--warning)}
-#demo-results[data-outcome="defeat"] h2{color:var(--danger)}
-#demo-results p{margin:0;color:var(--muted-foreground);font-size:var(--demo-label);line-height:1.5}
-#demo-results > dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--demo-gap);margin:0}
-#demo-results > dl dt{font-size:var(--demo-label);color:var(--muted-foreground)}
-#demo-results > dl dd{margin:0;font-size:var(--demo-value);font-weight:bold;font-variant-numeric:tabular-nums}
-#demo-replay{min-height:var(--demo-button);background:var(--primary);color:var(--background);font-weight:bold}
-#demo-replay:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
-
-/* Results on the stage: the Runeforge results panel (LOFT-RUMBLE-UI-DIRECTIONS.md, Components): a chamfered blackened
-   steel plate, a 2 px Night Ink rim, one polished bevel at the top left, Pearl text. Gold only on a victory title.
-   The panel never closes from a tap outside it; only its own buttons act. */
-[data-rumble-demo] #demo-results{
-  --rf-steel:#1f1b27;--rf-bevel:#b8b2c8;--rf-ink:#1b1026;--rf-pearl:#f6efe6;--rf-gold:#f5b62e;--rf-teal:#1fd6a8;--rf-channel:#3a1a52;
-  --rf-rim:2px;--rf-chamfer:14px;--rf-shadow:0 16px 64px #0008;
-  --rf-row:52px;--rf-face:36px;--rf-bar:5px;--rf-name:15px;--rf-part:14px;--rf-counts:12px;--rf-indent:12px;--rf-tight:8px;
-  --rf-plate:polygon(var(--rf-chamfer) 0,calc(100% - var(--rf-chamfer)) 0,100% var(--rf-chamfer),100% calc(100% - var(--rf-chamfer)),calc(100% - var(--rf-chamfer)) 100%,var(--rf-chamfer) 100%,0 calc(100% - var(--rf-chamfer)),0 var(--rf-chamfer));
-  display:flex;flex-direction:column;overflow:hidden;isolation:isolate;
-  background:var(--rf-ink);color:var(--rf-pearl);border:0;border-radius:0;clip-path:var(--rf-plate);filter:drop-shadow(var(--rf-shadow));
-}
-[data-rumble-demo] #demo-results[hidden]{display:none}
+[data-rumble-demo]:has(#demo-results:not([hidden])) :is(.top,.roster){visibility:hidden}
+#demo-results > :is(.results-celebration,.results-body,.results-actions){width:min(100%,var(--lm-content-width));justify-self:center;min-width:0}
+.results-celebration{display:flex;flex-direction:column;gap:var(--lm-tight);min-height:0}
+#demo-results::before{content:'';position:absolute;inset:var(--lm-material-inset);z-index:-2;border-radius:var(--lm-material-radius);
+  background:var(--lm-plum) url('art/results-panel-surface.webp') repeat 0 0/var(--lm-material-tile);box-shadow:var(--lm-drop)}
+#demo-results::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border:var(--lm-frame-slice) solid transparent;
+  border-image:url('art/results-frame.webp') var(--lm-frame-inset)/var(--lm-frame-slice) stretch}
 /* A scrim over the arena while the results show: the fight behind is over, and the panel reads as the only thing to act on. */
 [data-rumble-demo] #arena:has(> #demo-results:not([hidden]))::after{content:'';position:absolute;inset:0;z-index:1;background:var(--stage-sheet-backdrop)}
-[data-rumble-demo] #demo-results::before{content:'';position:absolute;inset:var(--rf-rim);z-index:-1;background:var(--rf-steel);clip-path:var(--rf-plate);box-shadow:inset var(--rf-rim) var(--rf-rim) 0 var(--rf-bevel)}
-[data-rumble-demo] #demo-results > *{flex:none}
-[data-rumble-demo] #demo-results h2{color:var(--rf-pearl)}
-[data-rumble-demo] #demo-results[data-outcome="victory"] h2{color:var(--rf-gold)}
-[data-rumble-demo] #demo-results :is(p,dt,h3){color:var(--rf-bevel)}
-[data-rumble-demo] #demo-replay{border:var(--rf-rim) solid var(--rf-ink);border-radius:0;background:var(--rf-teal);color:var(--rf-ink);clip-path:var(--rf-plate)}
-[data-rumble-demo] #demo-results button:focus-visible{outline:var(--rf-rim) solid var(--rf-pearl);outline-offset:calc(var(--rf-rim) * -2);clip-path:none}
+.results-crest{position:absolute;left:50%;top:var(--lm-crest-top);width:var(--lm-crest);aspect-ratio:1;transform:translateX(-50%);
+  background:url('art/results-spiral-crest.webp') center/contain no-repeat;pointer-events:none}
 
-/* Damage per resident: the body scrolls, the Play Again button stays in view (standards L4). */
-#demo-damage{flex:0 1 auto!important;min-height:0;overflow:auto;text-align:left;border-top:var(--rf-rim) solid var(--rf-channel);padding-top:var(--rf-tight)}
-#demo-damage h3{margin:0 0 var(--rf-tight);font-size:var(--demo-label);font-weight:normal}
-#demo-damage-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--rf-tight)}
-.damage-row{
-  width:100%;min-height:var(--rf-row);box-sizing:border-box;padding:var(--rf-tight);border:0;border-radius:0;background:transparent;color:inherit;font:inherit;cursor:pointer;
-  display:grid;grid-template-columns:var(--rf-face) minmax(0,1fr) auto;grid-template-rows:auto auto var(--rf-bar);column-gap:var(--demo-pad);row-gap:var(--rf-tight);align-items:center;text-align:left;
-}
-.damage-row[aria-expanded="true"]{background:var(--rf-channel)}
-.damage-face{grid-row:1/4;width:var(--rf-face);height:var(--rf-face);object-fit:contain}
-.damage-name{font-size:var(--rf-name);font-weight:bold}
-.damage-total{font-size:var(--rf-name);font-weight:bold;font-variant-numeric:tabular-nums}
-.damage-counts{grid-column:2/4;margin-top:calc(var(--rf-tight) / -2);font-size:var(--rf-counts);color:var(--rf-bevel);white-space:nowrap;font-variant-numeric:tabular-nums}
-.damage-bar{grid-column:2/4;height:var(--rf-bar);background:var(--rf-channel)}
-.damage-bar::before{content:'';display:block;height:100%;width:calc(var(--fill) * 100%);background:var(--rf-teal)}
-#demo-breakdown{margin:0;padding:var(--rf-tight) var(--rf-tight) var(--rf-tight) calc(var(--rf-face) + var(--demo-pad) + var(--rf-tight));display:grid;gap:var(--rf-tight);font-size:var(--rf-part);background:var(--rf-channel)}
+.results-body{min-height:0;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:var(--lm-gap);
+  scrollbar-width:thin;scrollbar-color:var(--lm-line) transparent}
+.results-body > *{flex:none}
+.results-body{box-sizing:border-box;padding-block:var(--lm-scroll-pad);scroll-padding-block:var(--lm-scroll-pad)}
+.damage-row{scroll-margin-block:var(--lm-scroll-pad)}
+.results-head{display:flex;flex-direction:column}
+#demo-results h2{position:relative;z-index:1;margin:0;font-size:var(--lm-title);font-weight:800;line-height:1.15;color:var(--lm-amber);
+  text-shadow:var(--lm-title-shadow)}
+#demo-results[data-outcome="defeat"] h2{color:var(--lm-rose)}
+#demo-results h2{background:var(--lm-label-surface);border-radius:var(--lm-tight);padding-block:var(--lm-tight)}
+.results-stage{position:relative;aspect-ratio:var(--lm-stage-w)/var(--lm-stage-h);align-self:center;
+  width:min(100%,calc(var(--lm-stage-max) * var(--lm-stage-w) / var(--lm-stage-h)));
+  margin-top:0;
+  background:url('art/results-victory-stage.webp') center/contain no-repeat}
+#demo-results[data-outcome="defeat"] .results-stage{filter:var(--lm-defeat-stage)}
+/* Each resident stands on the stage floor (--ground of the stage height) with its own slot: x, size, tilt and a small step
+   back. The portrait's transparent foot rows (--foot) are pulled under the floor line so the feet touch it. */
+.results-figure{position:absolute;z-index:var(--layer);left:calc(var(--x) * 100%);bottom:calc((1 - var(--ground) + var(--back)) * 100%);height:calc(var(--size) * 100%);
+  display:flex;align-items:flex-end;justify-content:center;transform:translateX(-50%) rotate(var(--tilt));transform-origin:50% 100%;
+  animation:lm-figure-in var(--lm-in) ease-out both;animation-delay:calc(var(--delay) * var(--lm-stagger))}
+.results-figure img{height:100%;width:auto;max-width:none;transform:translateY(calc(var(--foot) * 100%))}
+.results-figure::before{content:'';position:absolute;left:10%;right:10%;bottom:-6%;height:16%;border-radius:50%;
+  background:radial-gradient(closest-side,var(--lm-shadow),transparent)}
+#demo-results p{margin:0;color:var(--lm-muted);font-size:var(--lm-body);line-height:1.4}
+
+/* Summary: one item per results.summary key; items wrap into another row in reading order. */
+/* The divider sits on each item's start edge, pulled one line-weight outside; the first item of every row has its line
+   clipped by the list, so a wrapped row never starts with a stray divider. */
+.results-summary{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--lm-gap) 0;margin:0;overflow:hidden}
+.results-summary > div{flex:1 1 var(--lm-fact-min);display:flex;flex-direction:column;justify-content:space-between;padding:0 var(--lm-tight);
+  margin-inline-start:calc(var(--lm-line-weight) * -1);border-inline-start:var(--lm-line-weight) solid var(--lm-line)}
+.results-summary dt{font-size:var(--lm-body);color:var(--lm-muted)}
+.results-summary dd{margin:0;font-size:var(--lm-value);font-weight:800;font-variant-numeric:tabular-nums}
+.results-divider{height:var(--lm-divider-crest);background:url('art/results-spiral-crest.webp') center/contain no-repeat,
+  linear-gradient(90deg,transparent,var(--lm-line) 20%,var(--lm-line) 80%,transparent) center/100% var(--lm-line-weight) no-repeat}
+
+/* Damage per resident: one shared row component, collapsed by default, one open at a time. */
+#demo-damage{text-align:left}
+#demo-damage h3{margin:0 0 var(--lm-tight);font-size:var(--lm-heading);font-style:italic;font-weight:800;color:var(--lm-cream)}
+#demo-damage-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--lm-gap)}
+.results-hero{border:0 solid transparent;border-image:url('art/results-row-surface.webp') var(--lm-row-inset) fill/var(--lm-row-slice) stretch;
+  --hero:var(--lm-teal)}
+.results-hero[data-colour="violet"]{--hero:var(--lm-violet)}
+.results-hero[data-colour="blue"]{--hero:var(--lm-blue)}
+.results-hero[data-colour="amber"]{--hero:var(--lm-amber-hero)}
+.results-hero[data-colour="rose"]{--hero:var(--lm-rose-hero)}
+.results-hero[data-colour="lime"]{--hero:var(--lm-lime)}
+.results-hero[data-colour="coral"]{--hero:var(--lm-coral)}
+.damage-row{width:100%;min-height:var(--lm-button);box-sizing:border-box;padding:var(--lm-row-pad);border:0;border-radius:var(--lm-radius);
+  background:transparent;color:inherit;font:inherit;cursor:pointer;text-align:left;
+  display:grid;grid-template-columns:var(--lm-face) minmax(0,1fr) auto var(--lm-chevron);grid-template-rows:auto auto var(--lm-bar);
+  column-gap:var(--lm-gap);row-gap:var(--lm-tight);align-items:center}
+.damage-face{grid-row:1/4;width:var(--lm-face);height:var(--lm-face);object-fit:contain}
+.damage-name{font-size:var(--lm-name);font-weight:800;line-height:1.2}
+.damage-total{font-size:var(--lm-name);font-weight:800;font-variant-numeric:tabular-nums}
+.results-chevron{width:var(--lm-chevron);height:var(--lm-chevron);background:url('art/results-chevron.webp') center/contain no-repeat;
+  transition:transform var(--lm-turn) ease-out}
+.damage-row[aria-expanded="true"] .results-chevron{transform:rotate(90deg)}
+.damage-counts{grid-column:2/5;min-width:0;font-size:var(--lm-helper);color:var(--lm-muted);white-space:normal;font-variant-numeric:tabular-nums}
+.damage-counts [data-count]{display:inline-block;max-width:100%;overflow-wrap:anywhere}
+/* Contribution bar: one scale across the team (fill against the top total). The ui-v1 health-fill strip, tinted to the
+   resident's colour by masking, over a thin solid core; both cropped to the fill, never squashed. */
+.damage-bar{grid-column:2/5;position:relative;height:var(--lm-bar);border-radius:var(--lm-bar);background:var(--lm-track)}
+.damage-bar::before,.damage-bar::after{content:'';position:absolute;inset:0;clip-path:inset(0 calc((1 - var(--fill)) * 100%) 0 0)}
+.damage-bar::before{inset:calc((var(--lm-bar) - var(--lm-bar-core)) / 2) 0;border-radius:var(--lm-bar-core);background:var(--hero)}
+.damage-bar::after{background:var(--hero);-webkit-mask:url('art/hud-health-fill.webp') 0 50%/100% 100% no-repeat;mask:url('art/hud-health-fill.webp') 0 50%/100% 100% no-repeat}
+#demo-breakdown{margin:0 var(--lm-gap) var(--lm-gap);padding:var(--lm-row-pad);border-radius:var(--lm-radius);background:var(--lm-well);
+  display:grid;gap:var(--lm-tight);font-size:var(--lm-body);text-align:left}
 #demo-breakdown[hidden]{display:none}
-#demo-breakdown > div{display:flex;justify-content:space-between;gap:var(--rf-indent)}
-#demo-breakdown dt{color:var(--rf-bevel)}
-#demo-breakdown dd{margin:0;display:flex;gap:var(--rf-indent);font-variant-numeric:tabular-nums;font-weight:bold}
-#demo-breakdown .damage-count{min-width:3ch;text-align:right;font-weight:normal;color:var(--rf-bevel)}
+#demo-breakdown > div{display:flex;justify-content:space-between;gap:var(--lm-gap)}
+#demo-breakdown dt{color:var(--lm-muted)}
+#demo-breakdown dd{margin:0;display:flex;gap:var(--lm-gap);font-weight:800;font-variant-numeric:tabular-nums}
+#demo-breakdown .damage-count{min-width:var(--lm-count-col);text-align:right;font-weight:normal;color:var(--lm-muted)}
+#demo-breakdown .results-note{display:block;font-size:var(--lm-helper);color:var(--lm-muted)}
+/* Teammates bumped counts setups, not damage: its own subsection under the damage parts. */
+#demo-breakdown > .results-setoff{margin-top:var(--lm-tight);padding-top:var(--lm-gap);border-top:var(--lm-line-weight) solid var(--lm-line)}
+
+/* Footer: one primary action first (teal), any further actions on the plum base; they wrap or stack, never scroll away. */
+.results-actions{flex:none;display:flex;flex-wrap:wrap;gap:var(--lm-gap);padding-top:var(--lm-gap)}
+.results-actions > *{flex:1 1 var(--lm-action-min);min-height:var(--lm-button);box-sizing:border-box;padding:0 var(--lm-button-pad);
+  display:flex;align-items:center;justify-content:center;border:0 solid transparent;background:none;cursor:pointer;
+  border-image:url('art/results-button-secondary.webp') var(--lm-button-inset) fill/var(--lm-button-slice) stretch;
+  color:var(--lm-cream);font:800 var(--lm-action-2)/1.2 var(--font-body);text-decoration:none}
+.results-actions > .results-primary{flex-basis:100%;border-image-source:url('art/results-button-primary.webp');color:var(--lm-cream);font-size:var(--lm-action)}
+.results-action-label{background:var(--lm-label-surface);padding:var(--lm-label-pad);border-radius:var(--lm-tight)}
+#demo-results button:focus-visible{outline:var(--lm-focus) solid var(--lm-amber);outline-offset:calc(-1 * var(--lm-focus))}
+
+@keyframes lm-results-in{from{opacity:0;translate:0 var(--lm-rise)}}
+@keyframes lm-figure-in{from{opacity:0;translate:0 var(--lm-rise)}}
+@media (prefers-reduced-motion:reduce){
+  #demo-results,.results-figure{animation:none}
+  .results-chevron{transition:none}
+}

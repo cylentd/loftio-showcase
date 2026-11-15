@@ -135,6 +135,104 @@
     return {points:[{x,y},{x:-x,y:-y}],size,alpha,angle};
   }
 
+  // ---- Beam look (concept: mockups/rumble-living-magic/beam-bidirectional-and-shield.webp, CHARGE / FIRE / FADE) ----
+  // All in the beam's own frame like beamSegments. Look only: the hit test reads FEEL.beamHalf and the warning, never this.
+  // Distances from the boss along +x (fore) and -x (back) to the play rect's edge, less the end glow's inset.
+  function wallReach(enemy,angle,rect,F){
+    const dx=Math.cos(angle),dy=Math.sin(angle),inset=F.beam.end.inset;
+    const along=s=>Math.min(...[[s*dx,rect.right-enemy.x],[-s*dx,enemy.x-rect.left],[s*dy,rect.bottom-enemy.y],[-s*dy,enemy.y-rect.top]]
+      .filter(([d])=>d>0).map(([d,room])=>room/d));
+    return {fore:along(1)-inset,back:along(-1)-inset};
+  }
+  // CHARGE: chevrons from the collider edge to each wall, pointing outward, crawling outward with the clock.
+  function laneChevrons({fore,back,half,radius,clock,charge,reduced},F){
+    const C=F.beam.chevrons,size=C.size*half,offset=reduced?0:((clock*C.speed)%C.spacing+C.spacing)%C.spacing;
+    const alpha=C.alpha+C.charge*clamp01(charge),out=[];
+    for(const [dir,end] of [[1,fore],[-1,back]])
+      for(let x=radius+size*HALF+offset;x+size*HALF<=end;x+=C.spacing)out.push({x:dir*x,dir,size,alpha});
+    return out;
+  }
+  // FIRE then FADE: strength k, glow and core half-widths, and the bright bands running outward. null when nothing shows.
+  function beamLook(fx,feel,radius,length,F,reduced){
+    const seg=beamSegments(fx,feel,radius,length,F,reduced);if(!seg)return null;
+    const B=F.beam,after=fx.t-feel.windup-feel.travel,hold=B.hold*feel.beamFade,fading=after>=hold;
+    const p=fading?(after-hold)/(feel.beamFade-hold):0,k=(1-p)*(1-p),since=fx.t-feel.windup;
+    const breathe=reduced?1:1-B.pulse.depth*HALF*(1-Math.cos(TURN*B.pulse.hz*since));
+    const reach=seg.lane.reach,runs=[];
+    if(!reduced)for(let x=radius+(since*B.runs.speed)%B.runs.spacing-B.runs.length;x<reach;x+=B.runs.spacing){
+      const from=Math.max(radius,x),to=Math.min(reach,x+B.runs.length);if(to<=from)continue;
+      runs.push({from,to,alpha:B.runs.alpha*k},{from:-from,to:-to,alpha:B.runs.alpha*k});
+    }
+    return {phase:fading?'fade':'fire',k,reach,glowHalf:B.glow.half*feel.beamHalf,glowAlpha:B.glow.alpha*k,
+      coreHalf:B.core.half*feel.beamHalf*breathe,coreAlpha:B.core.alpha*k,runs};
+  }
+  // A fixed pseudo-random share in [0, 1) per particle and channel, so the particles are a pure function of time.
+  const shares=H=>(i,channel)=>{const v=Math.sin((i+1)*H.index+channel*H.channel)*H.scale;return v-Math.floor(v);};
+  const SEED_SIDE=97,SEED_X=1,SEED_Y=2,SEED_AGE=3,SEED_SPIN=4;  // channels of share()
+  // FIRE: leaves and sparks streaming outward along each beam. FADE: a few leaves drifting off as the beam dissolves.
+  // Each particle's centre plus half its size stays inside spread of beamHalf. Reduced motion: none.
+  function beamParticles(fx,feel,radius,length,F,reduced){
+    const look=reduced?null:beamLook(fx,feel,radius,length,F,false);if(!look)return [];
+    const P=F.beam.particles,share=shares(P.hash),span=look.reach-radius,room=size=>P.spread*feel.beamHalf-size*HALF,out=[];
+    const since=fx.t-feel.windup,after=since-feel.travel,fadeAt=F.beam.hold*feel.beamFade;
+    for(const dir of [1,-1]){
+      if(look.phase==='fire')for(let i=0;i<P.count;i++){const n=i+(dir<0?SEED_SIDE:0),kind=i%P.leafEvery===0?'leaf':'spark';
+        const age=(since/P.life+share(n,SEED_AGE))%1,size=P.size[kind];
+        out.push({kind,crop:i%P.crops[kind].length,size,alpha:Math.sin(age*Math.PI)*look.k,
+          x:dir*(radius+span*Math.min(1,share(n,SEED_X)*(1-P.run)+age*P.run)),y:(2*share(n,SEED_Y)-1)*room(size),
+          spin:TURN*(share(n,SEED_SPIN)+P.spin*age*P.life)});}
+      else for(let i=0;i<P.fadeCount;i++){const n=i+(dir<0?SEED_SIDE:0),size=P.size.leaf,p=(after-fadeAt)/(feel.beamFade-fadeAt);
+        const y=(2*share(n,SEED_Y)-1)*room(size)+P.sink*p,limit=room(size);
+        out.push({kind:'leaf',crop:i%P.crops.leaf.length,size,alpha:1-p,
+          x:dir*Math.min(look.reach,radius+span*(i+share(n,SEED_X))/P.fadeCount+P.drift*p),y:Math.max(-limit,Math.min(limit,y)),
+          spin:TURN*(share(n,SEED_SPIN)+P.spin*p*feel.beamFade)});}
+    }
+    return out;
+  }
+  // The spiral glows where each beam meets the wall, once its reach gets there. ends: wallReach's {fore, back}.
+  function beamEnds(reach,ends,k,radius,F){
+    const size=F.beam.end.size*radius;
+    return [[1,ends.fore],[-1,ends.back]].filter(([,d])=>d>radius&&reach>=d).map(([dir,d])=>({x:dir*d,size,alpha:k}));
+  }
+
+  // ---- Slam landing (LM3b) ----
+  const quadOut=k=>1-(1-k)*(1-k),quadIn=k=>k*k;
+  // Seconds since the Slam landed (the tick that set fx.hit), or null.
+  function slamSince(fx,feel){
+    if(!fx||!fx.hit||fx.warn.def.id!=='slam')return null;
+    return fx.t-feel.windup-feel.travel;
+  }
+  // The game's zone radius: max(slamMin, slamRadius x the shorter arena side) (loft-rumble-realtime.html, slamRadius).
+  const slamZone=(feel,arena)=>Math.max(feel.slamMin,feel.slamRadius*Math.min(arena.w,arena.h));
+  // The crack on the floor. gx, gy: its core, the boss foot (logical units from the collider centre; the foot sits
+  // bossFoot radii below the centre on screen, upright x that on the squashed floor). left, top, width, height: the
+  // upright sprite box at that point. Sized so the farther fissure tip lands on tipShare of the ring radius.
+  function slamCrack({fx,feel,radius,upright,reduced,arena,texture},F){
+    const since=slamSince(fx,feel),C=F.slam.crack;if(since===null||since<0)return null;
+    const fade=since-feel.slamRingLife;if(fade>=C.fade)return null;
+    const gy=F.storybook.bossFoot*radius*upright,tip=C.tipShare*slamZone(feel,arena);
+    const full=Math.sqrt(Math.max(0,tip*tip-gy*gy))/Math.max(C.coreX-C.left,C.right-C.coreX);
+    const width=full*(reduced?1:C.growFrom+(1-C.growFrom)*quadOut(Math.min(1,since/C.grow))),height=width*texture.height/texture.width;
+    return {gx:0,gy,width,height,left:-C.coreX*width,top:-C.coreY*height,alpha:fade<0?1:1-quadIn(fade/C.fade)};
+  }
+  // Debris pieces relative to the foot, upright frame (boss-rig-model.js debris: x, y on the floor, h above it).
+  // Reduced motion: every reducedEvery-th piece, already resting where it lands, fading over its life.
+  function slamDebris({fx,feel,reduced},F,R){
+    const since=slamSince(fx,feel),S=F.slam;if(since===null||since<0)return [];
+    const D=reduced?{...R,debris:R.debris.filter((_,i)=>i%S.reducedEvery===0)}:R;
+    return Rig().debris(since,D,false,reduced).map(p=>({...p,size:p.size*S.debrisScale}));
+  }
+  // The rig's ground shadow in the boss's floor frame: rig space -> local matrix, and its opacity. The hop share is the
+  // rig's own lift channel for the fight's Slam clock (its rise and fall keys mirror the game's hop curve).
+  function groundShadow(o,F,R){
+    const lift=Rig().pose(rigState(o,F,R),R,o.reduced).lift,p={...R.rest,lift},rig=Rig().rig(p,R);
+    const S=F.slam.shadow,foot=R.pivots.foot;
+    // Drop onto the foot line, then widen about the foot: [w,0,0,w,..] scales about (foot.x, foot.y).
+    const place=[S.widen,0,0,S.widen,foot.x*(1-S.widen),foot.y*(1-S.widen)+S.widen*S.drop];
+    return {matrix:Rig().mul(rigBase(o.radius,o.upright,F,R),Rig().mul(place,rig.matrices.shadow)),alpha:rig.shadowAlpha};
+  }
+
   root.LoftRumbleBossFightModel=Object.freeze({rigBase,rigState,pose,shieldViews,shieldLook,squashBox,shieldTexture,shieldBox,
-    SHIELD_PHASES,shieldInitial,shieldNext,crackShake,shards,breakFlash,beamSegments,beamSources});
+    SHIELD_PHASES,shieldInitial,shieldNext,crackShake,shards,breakFlash,beamSegments,beamSources,
+    wallReach,laneChevrons,beamLook,beamParticles,beamEnds,slamSince,slamZone,slamCrack,slamDebris,groundShadow});
 })(typeof window!=='undefined'?window:globalThis);

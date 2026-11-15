@@ -63,7 +63,9 @@
     // Shadow under the hop: at the apex it shrinks to this scale and fades to this opacity.
     shadow:freeze({apexScale:.62,apexAlpha:.45,alpha:.85}),
     // Impact sprite: width as a share of the warning ring's diameter (must sit well inside it), and its fade.
-    impact:freeze({file:'bramble-slam-impact.webp',ringShare:.62,growFrom:.7,life:.62}),
+    // v2 (LM3b, 2026-11-15): the crack without baked rocks; the old bramble-slam-impact.webp stays on disk, unused.
+    // Its fissure tips sit at 0.034-0.966 of the canvas, so they reach 0.58 of the ring radius here.
+    impact:freeze({file:'bramble-slam-impact-v2.webp',ringShare:.62,growFrom:.7,life:.62}),
     // Debris on landing: few, short-lived, independent pieces (spec). dist is a share of the warning radius, so no piece
     // lands outside the zone; h = arc height in boss radii; size in boss radii; life in seconds; spin in turns.
     debrisFiles:freeze({stone:'bramble-particle-stone.webp',bark:'bramble-particle-bark.webp',leaf:'bramble-particle-leaf.webp'}),

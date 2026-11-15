@@ -34,6 +34,16 @@
   function background(session){
     if(!enabled(session)||!images.arena)return false;
     const {ctx,s,C}=session.game;
+    const skins=root.LoftRumbleArenaSkins;
+    const skin=skins?.options.find(option=>option.id===root.document?.documentElement.dataset.arenaSkin);
+    const background=skin?.id!==skins?.defaultId?skin?.background:null;
+    const painted=background&&root.LoftRumbleArt?.available(background.asset);
+    if(painted){
+      const [across,down,span,depth]=background.crop;
+      ctx.drawImage(painted,across*painted.naturalWidth,down*painted.naturalHeight,
+        span*painted.naturalWidth,depth*painted.naturalHeight,0,C.hudTop,s.w,s.h-C.hudTop-C.hudBottom);
+      return true;
+    }
     ctx.drawImage(images.arena,0,C.hudTop,s.w,s.h-C.hudTop-C.hudBottom);
     return true;
   }

@@ -175,16 +175,19 @@
     const unwalled=Math.round(amount/walls),direct=Math.round(amount/walls/weak);
     return {direct,weak:unwalled-direct,walls:amount-unwalled};
   }
-  // kind 'throw': by was launched (special: it carried a special). 'hit': by's own contact. 'ability': owner's ability
-  // fired, by's launch set it off. 'special': the bonus damage of by's special.
+  // kind 'throw': by was launched (special: it carried a special). 'hit': by's own contact. 'activation': owner's ability
+  // fired once, by's launch set it off (counts only). 'ability': one damage event of that ability (damage only). 'special': the bonus damage of by's special.
   function credit(ledger,event){
     if(event.kind==='hit'){
       const entry=ledger[event.by],cut=split(event.amount,event.weak,event.walls);
       for(const part of ['direct','weak','walls'])entry[part]+=cut[part];
       entry.hits+=1;if(event.weak>1)entry.weakHits+=1;
-    }else if(event.kind==='ability'){
-      ledger[event.owner].ability+=event.amount;ledger[event.owner].abilities+=1;
+    }else if(event.kind==='activation'){
+      // Ability and Bumps count here, once per activation, whether or not it reaches the boss (owner, 2026-11-15).
+      ledger[event.owner].abilities+=1;
       if(event.by&&event.by!==event.owner)ledger[event.by].setOff+=1;
+    }else if(event.kind==='ability'){
+      ledger[event.owner].ability+=event.amount;
     }else if(event.kind==='special'){
       ledger[event.by].special+=event.amount;
     }else if(event.kind==='throw'){

@@ -11,12 +11,15 @@
 <script src="rumble-cinematic.js"></script>
 <link rel="stylesheet" href="rumble-stage.css">
 <link rel="stylesheet" href="rumble-cues.css">
+<link rel="stylesheet" href="rumble-hud.css">
 <style>
-:root{color-scheme:light dark;--foreground:light-dark(#253e34,#e5eee8);--background:light-dark(#faf9f6,#191b1a);--card:light-dark(#edf2eb,#222d27);--secondary:light-dark(#dde7dd,#34473b);--primary:light-dark(#27694c,#9bdbb4);--good:light-dark(#2e9a55,#6fdc95);--muted-foreground:light-dark(#53685b,#afc4b5);--border:light-dark(#bdcdbf,#4d6755);--warning:light-dark(#a55a15,#f6bf73);--danger:light-dark(#b8322a,#ff7b6e);--chip:light-dark(#e2a93f,#ffe0a3);--flash:light-dark(#ffffff,#ffffff);--track:light-dark(#d3ddd3,#17201b);--pending:light-dark(#8e9a92,#e8eee9);--boss-beam:light-dark(#d9b3ff,#6f35c4);--seed:#a8e86f;--seed-glow:#e9ffd0;--slam:light-dark(#8a3fb5,#d6a2ff);--radius:18px;--font-sans:'Trebuchet MS',sans-serif}
+:root{color-scheme:light dark;--foreground:light-dark(#253e34,#e5eee8);--background:light-dark(#faf9f6,#191b1a);--card:light-dark(#edf2eb,#222d27);--secondary:light-dark(#dde7dd,#34473b);--primary:light-dark(#27694c,#9bdbb4);--good:light-dark(#2e9a55,#6fdc95);--muted-foreground:light-dark(#53685b,#afc4b5);--border:light-dark(#bdcdbf,#4d6755);--warning:light-dark(#a55a15,#f6bf73);--danger:light-dark(#b8322a,#ff7b6e);--chip:light-dark(#e2a93f,#ffe0a3);--flash:light-dark(#ffffff,#ffffff);--track:light-dark(#d3ddd3,#17201b);--pending:light-dark(#8e9a92,#e8eee9);--boss-beam:light-dark(#d9b3ff,#6f35c4);--seed:#a8e86f;--seed-glow:#e9ffd0;--beam-fire:#ffc23d;--beam-core:#fff8d6;--slam:light-dark(#8a3fb5,#d6a2ff);--radius:18px;--font-sans:'Trebuchet MS',sans-serif}
 *{box-sizing:border-box}body{margin:0;color:var(--foreground);font-family:var(--font-sans)}main{display:grid;gap:10px}.roster{display:flex;gap:8px;flex-wrap:wrap}.roster .card{cursor:default}button,.roster .card{font:inherit;color:var(--foreground);border:1px solid var(--border);background:var(--secondary);border-radius:12px;min-height:44px;padding:8px 12px;cursor:pointer}button[aria-pressed=true]{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}button:focus-visible{outline:2px solid var(--primary);outline-offset:3px}button:disabled{opacity:.5;cursor:default}.roster .card{display:flex;align-items:center;gap:6px;flex:1}.roster img{width:32px;height:32px;object-fit:contain}.roster span{display:grid;text-align:left}.roster small{font-size:11px;color:var(--muted-foreground)}
 /* --boss-beam (owner, 2026-11-15): the boss Beam warns in purple (living-magic brief, "purple enemy warnings"). It is the
    deep purple beside --slam's light one, at least 3:1 apart in each scheme (WCAG 1.4.11), so lane and ring differ in
-   lightness as well as shape. Hero beams stay sky blue in their art. Measured: docs/testing/ui/rumble-boss-lane-purple. */
+   lightness as well as shape. Hero beams stay sky blue in their art. Measured: docs/testing/ui/rumble-boss-lane-purple.
+   --beam-fire and --beam-core (2026-11-15): the fired boss beam's amber glow and warm-white core, read from the concept
+   (mockups/rumble-living-magic/beam-bidirectional-and-shield.webp, FIRE). Emitted light, so one value in both schemes. */
 /* Layout (round 4): one fixed portrait arena, fitted by JS into #stage. Phone portrait first; landscape puts the controls in a side column. */
 :root{--perfect:light-dark(#0a8fb0,#7ff0ff);--gap:6px;--pad:10px;--control:40px;--side:300px;--small:12px;--portrait:clamp(58px,calc(var(--col,360px)*.17),100px);--ring:4px;--badge:10px;--glow:16px;--glow-pulse:1.2s;--ping-time:.35s;--fill-alpha:45%;--slow-saturate:.5;--slow-ease:.15s}
 /* Round 12: one centred column on every layout. resize() sets --col to the arena's width, so the top bar and dock match it. */
@@ -56,7 +59,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor
 <div class="card" data-resident="custom"><span class="portrait"><img src="data:image/webp;base64,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" alt=""><span class="badge">Special</span></span><b>Custom</b><em id="custom-label">Random trait</em><small>Ready</small></div>
 </div>
 <div id="portrait-hint" role="note"><span>Best in portrait</span><button id="hint-close">Dismiss</button></div>
-</main><script src="art-manifest.js"></script><script src="arena-skins.js"></script><script src="arena-scenery.js"></script><script src="colosseum-relief.js"></script><script src="battle-materials-config.js"></script><script src="battle-materials.js"></script><script src="art-renderer.js"></script><script src="arena-skin-controls.js"></script><script src="hero-card-data.js"></script><script src="hero-cards.js"></script><script src="stage-layout-data.js"></script><script src="stage-layout-controls.js"></script><script src="rumble-encounter-data.js"></script><script src="rumble-encounters.js"></script><script src="rumble-demo-data.js"></script><script src="rumble-music-data.js"></script><script src="rumble-music.js"></script><script src="rumble-demo.js"></script><script src="rumble-cues-data.js"></script><script src="rumble-cues-view.js"></script><script src="rumble-cues.js"></script>
+</main><script src="art-manifest.js"></script><script src="arena-skins.js"></script><script src="arena-scenery.js"></script><script src="colosseum-relief.js"></script><script src="battle-materials-config.js"></script><script src="battle-materials.js"></script><script src="art-renderer.js"></script><script src="arena-skin-controls.js"></script><script src="hero-card-data.js"></script><script src="hero-cards.js"></script><script src="rumble-hud-data.js"></script><script src="rumble-hud-model.js"></script><script src="rumble-hud.js"></script><script src="stage-layout-data.js"></script><script src="stage-layout-controls.js"></script><script src="rumble-encounter-data.js"></script><script src="rumble-encounters.js"></script><script src="rumble-demo-data.js"></script><script src="rumble-music-data.js"></script><script src="rumble-music.js"></script><script src="rumble-demo.js"></script><script src="rumble-cues-data.js"></script><script src="rumble-cues-view.js"></script><script src="rumble-cues.js"></script>
 <script src="rumble-tutorial-model.js"></script>
 <script src="rumble-tutorial-script.js"></script>
 <script src="rumble-tutorial-plain.js"></script>
@@ -265,7 +268,7 @@ const PIXEL_SLACK=1e-6; // float slack, so a width that is already whole pixels 
 function resize(){const edge=arena.offsetWidth-arena.clientWidth,main=stage.parentElement,pad=parseFloat(getComputedStyle(main).paddingLeft)*2,fit=Math.max(.1,Math.min((main.clientWidth-pad-edge)/C.arenaW,(stage.clientHeight-edge)/C.arenaH));
   // Whole bitmap pixels across, so the canvas transform and the board's pixel width give the same scale.
   const dpr=window.devicePixelRatio||1,k=Math.floor(C.arenaW*fit*dpr+PIXEL_SLACK)/(C.arenaW*dpr);arena.style.width=C.arenaW*k+edge+'px';arena.style.height=C.arenaH*k+edge+'px';s.scale=k;document.documentElement.style.setProperty('--col',Math.floor(C.arenaW*k+edge)+'px');
-  board.width=Math.round(C.arenaW*k*dpr);board.height=Math.round(C.arenaH*k*dpr);ctx.setTransform(k*dpr,0,0,k*dpr,0,0);arena.style.setProperty('--k',k);for(const key of ['foreground','primary','good','warning','border','secondary','muted-foreground','danger','chip','flash','track','card','pending','boss-beam','slam','perfect','seed','seed-glow']){const probe=document.createElement('span');probe.style.color='var(--'+key+')';arena.append(probe);colors[key]=getComputedStyle(probe).color;probe.remove()}}
+  board.width=Math.round(C.arenaW*k*dpr);board.height=Math.round(C.arenaH*k*dpr);ctx.setTransform(k*dpr,0,0,k*dpr,0,0);arena.style.setProperty('--k',k);for(const key of ['foreground','primary','good','warning','border','secondary','muted-foreground','danger','chip','flash','track','card','pending','boss-beam','slam','perfect','seed','seed-glow','beam-fire','beam-core']){const probe=document.createElement('span');probe.style.color='var(--'+key+')';arena.append(probe);colors[key]=getComputedStyle(probe).color;probe.remove()}}
 // A ready resident (stopped, ring full) launches at full trait speed; a charged special fires on this fling and spends the charge.
 // power (0 to 1) is the share of the trait's travel range: a sling is 1, a fling is set by the fling-power switch (drag-feedback-data.js, fling).
 function fling(id,angle,power=1){const b=s.bodies[id];if(!b||s.phase!=='play'||b.moving||b.charge<1||stunned(b))return false;camera?.onLaunch(names[id]);const t=profile(b),range=t.range*power;
@@ -306,11 +309,11 @@ function chargeSpecial(id,amount){const was=s.specialCharge[id];if(s.phase!=='pl
   if(now>=1)specialReady(id)}
 // Hit combo: the charge-rate reward, one enemy hit, and the break (an attack catches a resident, or the idle timeout).
 const comboRate=()=>1+Math.min(FEEL.comboChargeCap,(s.hits||0)*FEEL.comboCharge);
-const hitsAnchor=()=>({x:s.w-FEEL.barInset,y:C.hudTop+FEEL.comboTop});
+const hitsAnchor=()=>window.LoftRumbleHud?.comboAnchor()??{x:s.w-FEEL.barInset,y:C.hudTop+FEEL.comboTop,align:'right'}; // LM6b: left edge
 function comboHit(){if(s.phase!=='play')return;s.hits++;s.hitsIdle=0;s.hitsPeak=Math.max(s.hitsPeak,s.hits);s.hitsPop=FEEL.comboPopLife;s.hitsLost=null;
   // The live fight pops the milestone word on the field instead (2026-11-14).
   const m=FEEL.comboMilestones.indexOf(s.hits);if(m<0||cues.onCombo(m,s.lastHit??enemy()))return;const a=hitsAnchor();s.popups=s.popups.filter(p=>!COPY.comboMiles.includes(p.text));
-  s.popups.push({x:a.x,y:a.y+FEEL.comboPopGap+FEEL.popupBig/2,text:COPY.comboMiles[m],big:true,hud:true,align:'right',color:'chip',bounce:!still(),life:C.popupLife})}
+  s.popups.push({x:a.x,y:a.y+FEEL.comboPopGap+FEEL.popupBig/2,text:COPY.comboMiles[m],big:true,hud:true,align:a.align,color:'chip',bounce:!still(),life:C.popupLife})}
 function breakCombo(why){if(!s.hits)return;s.hitBreaks[why]=(s.hitBreaks[why]??0)+1;s.hitsLost={n:s.hits,life:FEEL.comboLostLife,shatter:why!=='timeout'};s.hits=0;s.hitsIdle=0}
 // Camera experiment only: the last factor is the combo payoff (camera-payoff.js). Without the experiment it is 1.
 function damage(b,weak){const hit=Math.round(profile(b).damage*(weak?C.weakMultiplier:1)*bounceMult(b.walls)*(b.boost?.mult??1)*(camera?window.LoftRumblePayoff.multiplier(s.hits):1));if(b.boost)s.tally??={total:0,parts:[]},s.tally.boost=b.boost;s.focus=Math.min(RT.focusMax,s.focus+RT.focusHit);
@@ -341,7 +344,7 @@ function activateAlly(m,o){if(stunned(m)||stunned(o))return;m.used.push(o.id);if
  if(!s.introduced[a.id]){s.introduced[a.id]=true;if(!cues.onAllyIntro(a.id))s.toasts.push({id:a.id,kind:a.kind,life:FEEL.toastLife})}s.splash[a.id]=FEEL.splashTime
 }
 // One ability effect at a point; its damage credits m (the resident whose launch set it off).
-function abilityAt(a,m){const e=enemy(),label=abilities[a.kind],inRange=Math.hypot(e.x-a.x,e.y-a.y)<=A.shockRange+C.enemyRadius;
+function abilityAt(a,m){window.LoftRumbleStats.credit(s.fightStats,{kind:'activation',by:m.id,owner:a.id});const e=enemy(),label=abilities[a.kind],inRange=Math.hypot(e.x-a.x,e.y-a.y)<=A.shockRange+C.enemyRadius;
  // The look (hero-ability-fx.js, LM2) tags each effect with its kind, order and contact point; damage below never reads it.
  const look=(extra)=>{const fx=window.LoftRumbleHeroFx;s.fxSeq=(s.fxSeq??0)+1;return fx?fx.effect(a.kind,s.fxSeq,a,{x:(a.x+m.x)/2,y:(a.y+m.y)/2},extra):{x:a.x,y:a.y,life:A.effectLife,label:'',...extra}};
  if(a.kind==='springy'){for(let i=0;i<A.burstCount;i++)s.bolts.push({x:a.x,y:a.y,delay:i*.09,life:2,by:m.id,owner:a.id});s.teamEffects.push(look({type:'wave',r:60}))}
@@ -545,7 +548,7 @@ function attackImpact(){
   if(calm)fx.amount=0;
   s.teamHP=Math.max(0,s.teamHP-fx.amount);
   const escaped=!!window.LoftRumbleDemo?.observeImpact(s,fx.warn,fx.hits);if(escaped)tutorCheck();cues.onImpact(fx,escaped);tutorial.onImpact(fx);
-  if(def.id!=='pulse'&&s.hits){if(fx.hits.length){if(!camera)breakCombo('attack')}else{const a=hitsAnchor();s.popups.push({x:a.x,y:a.y+FEEL.comboPopGap,text:COPY.comboSaved,hud:true,align:'right',color:'good',life:C.popupLife})}}
+  if(def.id!=='pulse'&&s.hits){if(fx.hits.length){if(!camera)breakCombo('attack')}else{const a=hitsAnchor();s.popups.push({x:a.x,y:a.y+FEEL.comboPopGap,text:COPY.comboSaved,hud:true,align:a.align,color:'good',life:C.popupLife})}}
   s.hitStop=Math.max(s.hitStop,FEEL.attackStop);
   if(fx.amount){if(!camera||!window.LoftRumbleAttackImpact.trigger(s,def.id))s.shake=FEEL.shakeAttack;s.vignette=FEEL.vignetteLife;vibrate(FEEL.vibrateAttack)}
   for(const id of fx.hits){const p=s.bodies[id];
@@ -620,6 +623,10 @@ function shieldHit(b,angle){if(!onShield(angle))return true;const sh=s.shield,t=
     else shieldSpark(angle,COPY.crack,'muted-foreground');return true}
   shieldSpark(angle,COPY.blocked,'muted-foreground');b.cool=C.hitCooldown;b.inside=true;return false}
 // Living-magic boss look (LM3, boss-fight.js): one shield depth layer, 'rear' under the boss and 'front' over it. False until its art loads.
+// LM3b: the boss's ground shadow and the Slam landing (crack 'ground', debris 'behind' and 'front'). False until their art loads.
+const bossLook=()=>({fx:s.attackFx,feel:FEEL,timing:RT,clock:s.clock,enemy:enemy(),radius:C.enemyRadius,upright:camera?.shallow?camera.uprightScale:1,reduced:still(),arena:{w:s.w,h:s.h},enabled:!!camera&&window.LoftRumbleStorybook.enabled(camera),image:name=>artwork?.available(name)});
+const bossSlamLook=layer=>!!window.LoftRumbleBossFight?.slam(ctx,{...bossLook(),layer});
+const bossShadowLook=()=>!!window.LoftRumbleBossFight?.shadow(ctx,bossLook());
 const bossShieldLook=layer=>window.LoftRumbleBossFight?.shield(ctx,{layer,shield:s.shield,enemy:enemy(),plate:C.enemyRadius+FEEL.shieldGap,arc:FEEL.shieldArc,feel:FEEL,clock:s.clock,upright:camera?.shallow?camera.uprightScale:1,reduced:still(),alive:s.hp>0,tint:{ring:colors.warning,edge:colors.foreground,flash:colors.flash,rim:colors['seed-glow']},image:name=>artwork?.available(name)});
 // The plate: a thick metal arc outside the body with a sheen sliding along it and a tick per crack; it fades back in when it reforms.
 function drawShield(){const sh=s.shield;if(bossShieldLook('front'))return;if(sh.down>0||s.hp<=0)return;if(artwork?.shield(ctx,sh,enemy(),C.enemyRadius+FEEL.shieldGap))return;const e=enemy(),r=C.enemyRadius+FEEL.shieldGap,a0=sh.angle-FEEL.shieldArc/2,a1=sh.angle+FEEL.shieldArc/2;ctx.save();ctx.globalAlpha=sh.up;ctx.lineCap='round';
@@ -897,7 +904,7 @@ function drawParticles(){
 }
 function draw(){
  const font=getComputedStyle(arena).fontFamily,quake=still()?0:s.shake;
- ctx.clearRect(0,0,s.w,s.h);if((camera&&window.LoftRumbleStorybook.background(camera))||artPaint('bg-arena',s.w/2,s.h/2,s.w,s.h,true)){if(window.LoftRumbleBattleMaterials)window.LoftRumbleBattleMaterials.hud(ctx,s.w,s.h,C.hudTop,C.hudBottom);else{ctx.fillStyle=colors.card;ctx.fillRect(0,0,s.w,C.hudTop);ctx.fillRect(0,s.h-C.hudBottom,s.w,C.hudBottom)}}ctx.save();
+ ctx.clearRect(0,0,s.w,s.h);if((camera&&window.LoftRumbleStorybook.background(camera))||artPaint('bg-arena',s.w/2,s.h/2,s.w,s.h,true)){if(lmBars()){/* LM6b: the arena shows behind the slim frames */}else if(window.LoftRumbleBattleMaterials)window.LoftRumbleBattleMaterials.hud(ctx,s.w,s.h,C.hudTop,C.hudBottom);else{ctx.fillStyle=colors.card;ctx.fillRect(0,0,s.w,C.hudTop);ctx.fillRect(0,s.h-C.hudBottom,s.w,C.hudBottom)}}ctx.save();
  ctx.beginPath();ctx.rect(0,C.hudTop,s.w,s.h-C.hudTop-C.hudBottom);ctx.clip(); // the play area: zones and effects never spill into the HUD strips
  if(s.finale&&!still()){const boss=enemy(),e=camera?camera.projection.project(boss):boss,k=1+FEEL.finaleZoom*flyEase(Math.min(1,s.finale.t/FEEL.finaleZoomIn));ctx.translate(e.x,e.y);ctx.scale(k,k);ctx.translate(-e.x,-e.y)} // finale zoom, play area only
  if(quake)ctx.translate((Math.random()*2-1)*quake,(Math.random()*2-1)*quake);
@@ -962,9 +969,12 @@ pauseButton.onclick=e=>{e.stopPropagation();if(s.demo)showMenu(false);else setPa
 document.getElementById('replay-tutorial').onclick=event=>{if(tutorial.installed()){tutorial.replay(event.currentTarget);return}try{localStorage.removeItem(s.demo?window.LoftRumbleDemoData.tutorialKey:TUTOR_KEY)}catch{}reset();showMenu(false)};
 function teamText(){if(camera?.predicting)return;document.getElementById('team-health').textContent='Team '+s.teamShown+'/'+TURN.hp+' HP'}
 // Boss bar: the top strip, full width unless bullet time needs room for the Focus meter.
-function bossBar(){const y=FEEL.barInset+FEEL.hudFont+4,x=FEEL.barInset;return{x,y,w:FEEL.bulletTime?Math.round(s.w*FEEL.teamBarW):s.w-x-FEEL.barInset,h:FEEL.teamBarH}}
+// LM6b: with the living-magic frames loaded (and bullet time's Focus meter off), both bars are the frames' health channels.
+function lmArt(name){return artwork?.available(name)??null}
+function lmBars(){return FEEL.bulletTime?null:window.LoftRumbleHud?.channels(ctx,{width:s.w,height:s.h,strip:C.hudBottom,teamMax:TURN.hp,font:getComputedStyle(arena).fontFamily,image:lmArt})??null}
+function bossBar(){const lm=lmBars();if(lm)return lm.boss;const y=FEEL.barInset+FEEL.hudFont+4,x=FEEL.barInset;return{x,y,w:FEEL.bulletTime?Math.round(s.w*FEEL.teamBarW):s.w-x-FEEL.barInset,h:FEEL.teamBarH}}
 // Team bar: one row in the bottom strip, directly above the dock: heart, "Your team", bar, HP.
-function teamBar(){const x=FEEL.barInset+FEEL.teamIcon+FEEL.barInset/2+FEEL.teamLabelW;return{x,y:s.h-C.hudBottom/2-FEEL.teamBarH/2,w:s.w-x-FEEL.teamNumW-FEEL.barInset,h:FEEL.teamBarH}}
+function teamBar(){const lm=lmBars();if(lm)return lm.team;const x=FEEL.barInset+FEEL.teamIcon+FEEL.barInset/2+FEEL.teamLabelW;return{x,y:s.h-C.hudBottom/2-FEEL.teamBarH/2,w:s.w-x-FEEL.teamNumW-FEEL.barInset,h:FEEL.teamBarH}}
 // High-contrast bar: dark track, pale pending segment, coloured value, foreground edge; `flash` (0-1) washes it with `wash`.
 function drawBar(x,y,w,h,value,chip,max,fill,flash=0,wash=colors.flash){
   if(window.LoftRumbleBattleMaterials?.meter(ctx,x,y,w,h,value,chip,max,fill,flash,wash))return;
@@ -990,7 +1000,12 @@ const healthFill=share=>share>FEEL.healthMid?colors.good:share>FEEL.healthLow?co
 const lowPulse=share=>share<=FEEL.healthLow&&share>0&&!still()?FEEL.lowWash*(.5+.5*Math.sin(s.clock*FEEL.lowPulse)):0;
 // Hit counter, top right under the boss bar: "23 hits". Pops on each hit, grows a little per milestone; a Beam or Slam break
 // shatters it with "Combo lost" (a plain fade under reduced motion); the idle timeout only fades it.
-function drawHits(font){const {x,y}=hitsAnchor(),calm=still();ctx.save();if(s.hits&&artwork)artPaint('ui-badge-combo',x-artwork.metrics.comboBadgeWidth/2,y-artwork.metrics.comboBadgeHeight/3,artwork.metrics.comboBadgeWidth,artwork.metrics.comboBadgeHeight,true);ctx.textAlign='right';ctx.lineJoin='round';ctx.strokeStyle=colors.card;ctx.lineWidth=4;
+// LM6b: the living-magic count on the left edge inside the open spiral (rumble-hud.js); a milestone hit pops it once.
+function drawHits(font){const hud=window.LoftRumbleHud;if(hud){const calm=still(),left=s.hitsPop/FEEL.comboPopLife,mile=FEEL.comboMilestones.includes(s.hits);
+    const L=s.hitsLost,scale=(calm?1:1+FEEL.comboPop*left)*(mile?window.LoftRumbleHudModel.milestoneScale(left,window.LoftRumbleHudData,calm):1);
+    hud.combo(ctx,{hits:s.hits,word:s.hits===1?COPY.hit:COPY.hits,scale,reduced:calm,font,image:name=>artwork?.available(name),
+      lost:L?{n:L.n,age:1-L.life/FEEL.comboLostLife,shatter:L.shatter,spread:FEEL.comboShatter,word:COPY.comboLost}:null});return}
+  const {x,y}=hitsAnchor(),calm=still();ctx.save();if(s.hits&&artwork)artPaint('ui-badge-combo',x-artwork.metrics.comboBadgeWidth/2,y-artwork.metrics.comboBadgeHeight/3,artwork.metrics.comboBadgeWidth,artwork.metrics.comboBadgeHeight,true);ctx.textAlign='right';ctx.lineJoin='round';ctx.strokeStyle=colors.card;ctx.lineWidth=4;
   const text=(t,tx,ty,fill)=>{ctx.fillStyle=fill;ctx.strokeText(t,tx,ty);ctx.fillText(t,tx,ty)};
   if(s.hits>0){const miles=FEEL.comboMilestones.filter(m=>s.hits>=m).length,k=(1+FEEL.comboGrow*miles)*(calm?1:1+FEEL.comboPop*s.hitsPop/FEEL.comboPopLife);
     ctx.translate(x,y);ctx.scale(k,k);ctx.font='bold '+FEEL.hudFont+'px '+font;const label=s.hits===1?COPY.hit:COPY.hits,lw=ctx.measureText(label).width;text(label,0,0,colors['muted-foreground']);
@@ -1005,16 +1020,21 @@ function drawBars(font){
   // Team bar, bottom strip: a heart, "Your team", a thick bar, HP. It shakes and flashes when hit, flashes green on a heal, pulses red when low.
   const t=teamBar(),share=s.teamShown/TURN.hp,fill=healthFill(share),hit=s.teamBarHit/FEEL.barFlash,heal=s.teamFlash==='heal',mid=t.y+t.h/2;
   const ox=hit&&!heal&&!still()?Math.sin(s.clock*FEEL.lowPulse*12)*FEEL.barShake*hit:0;
+  const hud=FEEL.bulletTime?null:window.LoftRumbleHud;
+  if(!hud?.team(ctx,{width:s.w,height:s.h,strip:C.hudBottom,shake:ox,font,image:lmArt,
+    bar:{value:s.teamShown,chip:s.teamChip,max:TURN.hp,flash:Math.max(hit*FEEL.hitWash,lowPulse(share)),wash:hit&&heal?colors.good:colors.danger}})){
   ctx.save();ctx.translate(ox,0);
   heartIcon(FEEL.barInset+FEEL.teamIcon/2,mid,FEEL.teamIcon,fill);
   ctx.font='bold '+FEEL.hudFont+'px '+font;ctx.textBaseline='middle';ctx.fillStyle=colors.foreground;
   ctx.textAlign='left';ctx.fillText('Your team',FEEL.barInset+FEEL.teamIcon+FEEL.barInset/2,mid);ctx.textAlign='right';ctx.fillText(s.teamShown+'/'+TURN.hp,s.w-FEEL.barInset,mid);ctx.textBaseline='alphabetic';
   artwork?.bar(ctx,'ui-bar-team',t);drawBar(t.x,t.y,t.w,t.h,s.teamShown,s.teamChip,TURN.hp,fill,Math.max(hit*FEEL.hitWash,lowPulse(share)),hit&&heal?colors.good:colors.danger);
-  ctx.restore();
+  ctx.restore()}
   // Boss bar, top strip: the enemy's name and HP over a full-width bar, same health colours, pending segment and low pulse.
   const b=bossBar(),share2=s.hp/RT.hp,fill2=healthFill(share2);
+  if(!hud?.boss(ctx,{width:s.w,top:C.hudTop,name:s.hp>0?COPY.boss:COPY.bossDown,font,image:lmArt,
+    bar:{value:s.hp,chip:s.enemyChip,max:RT.hp,flash:Math.max(.8*s.enemyBarFlash/FEEL.barFlash,lowPulse(share2)),wash:s.enemyBarFlash?colors.flash:colors.danger}})){
   ctx.font='bold '+FEEL.bossLabelFont+'px '+font;ctx.fillStyle=colors.foreground;ctx.textAlign='left';ctx.fillText(s.hp>0?COPY.boss:COPY.bossDown,b.x,b.y-4);ctx.textAlign='right';ctx.fillText(s.hp+' HP',b.x+b.w,b.y-4);
-  artwork?.bar(ctx,'ui-bar-boss',b);drawBar(b.x,b.y,b.w,b.h,s.hp,s.enemyChip,RT.hp,fill2,Math.max(.8*s.enemyBarFlash/FEEL.barFlash,lowPulse(share2)),s.enemyBarFlash?colors.flash:colors.danger);
+  artwork?.bar(ctx,'ui-bar-boss',b);drawBar(b.x,b.y,b.w,b.h,s.hp,s.enemyChip,RT.hp,fill2,Math.max(.8*s.enemyBarFlash/FEEL.barFlash,lowPulse(share2)),s.enemyBarFlash?colors.flash:colors.danger)}
   drawHits(font);
   // The intent chip stays by the enemy: it is about the enemy's position.
   if(enemyVisible()&&!camera?.fixture)drawIntent(font,camera?camera.intentAnchor(enemy()):enemy());
@@ -1032,7 +1052,7 @@ function drawEnemy(ground=true){
   const act=actLevel(),lift=still()?0:FEEL.riseHeight*act;
   if(ground)window.LoftRumbleColosseumRelief?.ground(ctx,e.x+ox,e.y+oy,R,document.documentElement.dataset.arenaSkin);
   if(act>0){const ac=colors[fx.warn.def.colour],pulse=still()?1:.75+.25*Math.sin(s.clock*FEEL.telegraphPulse*1.5);ctx.globalAlpha=.35*act*pulse;circle(e.x+ox,e.y+oy-lift,R+6+FEEL.riseGlow*act,ac);ctx.globalAlpha=1}
-  bossShieldLook('rear');
+  bossShadowLook();bossShieldLook('rear');
   ctx.save();ctx.translate(e.x+ox,e.y+oy-lift);
   if(s.finale){const k=Math.min(1,s.finale.t/FEEL.finaleTime);ctx.globalAlpha=1-k;if(!still())ctx.scale(1+FEEL.finalePop*k,1+FEEL.finalePop*k)} // finale: the enemy pops and fades
   if(s.enemyHit&&!still()){const h=s.enemyHit,k=FEEL.enemySquash*h.k*h.life/FEEL.enemySquashLife,a=Math.atan2(h.ny,h.nx);ctx.rotate(a);ctx.scale(1-k,1+k*.5);ctx.rotate(-a)}
@@ -1056,7 +1076,7 @@ function drawEnemy(ground=true){
   else ctx.arc(0,R*.13,R*.27,0,Math.PI);
   ctx.stroke();}
   if(!skinned&&s.enemyFlash>0&&!still()){ctx.globalAlpha=s.enemyFlash/FEEL.enemyFlash;circle(0,0,R+5,colors.flash);ctx.globalAlpha=1}
-  ctx.restore();
+  ctx.restore();bossSlamLook('front');
 }
 function drawAttack(){
   const fx=s.attackFx;if(!fx||fx.t<0)return;
@@ -1066,14 +1086,20 @@ function drawAttack(){
     const spread=Math.min(1,(fx.t-FEEL.windup)/(FEEL.travel*2)),far=Math.max(...Object.values(s.positions).map(p=>Math.hypot(p.x-e.x,p.y-e.y)));
     ctx.globalAlpha=Math.max(0,1-spread);ctx.strokeStyle=col;ctx.lineWidth=5;ctx.beginPath();ctx.arc(e.x,e.y,C.enemyRadius+spread*far,0,Math.PI*2);ctx.stroke();artPaint('fx-pulse-ring',e.x,e.y,(C.enemyRadius+spread*far)*2);ctx.globalAlpha=1;return}
   if(def.id==='beam'){ctx.save();ctx.translate(e.x,e.y);ctx.rotate(fx.warn.angle);
-    if(window.LoftRumbleBossFight?.beam(ctx,{fx,feel:FEEL,radius:C.enemyRadius,length:L,reduced:still(),image:name=>artwork?.available(name),lane:(reach,half,alpha)=>{ctx.globalAlpha=alpha;ctx.fillStyle=col;ctx.fillRect(-reach,-half,2*reach,2*half)}})){ctx.restore();ctx.globalAlpha=1;return} // LM3: two beams from the two glows over the hit lane
+    if(window.LoftRumbleBossFight?.beam(ctx,{fx,feel:FEEL,radius:C.enemyRadius,length:L,reduced:still(),image:name=>artwork?.available(name),
+      tint:{fire:colors['beam-fire'],core:colors['beam-core']},ends:beamWalls(e,fx.warn.angle),angle:fx.warn.angle,upright:camera?.shallow?camera.uprightScale:1,
+      lane:(reach,half,alpha,edge)=>{ctx.globalAlpha=alpha;ctx.fillStyle=col;ctx.fillRect(-reach,-half,2*reach,2*half);
+        if(edge){ctx.globalAlpha=edge.alpha;ctx.strokeStyle=col;ctx.lineWidth=edge.width;ctx.beginPath();ctx.moveTo(-reach,-half);ctx.lineTo(reach,-half);ctx.moveTo(-reach,half);ctx.lineTo(reach,half);ctx.stroke()}}})){ctx.restore();ctx.globalAlpha=1;return} // LM3: two beams from the two glows over the outlined hit lane (concept FIRE / FADE)
     if(fx.t<FEEL.windup){const k=fx.t/FEEL.windup,flicker=still()?1:.7+.3*Math.sin(s.clock*FEEL.telegraphPulse*6);ctx.globalAlpha=k*flicker;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-L,0);ctx.lineTo(L,0);ctx.stroke()}
     else if(after<0){const k=(fx.t-FEEL.windup)/FEEL.travel;ctx.fillStyle=col;ctx.globalAlpha=.9;ctx.fillRect(-L*k,-FEEL.beamHalf*k,2*L*k,2*FEEL.beamHalf*k)}
     else if(after<FEEL.beamFade){const k=1-after/FEEL.beamFade;ctx.globalAlpha=k;ctx.fillStyle=col;ctx.fillRect(-L,-FEEL.beamHalf*k,2*L,2*FEEL.beamHalf*k);ctx.fillStyle=colors.flash;ctx.fillRect(-L,-FEEL.beamHalf*k*.3,2*L,FEEL.beamHalf*k*.6)}
     artwork?.beam(ctx,fx,FEEL,L);ctx.restore();ctx.globalAlpha=1;return}
-  // Slam: the enemy hops (drawEnemy), lands, and a ground shockwave runs out to the zone edge.
+  // Slam: the enemy hops (drawEnemy), lands, and a ground shockwave runs out to the zone edge. LM3b: the living-magic crack
+  // (boss-slam ground layer) replaces the old crack sprite under the shockwave and fades through the recovery.
+  const owned=after>=0&&bossSlamLook('ground');
+  if(owned)bossSlamLook('behind');
   if(after>=0&&after<FEEL.slamRingLife){const k=after/FEEL.slamRingLife,r=C.enemyRadius+(slamRadius()-C.enemyRadius)*Math.sqrt(k);
-    ctx.globalAlpha=1-k;artPaint('fx-slam-crack',e.x,e.y,artwork?.metrics.effectSize);ctx.globalAlpha=(1-k)*.35;circle(e.x,e.y,r,col);ctx.globalAlpha=1-k;ctx.strokeStyle=col;ctx.lineWidth=8*(1-k)+2;ctx.beginPath();ctx.arc(e.x,e.y,r,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}
+    ctx.globalAlpha=1-k;if(!owned)artPaint('fx-slam-crack',e.x,e.y,artwork?.metrics.effectSize);ctx.globalAlpha=(1-k)*.35;circle(e.x,e.y,r,col);ctx.globalAlpha=1-k;ctx.strokeStyle=col;ctx.lineWidth=8*(1-k)+2;ctx.beginPath();ctx.arc(e.x,e.y,r,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}
 }
 // Camera experiment only (camera-punish.js): the Root snap ring, drawn like the Slam zone on the floor, and a ring on each resident in it.
 function drawRootSnap(){
@@ -1083,6 +1109,16 @@ function drawRootSnap(){
   ctx.beginPath();ctx.arc(e.x,e.y,ring.radius,0,Math.PI*2);ctx.fill();ctx.globalAlpha=config.rootOutlineAlpha;ctx.stroke();ctx.restore();
   for(const id of ring.ids){const p=livePos(id);ctx.strokeStyle=col;ctx.lineWidth=config.rootDangerWidth;ctx.beginPath();ctx.arc(p.x,p.y,C.visualSize/2+FEEL.dangerMark,0,Math.PI*2);ctx.stroke()}
 }
+// The boss Beam's look (boss-fight-model.js): how far each beam runs to the play area's edge, for its wall glows and chevrons.
+const beamWalls=(e,angle)=>window.LoftRumbleBossFightModel?.wallReach(e,angle,{left:0,top:C.hudTop,right:s.w,bottom:s.h-C.hudBottom},window.LoftRumbleBossFightData);
+// Concept CHARGE: chevrons in the purple lane pointing away from the boss, in the lane's colour (beam frame).
+function drawChevrons(warn,charge){
+  const M=window.LoftRumbleBossFightModel,walls=beamWalls(enemy(),warn.angle);if(!M||!walls)return;
+  const V=window.LoftRumbleBossFightData.beam.chevrons;
+  for(const c of M.laneChevrons({...walls,half:FEEL.beamHalf,radius:C.enemyRadius,clock:s.clock,charge,reduced:still()},window.LoftRumbleBossFightData)){
+    const tip=c.x+c.dir*c.size/2,back=c.x-c.dir*c.size/2;ctx.beginPath();ctx.moveTo(tip,0);ctx.lineTo(back,-c.size/2);ctx.lineTo(back,c.size/2);ctx.closePath();
+    ctx.globalAlpha=c.alpha*V.fill;ctx.fill();ctx.globalAlpha=c.alpha;ctx.lineWidth=V.width;ctx.stroke()}
+}
 // Warning turn: positional attacks draw their zone, and residents inside it get a ring in the attack's colour.
 function drawWarn(){
   if(camera)drawRootSnap();
@@ -1090,7 +1126,10 @@ function drawWarn(){
   if(camera)window.LoftRumbleTelegraph.ground(ctx,window.LoftRumbleTelegraph.read({warn,fx:s.attackFx,remaining:s.enemyT,timing:RT,feel:FEEL}),enemy(),C.enemyRadius,colors,still());
   const e=enemy(),col=colors[warn.def.colour],fx=s.attackFx,charge=fx&&fx.t>=0?Math.min(1,fx.t/FEEL.windup):0,beat=still()?0:FEEL.zonePulse*Math.sin(s.clock*FEEL.telegraphPulse),L=Math.hypot(s.w,s.h);
   ctx.save();ctx.globalAlpha=FEEL.zoneAlpha+beat+charge*.15;ctx.fillStyle=col;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([8,7]);
-  if(warn.def.id==='beam'){ctx.translate(e.x,e.y);ctx.rotate(warn.angle);ctx.fillRect(-L,-FEEL.beamHalf,2*L,2*FEEL.beamHalf);ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(-L,-FEEL.beamHalf);ctx.lineTo(L,-FEEL.beamHalf);ctx.moveTo(-L,FEEL.beamHalf);ctx.lineTo(L,FEEL.beamHalf);ctx.stroke()}
+  // Once the art beam fires (concept FIRE) it draws the lane itself as an outline, so the warning fill steps aside.
+  const artFiring=warn.def.id==='beam'&&fx&&fx.t>=FEEL.windup&&window.LoftRumbleBossFight&&artwork?.available(window.LoftRumbleBossFightData.textures.beam);
+  if(warn.def.id==='beam'){if(!artFiring){ctx.translate(e.x,e.y);ctx.rotate(warn.angle);ctx.fillRect(-L,-FEEL.beamHalf,2*L,2*FEEL.beamHalf);ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(-L,-FEEL.beamHalf);ctx.lineTo(L,-FEEL.beamHalf);ctx.moveTo(-L,FEEL.beamHalf);ctx.lineTo(L,FEEL.beamHalf);ctx.stroke();
+    ctx.setLineDash([]);drawChevrons(warn,charge)}}
   else{const r=slamRadius();ctx.beginPath();ctx.arc(e.x,e.y,r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=.7;ctx.stroke()}
   ctx.restore();
   for(const id of TURN.order){const p=livePos(id);if(!inZone(warn,p))continue;ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,C.visualSize/2+FEEL.dangerMark,0,Math.PI*2);ctx.stroke()}

@@ -1,0 +1,232 @@
+/* Living-magic HUD (LM6b): the owner's ui-v1 hero frames, spiral seed and pause stone in the live fight.
+   The boss header, team bar and combo count draw on the canvas (rumble-hud.js) and read the --hud-* colours below.
+   Spec: docs/design/LOFT-RUMBLE-LIVING-MAGIC.md ("HUD, bumpers and unfinished art"); art rules: assets/living-magic/ui-v1/README.md.
+   The frames scale uniformly (the bottom socket forbids nine-slicing); every inset below is a share of the 384 x 274 frame,
+   measured from its alpha on 2026-11-15: opening 0.104-0.880 wide and 0.19-0.80 tall, socket centred at 0.806 tall. */
+:root {
+  /* Canvas HUD colours. Cream text with a deep plum stroke reads on all three arena backgrounds; the fills are the pack's
+     violet (boss) and teal (team) tints; pending damage is a pale cream segment. */
+  --hud-cream: #fff3d6;
+  --hud-ink: #2b1630;
+  --hud-boss-fill: #9b4fd8;
+  --hud-team-fill: #2fbfa3;
+  --hud-pending: #f6e6c4;
+  --hud-scrim: #1b0f1e;
+  --hud-flash: #ffffff;
+  /* Special-ready amber, the brief's "amber special-ready energy". */
+  --hud-ready: #ffb23d;
+  --hud-ready-glow: 6px;
+  --hud-danger-glow: 5px;
+  --hud-ignite: .45s;
+  /* Dock card geometry. */
+  --hud-card-ratio: 384 / 274;
+  --hud-opening-top: 19%;
+  --hud-opening-side: 10.4%;
+  --hud-opening-right: 12%;
+  --hud-opening-bottom: 20%;
+  --hud-opening-radius: 14%;
+  --hud-portrait-bottom: calc(var(--hud-name-bottom) + var(--hud-name-size) * var(--hud-name-line) + var(--hud-portrait-gap));
+  --hud-portrait-gap: 2px;
+  --hud-name-line: 1.15;
+  --hud-name-bottom: 24.5%;
+  --hud-name-size: clamp(15px, calc(var(--col, 360px) * .037), 17px);
+  --hud-name-stroke: 0 1px 0 var(--hud-ink), 0 -1px 0 var(--hud-ink), 1px 0 0 var(--hud-ink), -1px 0 0 var(--hud-ink), 0 2px 3px var(--hud-ink);
+  --hud-socket-y: 80.6%;
+  --hud-seed: 8.5%;
+  --hud-seed-dim: .35;
+  --hud-stun-ring: 24px; /* fits the smallest portrait opening without crossing its frame or name */
+  /* Resident-colour dark backings behind each portrait (README: "resident-color dark backing"). */
+  --hud-back-sprout: #183f33;
+  --hud-back-chomper: #35214a;
+  --hud-back-custom: #173552;
+  --hud-back-danger: #4a1626;
+  --hud-pause-glyph: 34%;
+  --hud-focus: 3px;
+  --hud-landscape-side: 160px;
+  --hud-landscape-gap: 16px;
+  --hud-landscape-card: 128px;
+  --hud-arena-ratio: .5625; /* existing 360 / 640 combat arena */
+}
+:root[data-rumble-demo] {
+  --stage-sheet-copy: 15px;
+  --stage-name-size: 13px;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  :root[data-rumble-demo] main {
+    grid-template-columns: auto var(--hud-landscape-side);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: 'stage top' 'stage roster';
+    column-gap: var(--hud-landscape-gap);
+    width: calc((100dvh - var(--stage-gap) * 2) * var(--hud-arena-ratio) + var(--hud-landscape-side) + var(--hud-landscape-gap) + var(--stage-pad) * 2);
+    max-width: 100%;
+  }
+  :root[data-rumble-demo] #stage { grid-row: 1 / -1; width: calc((100dvh - var(--stage-gap) * 2) * var(--hud-arena-ratio)); }
+  :root[data-rumble-demo] .top { width: 100%; grid-template-columns: minmax(0, 1fr) var(--stage-control); }
+  :root[data-rumble-demo] .top h1 { grid-column: 1; }
+  :root[data-rumble-demo] .top > #menu-toggle { grid-column: 2; }
+  :root.loft-art[data-rumble-demo] .roster {
+    width: 100%; grid-template-columns: var(--hud-landscape-card);
+    align-content: center; justify-content: center;
+  }
+}
+
+/* ---- Hero cards: backing, portrait, frame, name; the frame swaps to its amber twin when the special is ready. ---- */
+.loft-art[data-rumble-demo] .roster { gap: var(--stage-gap); }
+.loft-art[data-rumble-demo] .roster .card {
+  --hud-back: var(--hud-back-custom);
+  position: relative;
+  display: block;
+  aspect-ratio: var(--hud-card-ratio);
+  height: auto;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  animation: none;
+  color: var(--hud-cream);
+}
+.loft-art[data-rumble-demo] .roster [data-resident="sprout"] { --hud-back: var(--hud-back-sprout); }
+.loft-art[data-rumble-demo] .roster [data-resident="chomper"] { --hud-back: var(--hud-back-chomper); }
+.loft-art[data-rumble-demo] .roster .card::before {
+  content: '';
+  position: absolute;
+  inset: var(--hud-opening-top) var(--hud-opening-right) var(--hud-opening-bottom) var(--hud-opening-side);
+  border-radius: var(--hud-opening-radius);
+  background: var(--hud-back);
+}
+.loft-art[data-rumble-demo] .roster .card::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--art-lm-hero-frame-normal) center / 100% 100% no-repeat;
+  animation: none;
+}
+.loft-art[data-rumble-demo] .roster .card.ready::after {
+  background-image: var(--art-lm-hero-frame-ready);
+  filter: drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready));
+  animation: hud-ignite var(--hud-ignite) ease-out 1;
+}
+.loft-art[data-rumble-demo] .roster .card.danger::before { background: var(--hud-back-danger); }
+.loft-art[data-rumble-demo] .roster .card.danger::after { filter: drop-shadow(0 0 var(--hud-danger-glow) var(--danger)); }
+.loft-art[data-rumble-demo] .roster .card[data-grabbed]::before { box-shadow: inset 0 0 0 var(--stage-border) var(--hud-cream); }
+@keyframes hud-ignite {
+  from { filter: drop-shadow(0 0 calc(var(--hud-ready-glow) * 3) var(--hud-ready)); }
+}
+.loft-art[data-rumble-demo] .roster .portrait,
+.loft-art[data-rumble-demo] .roster .card.rumble-special-ready .portrait {
+  position: absolute;
+  inset: var(--hud-opening-top) var(--hud-opening-right) var(--hud-portrait-bottom) var(--hud-opening-side);
+  z-index: 1;
+  display: block;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.loft-art[data-rumble-demo] .roster .card .portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: none;
+  object-fit: contain;
+  object-position: center bottom;
+  transform: none;
+  opacity: 1;
+  filter: var(--art-sprite-finish);
+}
+.loft-art[data-rumble-demo] .roster .portrait::before,
+.loft-art[data-rumble-demo] .roster .portrait::after { display: none; }
+/* Name only: one centred line on the opening's lower edge, cream with a plum outline. A long name shrinks first
+   (rumble-hud.js, nameFit), then ellipses; the full name stays in the card's accessible label. */
+.loft-art[data-rumble-demo] .roster .card b {
+  position: absolute;
+  left: var(--hud-opening-side);
+  right: var(--hud-opening-right);
+  bottom: var(--hud-name-bottom);
+  z-index: 3;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0 var(--stage-gap);
+  background: none;
+  color: var(--hud-cream);
+  font-size: var(--hud-name-size);
+  line-height: var(--hud-name-line);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: var(--hud-name-stroke);
+}
+/* No state words on the card: ready, moving, stunned and danger show by frame, glow, grey and ring. The words stay in the
+   card's aria-label and the cue rail's live region. */
+.loft-art[data-rumble-demo] .roster .card:is(*, .ready, .danger, .stunned) :is(em, small, .badge, .dock-charge, .dock-danger, .rumble-ready) { display: none; }
+/* The special charge: the spiral seed in the frame's socket fills from the bottom as it charges, amber when ready. */
+.loft-art[data-rumble-demo] .roster .dock-meter {
+  position: absolute;
+  left: 50%;
+  top: var(--hud-socket-y);
+  z-index: 3;
+  width: var(--hud-seed);
+  aspect-ratio: 1;
+  height: auto;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: none;
+  overflow: visible;
+}
+.loft-art[data-rumble-demo] .roster .dock-meter::before,
+.loft-art[data-rumble-demo] .roster .dock-meter::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  background: var(--art-lm-hud-spiral-seed) center / contain no-repeat;
+}
+.loft-art[data-rumble-demo] .roster .dock-meter::before { opacity: var(--hud-seed-dim); filter: grayscale(1); }
+.loft-art[data-rumble-demo] .roster .dock-meter::after { clip-path: inset(calc((1 - var(--charge, 0)) * 100%) 0 0 0); }
+.loft-art[data-rumble-demo] .roster .card.ready .dock-meter::after {
+  background-color: transparent;
+  filter: drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready));
+}
+/* Stunned: the portrait greys (camera-stun.css) and the cue rail's ring drains over it. */
+.loft-art[data-rumble-demo] .roster .rumble-stun-ring {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--hud-opening-top) + (100% - var(--hud-opening-top) - var(--hud-portrait-bottom)) / 2);
+  z-index: 3;
+  width: var(--hud-stun-ring);
+  height: auto;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loft-art[data-rumble-demo] .roster .card.ready::after { animation: none; }
+}
+
+/* ---- The top-bar menu button is the pause stone (pause opens the menu in the live fight). ---- */
+:root.lm-hud-art[data-rumble-demo] .top > #menu-toggle {
+  border: 0;
+  background: var(--art-lm-icon-pause) center / auto var(--hud-pause-glyph) no-repeat,
+    var(--art-lm-hud-pause-base) center / contain no-repeat;
+  box-shadow: none;
+}
+:root.lm-hud-art[data-rumble-demo] .top > #menu-toggle svg { visibility: hidden; }
+:root.lm-hud-art[data-rumble-demo] .top > #menu-toggle:focus-visible {
+  outline: var(--hud-focus) solid var(--hud-cream);
+  outline-offset: var(--hud-focus);
+  border-radius: 50%;
+}

@@ -27,6 +27,22 @@ window.LoftRumbleArtConfig = Object.freeze({
   // Living-magic ordinary bumpers (owner's ui-v1 pack, LM6a). A bumper takes skin index % 3 of its layout index.
   bumperSkins: Object.freeze(["bumper-lm-bloom", "bumper-lm-mushroom", "bumper-lm-rune-stone"]),
   assets: [
+    "results-frame", "results-panel-surface", "results-victory-stage", "results-row-surface",
+    "results-button-primary", "results-button-secondary", "results-spiral-crest", "results-chevron",
+    "portrait-sprout", "portrait-chomper", "portrait-puff", "portrait-hoodie", "portrait-slime", "portrait-burger",
+    "hud-health-fill",
+    "lm-hud-boss-frame",
+    "lm-hud-team-frame",
+    "lm-hud-health-fill",
+    "lm-hud-combo-ornament",
+    "lm-hud-spiral-seed",
+    "lm-hud-pause-base",
+    "lm-icon-pause",
+    "lm-hero-frame-normal",
+    "lm-hero-frame-ready",
+    "lm-portrait-sprout",
+    "lm-portrait-chomper",
+    "lm-portrait-puff",
     "bumper-lm-bloom",
     "bumper-lm-mushroom",
     "bumper-lm-rune-stone",
@@ -92,7 +108,12 @@ window.LoftRumbleArtConfig = Object.freeze({
     "bramble-shield-rear",
     "bramble-shield-shards",
     "bramble-beam-strip",
-    "bramble-beam-source"
+    "bramble-beam-source",
+    "bramble-slam-impact-v2",
+    "bramble-ground-shadow",
+    "bramble-particle-stone",
+    "bramble-particle-bark",
+    "bramble-particle-leaf"
   ],
   metrics: Object.freeze({
     frames: 4, bossSize: 2.25, bumperSize: 2.8, hornWidth: 1.65,

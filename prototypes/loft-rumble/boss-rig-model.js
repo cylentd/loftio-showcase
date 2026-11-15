@@ -117,13 +117,14 @@
     return {width:width*(reduced?1:I.growFrom+(1-I.growFrom)*EASE.quadOut(Math.min(1,k*2))),alpha:1-EASE.quadIn(k)};
   }
   // Debris pieces relative to the ground point, logical units: x, y on the floor; h = height above it.
-  function debris(since,D,reduced){
+  // resting: every piece already where it lands, no flight or spin, still fading over its life (the fight's reduced motion).
+  function debris(since,D,reduced,resting){
     if(reduced||since===null)return [];
     const zone=slamRadius(D.game),R=D.game.enemyRadius,out=[];
     for(const d of D.debris){
       if(since>=d.life)continue;
-      const k=since/d.life,a=d.angle*Math.PI/DEGREES_PER_PI,r=d.dist*zone*EASE.quadOut(k);
-      out.push({kind:d.kind,x:Math.cos(a)*r,y:Math.sin(a)*r*HALF,h:ARC_PEAK*d.h*R*k*(1-k),rot:2*Math.PI*d.spin*k,size:d.size*R,alpha:1-EASE.quadIn(k)});
+      const k=since/d.life,a=d.angle*Math.PI/DEGREES_PER_PI,r=d.dist*zone*(resting?1:EASE.quadOut(k));
+      out.push({kind:d.kind,x:Math.cos(a)*r,y:Math.sin(a)*r*HALF,h:resting?0:ARC_PEAK*d.h*R*k*(1-k),rot:resting?0:2*Math.PI*d.spin*k,size:d.size*R,alpha:1-EASE.quadIn(k)});
     }
     return out;
   }
@@ -131,5 +132,5 @@
   const WARNING_PHASES=new Set(['crouch','rise','fall']);
   const warning=state=>state.attack==='slam'&&WARNING_PHASES.has(state.phase);
 
-  root.LoftRumbleBossRig=Object.freeze({ATTACKS,CHANNELS,initial,next,at,pose,rig,apply,slamRadius,sinceImpact,ring,impact,debris,warning,unitsPerLogical,hopUnits});
+  root.LoftRumbleBossRig=Object.freeze({ATTACKS,CHANNELS,initial,next,at,pose,rig,apply,mul,slamRadius,sinceImpact,ring,impact,debris,warning,unitsPerLogical,hopUnits});
 })(typeof window!=='undefined'?window:globalThis);
