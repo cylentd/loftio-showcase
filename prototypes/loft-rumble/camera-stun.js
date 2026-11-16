@@ -36,5 +36,12 @@
     }
     ctx.restore();
   }
-  root.LoftRumbleStun=Object.freeze({active,apply,tick,draw});
+  // How a resident's art is drawn while stunned: faded, except inside a live boss Beam, where the bright core would wash the faded
+  // art out; there it stays at full strength with a dark halo. alpha null: not stunned, the caller's own alpha applies.
+  function look(body,{beamLive,inside}){
+    if(!active(body))return {alpha:null,halo:0};
+    return beamLive&&inside?{alpha:1,halo:config.beamHalo}:{alpha:config.alpha,halo:0};
+  }
+  const haloColour=root.LoftRumbleCameraConfig.shadowColor;
+  root.LoftRumbleStun=Object.freeze({active,apply,tick,draw,look,haloColour});
 })(globalThis);

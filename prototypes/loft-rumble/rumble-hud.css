@@ -25,15 +25,27 @@
   --hud-opening-right: 12%;
   --hud-opening-bottom: 20%;
   --hud-opening-radius: 14%;
-  --hud-portrait-bottom: calc(var(--hud-name-bottom) + var(--hud-name-size) * var(--hud-name-line) + var(--hud-portrait-gap));
-  --hud-portrait-gap: 2px;
+  /* The portrait fills the opening and runs under the name, as on boss-layout.webp: the name sits on the resident's feet,
+     so the hero, not the name band, is the first thing seen. 1 = the portrait's base meets the name's baseline. */
+  --hud-portrait-bottom: calc(var(--hud-name-bottom) + var(--hud-name-size) * var(--hud-name-line) * (1 - var(--hud-portrait-under-name)));
+  --hud-portrait-under-name: .75;
   --hud-name-line: 1.15;
   --hud-name-bottom: 24.5%;
   --hud-name-size: clamp(15px, calc(var(--col, 360px) * .037), 17px);
   --hud-name-stroke: 0 1px 0 var(--hud-ink), 0 -1px 0 var(--hud-ink), 1px 0 0 var(--hud-ink), -1px 0 0 var(--hud-ink), 0 2px 3px var(--hud-ink);
   --hud-socket-y: 80.6%;
-  --hud-seed: 8.5%;
-  --hud-seed-dim: .35;
+  /* The charge rune: boss-layout.webp shows the socket rune about 30 px across on a 222 px card (13.5%). It sits on the
+     socket as an insert, wider than the socket hole. The unlit part is the same spiral, dark stone; the lit part rises
+     from the bottom in the seed's own cream, so half charge reads as half a lit rune on phone. */
+  --hud-seed: 13.5%;
+  --hud-seed-dim: .85;
+  --hud-seed-unlit: grayscale(1) brightness(.4);
+  --hud-seed-lit-shadow: drop-shadow(0 0 1px var(--hud-ink));
+  /* Moving and recharging: the portrait steps back (dimmer, less saturated) so a resting hero reads as the one to fling.
+     Opacity matches the pre-HUD hero cards (hero-cards.css --hero-busy-opacity, .55), softened so the plush still reads on
+     the dark backing; stunned keeps its full grey (camera-stun.css). */
+  --hud-busy-opacity: .6;
+  --hud-busy-finish: saturate(.75) brightness(.85); /* keeps the plush's colour so busy never reads as stunned grey */
   --hud-stun-ring: 24px; /* fits the smallest portrait opening without crossing its frame or name */
   /* Resident-colour dark backings behind each portrait (README: "resident-color dark backing"). */
   --hud-back-sprout: #183f33;
@@ -42,6 +54,9 @@
   --hud-back-danger: #4a1626;
   --hud-pause-glyph: 34%;
   --hud-focus: 3px;
+  /* Each card spreads past its grid cell into its neighbours' transparent frame margin: the frame art starts 7.8% in
+     from each side (alpha, 2026-11-15), so 1.1 (5% a side) keeps a visible gap and gives the portraits 10% more card. */
+  --hud-card-spread: 1.1;
   --hud-landscape-side: 160px;
   --hud-landscape-gap: 16px;
   --hud-landscape-card: 128px;
@@ -72,11 +87,16 @@
 }
 
 /* ---- Hero cards: backing, portrait, frame, name; the frame swaps to its amber twin when the special is ready. ---- */
-.loft-art[data-rumble-demo] .roster { gap: var(--stage-gap); }
+/* No grid gap: the frame art's own transparent margin (opening at 10.4% of the width) already spaces the cards, and the
+   width it frees goes to the portraits. */
+.loft-art[data-rumble-demo] .roster { gap: 0; }
 .loft-art[data-rumble-demo] .roster .card {
   --hud-back: var(--hud-back-custom);
   position: relative;
   display: block;
+  /* Grid items resolve percentage margins against their grid area, so the card grows evenly to both sides. */
+  width: calc(100% * var(--hud-card-spread));
+  margin-inline: calc((1 - var(--hud-card-spread)) * 50%);
   aspect-ratio: var(--hud-card-ratio);
   height: auto;
   min-height: 0;
@@ -145,6 +165,11 @@
   transform: none;
   opacity: 1;
   filter: var(--art-sprite-finish);
+  transition: opacity var(--hud-ignite) ease-out, filter var(--hud-ignite) ease-out;
+}
+.loft-art[data-rumble-demo] .roster .card:is([data-motion="moving"], [data-motion="recharging"]) .portrait img {
+  opacity: var(--hud-busy-opacity);
+  filter: var(--art-sprite-finish) var(--hud-busy-finish);
 }
 .loft-art[data-rumble-demo] .roster .portrait::before,
 .loft-art[data-rumble-demo] .roster .portrait::after { display: none; }
@@ -196,12 +221,13 @@
   height: auto;
   background: var(--art-lm-hud-spiral-seed) center / contain no-repeat;
 }
-.loft-art[data-rumble-demo] .roster .dock-meter::before { opacity: var(--hud-seed-dim); filter: grayscale(1); }
-.loft-art[data-rumble-demo] .roster .dock-meter::after { clip-path: inset(calc((1 - var(--charge, 0)) * 100%) 0 0 0); }
-.loft-art[data-rumble-demo] .roster .card.ready .dock-meter::after {
-  background-color: transparent;
-  filter: drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready));
+.loft-art[data-rumble-demo] .roster .dock-meter::before { opacity: var(--hud-seed-dim); filter: var(--hud-seed-unlit); }
+.loft-art[data-rumble-demo] .roster .dock-meter::after {
+  clip-path: inset(calc((1 - var(--charge, 0)) * 100%) 0 0 0);
+  filter: var(--hud-seed-lit-shadow);
 }
+/* The glow sits on the meter, not the clipped fill: a filter on a clip-path layer is cut to a square. */
+.loft-art[data-rumble-demo] .roster .card.ready .dock-meter { filter: drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready)); }
 /* Stunned: the portrait greys (camera-stun.css) and the cue rail's ring drains over it. */
 .loft-art[data-rumble-demo] .roster .rumble-stun-ring {
   position: absolute;
@@ -215,6 +241,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .loft-art[data-rumble-demo] .roster .card.ready::after { animation: none; }
+  .loft-art[data-rumble-demo] .roster .card .portrait img { transition: none; }
 }
 
 /* ---- The top-bar menu button is the pause stone (pause opens the menu in the live fight). ---- */

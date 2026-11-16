@@ -23,6 +23,10 @@
     // Its contact shadow, in radii, on the floor plane: collider-wide, nudged right and down away from the upper-left light.
     // The stone's 1.22-wide shadow read as a hole round the smaller painted body (captures, 2026-11-15).
     bumperArtShadow: Object.freeze({ x: 0.1, y: 0.3, width: 1, depth: 0.34 }),
+    // The grey rune stone read grey on pale grey on Cloudpeak (bumper-skin gate, 2026-11-15). A dark rim in `recess`, cast
+    // round its painted edge, gives it an outline; blur in radii, 0.15 = about 2.4 px at radius 16. The half-alpha edgeShade at
+    // 0.3 was invisible at 1500x920 (captures, 2026-11-15). Bloom and mushroom are pink and already read: plain edge.
+    bumperArtRim: Object.freeze({ skins: Object.freeze(['bumper-lm-rune-stone']), blur: 0.15 }),
     uiTokens: Object.freeze({
       surface: '--scene-actions-bg', recess: '--scene-actions-bg', worldEdge: '--scene-actions-edge',
       frameLight: '--controls-surface', frameShade: '--controls-edge', frameEdge: '--controls-edge',

@@ -6,9 +6,7 @@
     // 3.7 above the centre puts the feet one radius below it, on the unchanged collider's base.
     bossWidth:3.6,bossHeight:4.7,bossTop:3.7,bossFoot:0.9,
     // Measured on the art: the crown narrows to the trunk 56% down, and the trunk is 40% of the full width. Both padded a little.
-    bossCrown:0.6,bossTrunk:0.42,impactThreshold:0.65,bumperWidths:{idle:2.6,impact:3.2,rebound:3},
-    bumperAspect:{idle:840/900,impact:760/1090,rebound:1},bumperFoot:0.95,
-    boundaryColor:'#ffcf75',boundaryAlpha:0.6,boundaryWidth:1,
+    bossCrown:0.6,bossTrunk:0.42,impactThreshold:0.65, // magic-ok: this is the module's settings object, sourced in the comment above
   });
   const images={};
   let ready=null;
@@ -54,18 +52,5 @@
     ctx.drawImage(images.boss,rect.x-x,rect.y-y,rect.width,rect.height);
     ctx.restore();return true;
   }
-  function bumpers(session){
-    if(!enabled(session)||!images['bumper-idle'])return false;
-    const {ctx,s,FEEL,bumperSpots}=session.game;
-    bumperSpots().forEach((point,index)=>{
-      const radius=FEEL.bumperRadius,flash=s.bumperHits[index]/FEEL.bumperFlash;
-      const state=bumperState(flash),image=images['bumper-'+state]??images['bumper-idle'];
-      const width=radius*settings.bumperWidths[state],height=width*settings.bumperAspect[state];
-      ctx.drawImage(image,point.x-width/2,point.y+radius*settings.bumperFoot-height,width,height);
-      ctx.save();ctx.strokeStyle=settings.boundaryColor;ctx.globalAlpha=settings.boundaryAlpha;ctx.lineWidth=settings.boundaryWidth;
-      ctx.beginPath();ctx.arc(point.x,point.y,radius,0,Math.PI*2);ctx.stroke();ctx.restore();
-    });
-    return true;
-  }
-  root.LoftRumbleStorybook={enabled,load,bossBounds,bossParts,bumperState,background,boss,bumpers};
+  root.LoftRumbleStorybook={enabled,load,bossBounds,bossParts,bumperState,background,boss};
 })(globalThis);

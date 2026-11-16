@@ -17,7 +17,10 @@
     bossHp: 4800, bossHpMin: 2800, bossHpMax: 24000, bossHpStep: 400,
     seekStep: 5, // degrees a notch on the Springy seek slider
     comboTimeout: 2.5, comboTimeoutMin: 1, comboTimeoutMax: 6, sliderStep: 0.5,
-    stun: Object.freeze({beam: 1.5, slam: 2.0, stars: 3, orbit: 17, orbitHeight: 5, lift: 34, size: 4, inner: 0.45, points: 5, spin: 4, alpha: 0.65, outline: 1.5}),
+    stun: Object.freeze({beam: 1.5, slam: 2.0, stars: 3, orbit: 17, orbitHeight: 5, lift: 34, size: 4, inner: 0.45, points: 5, spin: 4, alpha: 0.65, outline: 1.5,
+      // Over a live boss Beam the 0.65 fade washed a pale hero into the warm-white core (review, 2026-11-15): there it draws at full
+      // strength with a dark halo in shadowColor, blur in px. 6 is the smallest that outlined Puff on the core at 390x844 (captures, 2026-11-15).
+      beamHalo: 6}),
     attackImpact: Object.freeze({
       beam: Object.freeze({x: 5, y: 1, duration: 0.12, cycles: 2}),
       slam: Object.freeze({x: 2, y: 7, duration: 0.2, cycles: 1.5}),

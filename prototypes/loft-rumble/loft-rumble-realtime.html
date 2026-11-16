@@ -856,8 +856,10 @@ function drawBodies(font,onlyId=null,extras=true,ground=true){if(extras)drawFlas
     // Activation: the ally that fired gets a thin cream ring that widens a little and fades over the splash.
     if(s.splash[id]>0){const k=1-s.splash[id]/FEEL.splashTime;ctx.globalAlpha=FEEL.activationRingAlpha*(1-k);ctx.lineWidth=FEEL.ringLine;ctx.strokeStyle=colors.foreground;
       ctx.beginPath();ctx.arc(b.x,b.y,R+FEEL.activationRingGap+(still()?0:FEEL.activationRingGrow*k),0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}
-    ctx.globalAlpha=stunned(b)?window.LoftRumbleCameraConfig.stun.alpha:b.moving||b.charge>=1?1:RT.rechargeAlpha;
-    const grabPose=dragFeel.pose(id,still());ctx.save();ctx.translate(b.x+pose.x,b.y+pose.y-grabPose.lift);if(camera?.shallow)ctx.scale(1,camera.uprightScale);
+    // Stunned: faded, but full strength with a dark halo inside a live Beam so the core never washes the hero out.
+    const stunLook=camera?window.LoftRumbleStun.look(b,{beamLive:beamLive(),inside:!!s.attackFx&&inZone(s.attackFx.warn,b)}):{alpha:null,halo:0};
+    ctx.globalAlpha=stunLook.alpha??(b.moving||b.charge>=1?1:RT.rechargeAlpha);
+    const grabPose=dragFeel.pose(id,still());ctx.save();if(stunLook.halo){ctx.shadowColor=window.LoftRumbleStun.haloColour;ctx.shadowBlur=stunLook.halo}ctx.translate(b.x+pose.x,b.y+pose.y-grabPose.lift);if(camera?.shallow)ctx.scale(1,camera.uprightScale);
     if(b.squash&&!still()){const k=FEEL.wallSquash*b.squash.life/FEEL.wallSquashLife,a=Math.atan2(b.squash.ny,b.squash.nx);ctx.rotate(a);ctx.scale(1-k,1+k*.6);ctx.rotate(-a)}
     const held=s.held===id,stretch=held?grabPose.stretch:b.pulse,k=grabPose.scale*splashScale(id)*(FEEL.artBalance[id]??1)*(held&&s.perfectPulse>0?1+FEEL.perfectPulse*s.perfectPulse/FEEL.perfectPulseLife:1);
     ctx.rotate(b.angle+pose.rotation);ctx.scale((1+stretch)*pose.sx*k,(1-stretch*.5)*pose.sy*k);
@@ -1078,6 +1080,8 @@ function drawEnemy(ground=true){
   if(!skinned&&s.enemyFlash>0&&!still()){ctx.globalAlpha=s.enemyFlash/FEEL.enemyFlash;circle(0,0,R+5,colors.flash);ctx.globalAlpha=1}
   ctx.restore();bossSlamLook('front');
 }
+// The boss Beam is on screen from the end of its windup until its fade ends (FIRE, then FADE).
+const beamLive=()=>{const fx=s.attackFx;return !!fx&&fx.warn.def.id==='beam'&&fx.t>=FEEL.windup&&fx.t-FEEL.windup-FEEL.travel<FEEL.beamFade};
 function drawAttack(){
   const fx=s.attackFx;if(!fx||fx.t<0)return;
   const e=enemy(),def=fx.warn.def,col=colors[def.colour],impact=FEEL.windup+FEEL.travel,after=fx.t-impact,L=Math.hypot(s.w,s.h);

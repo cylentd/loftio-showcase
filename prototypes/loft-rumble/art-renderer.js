@@ -265,8 +265,20 @@
     ctx.ellipse(radius * cast.x, radius * cast.y, radius * cast.width, radius * cast.depth, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.scale(1, upright);
-    if (impact > 0) ctx.filter = 'brightness(' + (1 + impact * style.bumperArtHitGlow) + ')';
+    if (style.bumperArtRim.skins.includes(skin)) {
+      ctx.shadowColor = style.recess;
+      ctx.shadowBlur = radius * style.bumperArtRim.blur;
+    }
+    // Older iOS Safari has no ctx.filter: there the hit adds the art once more, 'lighter', at the same glow strength.
+    const filtered = 'filter' in ctx;
+    if (impact > 0 && filtered) ctx.filter = 'brightness(' + (1 + impact * style.bumperArtHitGlow) + ')';
     ctx.drawImage(image, -width / 2, -height / 2, width, height);
+    if (impact > 0 && !filtered) {
+      ctx.shadowBlur = 0;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha *= impact * style.bumperArtHitGlow;
+      ctx.drawImage(image, -width / 2, -height / 2, width, height);
+    }
     ctx.restore();
     return true;
   }
