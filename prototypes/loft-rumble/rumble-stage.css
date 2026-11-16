@@ -70,6 +70,16 @@
   --stage-dock-row: 16px;
   --stage-meter-height: 4px;
 }
+/* A portrait phone fills its screen: the 360 px minimum and the height-derived width are for shallow landscape, and in
+   portrait they either scrolled the page (360 x 640: a 779 px frame), left the dock 360 px wide on a 412 px screen, or
+   left unused bands above and below a taller phone's frame that the hero dock needs. The arena then fits the height left
+   (resize()), and the dock keeps the full width. 520 px is the phone bound the landscape layout uses (rumble-hud.css). */
+@media (orientation: portrait) and (max-width: 520px) {
+  :root[data-rumble-demo] {
+    --stage-frame-width: 100vw;
+    --stage-frame-height: 100dvh;
+  }
+}
 :root[data-rumble-demo] body { background: var(--stage-transition-surface); }
 :root[data-rumble-demo] body > main {
   /* Layout containment anchors fixed results to this frame without scaling text or the canvas. */
@@ -96,9 +106,14 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
 }
-[data-rumble-demo] .top,
-.loft-art[data-rumble-demo] .roster {
+[data-rumble-demo] .top {
   width: min(100%, max(var(--col), var(--stage-chrome-width)));
+  justify-self: center;
+}
+/* The dock takes the frame's full width, not the arena column's: on a short phone the arena narrows to fit the height,
+   and the cards should stay as large as the screen allows (owner, 2026-11-15). */
+.loft-art[data-rumble-demo] .roster {
+  width: 100%;
   justify-self: center;
 }
 [data-rumble-demo] .top {

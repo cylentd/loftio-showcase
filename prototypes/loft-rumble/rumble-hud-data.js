@@ -58,6 +58,6 @@
     // Canonical portraits for the three dock slots. The third slot is the demo's resident (rumble-demo-data.js, Puff); a
     // card with its own art (data-own-art) keeps it, so player-made residents use the same frame and pipeline.
     portraits:Object.freeze({sprout:'lm-portrait-sprout',chomper:'lm-portrait-chomper',custom:'lm-portrait-puff'}),
-    nameFit:Object.freeze({min:15,step:.5}),  // L11 body-text floor; ellipsis preserves readability for long names
+    nameFit:Object.freeze({min:13,step:.5}),  // L11 helper-text floor, the name's own floor (rumble-hud.css --hud-name-floor); then ellipsis
   });
 })(globalThis);

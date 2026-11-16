@@ -1,8 +1,10 @@
 /* Living-magic HUD (LM6b): the owner's ui-v1 hero frames, spiral seed and pause stone in the live fight.
    The boss header, team bar and combo count draw on the canvas (rumble-hud.js) and read the --hud-* colours below.
    Spec: docs/design/LOFT-RUMBLE-LIVING-MAGIC.md ("HUD, bumpers and unfinished art"); art rules: assets/living-magic/ui-v1/README.md.
-   The frames scale uniformly (the bottom socket forbids nine-slicing); every inset below is a share of the 384 x 274 frame,
-   measured from its alpha on 2026-11-15: opening 0.104-0.880 wide and 0.19-0.80 tall, socket centred at 0.806 tall. */
+   The frame is nine-sliced (border-image) so a card can be squarer than the art: the corners, the top bar and the bottom bar
+   with its socket keep the art's scale, and only the straight side vines (art rows 88-192) lengthen. Every inset below is
+   in frame-art pixels (--hud-u, one art pixel at the card's scale), measured from the frames' alpha on 2026-11-15: the
+   vines span x 29-357 and y 32-236 of the 384 x 274 art, the opening x 40-338 and y 52-219, the socket centre y 220.8. */
 :root {
   /* Canvas HUD colours. Cream text with a deep plum stroke reads on all three arena backgrounds; the fills are the pack's
      violet (boss) and teal (team) tints; pending damage is a pale cream segment. */
@@ -15,37 +17,69 @@
   --hud-flash: #ffffff;
   /* Special-ready amber, the brief's "amber special-ready energy". */
   --hud-ready: #ffb23d;
-  --hud-ready-glow: 6px;
-  --hud-danger-glow: 5px;
+  /* Glows are a share of the card (cqi: the card is the size container), so they scale with it: 6 px and 5 px were
+     tuned on the 136 px card at 390 x 844 (LM6d, 2026-11-15). */
+  --hud-ready-glow: 4.4cqi;
+  --hud-danger-glow: 3.7cqi;
   --hud-ignite: .45s;
-  /* Dock card geometry. */
-  --hud-card-ratio: 384 / 274;
-  --hud-opening-top: 19%;
-  --hud-opening-side: 10.4%;
-  --hud-opening-right: 12%;
-  --hud-opening-bottom: 20%;
-  --hud-opening-radius: 14%;
-  /* The portrait fills the opening and runs under the name, as on boss-layout.webp: the name sits on the resident's feet,
-     so the hero, not the name band, is the first thing seen. 1 = the portrait's base meets the name's baseline. */
-  --hud-portrait-bottom: calc(var(--hud-name-bottom) + var(--hud-name-size) * var(--hud-name-line) * (1 - var(--hud-portrait-under-name)));
-  --hud-portrait-under-name: .75;
+  /* Dock card geometry. The card's box is the frame's visible vines, so its aspect is the one a player sees. The concept
+     cards (boss-layout.webp and the owner's 2026-11-15 concept) are about 240 x 200 px: 1.2 wide to 1 tall. */
+  --hud-card-ratio: 6 / 5;
+  --hud-frame-vines: 328; /* art px across the vines, x 29-357 */
+  --hud-u: calc(100cqi / var(--hud-frame-vines));
+  /* The art's transparent margin around the vines (art px), drawn outside the card box. */
+  --hud-frame-margin-top: 32;
+  --hud-frame-margin-right: 27;
+  --hud-frame-margin-bottom: 38;
+  --hud-frame-margin-left: 29;
+  /* Nine-slice lines (art px from each edge): the corner leaves end above row 88 and start below row 192; 64 px clears
+     the corner curve sideways. */
+  --hud-slice-top: 88;
+  --hud-slice-right: 64;
+  --hud-slice-bottom: 82;
+  --hud-slice-left: 64;
+  /* The opening, from the card's (vines') edges, in art px. */
+  --hud-opening-top: calc(var(--hud-u) * 20);
+  --hud-opening-side: calc(var(--hud-u) * 11);
+  --hud-opening-right: calc(var(--hud-u) * 19);
+  --hud-opening-bottom: calc(var(--hud-u) * 17);
+  --hud-opening-radius: calc(var(--hud-u) * 30);
+  /* The hero fills the opening's height and the frame covers its edges, as in the concept: Sprout's curl runs under the
+     top vine and its feet under the name. The art's box is the opening's width and 112% of its height, lifted 4% so
+     the curl tucks under the top vine; the opening clips the rest. Object-fit contain, so a square portrait is as tall
+     as the box and a tall or wide custom resident is drawn whole: cover in a square box cut wide art with a hard edge
+     inside the opening (2026-11-15 capture). The focal point sits high (35% down), where every portrait draws its face,
+     so short wide art rides up toward the top vine instead of sinking under the name. */
+  --hud-hero-scale: 112%;
+  --hud-hero-lift: 4%;
+  --hud-hero-focus: 50% 35%;
+  /* The name sits over the hero's lower body, its bottom on the rune's top, as in the concept. */
   --hud-name-line: 1.15;
-  --hud-name-bottom: 24.5%;
-  --hud-name-size: clamp(15px, calc(var(--col, 360px) * .037), 17px);
+  --hud-name-bottom: calc(var(--hud-socket-y) + var(--hud-seed) / 2);
+  /* The name is a share of its card, so a small phone's card keeps its resident: on boss-layout.webp "Chomper" spans
+     half the 222 px card, which is 11% of the card at Nunito bold. The floor is L11's 13 px helper-text size, the same
+     floor the long-name fit stops at (rumble-hud-data.js nameFit.min). */
+  --hud-name-share: 11cqi;
+  --hud-name-floor: 13px;
+  --hud-name-size: max(var(--hud-name-floor), var(--hud-name-share));
   --hud-name-stroke: 0 1px 0 var(--hud-ink), 0 -1px 0 var(--hud-ink), 1px 0 0 var(--hud-ink), -1px 0 0 var(--hud-ink), 0 2px 3px var(--hud-ink);
-  --hud-socket-y: 80.6%;
+  /* The socket's centre above the card's bottom edge: art row 220.8 against the vines' bottom at 236. */
+  --hud-socket-y: calc(var(--hud-u) * 15.2);
   /* The charge rune: boss-layout.webp shows the socket rune about 30 px across on a 222 px card (13.5%). It sits on the
      socket as an insert, wider than the socket hole. The unlit part is the same spiral, dark stone; the lit part rises
      from the bottom in the seed's own cream, so half charge reads as half a lit rune on phone. */
-  --hud-seed: 13.5%;
+  --hud-seed: 13.5cqi;
   --hud-seed-dim: .85;
   --hud-seed-unlit: grayscale(1) brightness(.4);
   --hud-seed-lit-shadow: drop-shadow(0 0 1px var(--hud-ink));
   /* Moving and recharging: the portrait steps back (dimmer, less saturated) so a resting hero reads as the one to fling.
      Opacity matches the pre-HUD hero cards (hero-cards.css --hero-busy-opacity, .55), softened so the plush still reads on
      the dark backing; stunned keeps its full grey (camera-stun.css). */
-  --hud-busy-opacity: .6;
-  --hud-busy-finish: saturate(.75) brightness(.85); /* keeps the plush's colour so busy never reads as stunned grey */
+  /* A see-through hero let the backing wash it out, so the step back comes from brightness and saturation and the hero
+     stays nearly opaque (2026-11-15). */
+  --hud-busy-opacity: .95;
+  --hud-busy-finish: saturate(.6) brightness(.68); /* keeps the plush's colour so busy never reads as stunned grey */
+  --hud-stun-finish: grayscale(1) brightness(.8); /* camera-stun.css's grey, opaque: its .5 opacity washed into the backing */
   --hud-stun-ring: 24px; /* fits the smallest portrait opening without crossing its frame or name */
   /* Resident-colour dark backings behind each portrait (README: "resident-color dark backing"). */
   --hud-back-sprout: #183f33;
@@ -54,9 +88,20 @@
   --hud-back-danger: #4a1626;
   --hud-pause-glyph: 34%;
   --hud-focus: 3px;
-  /* Each card spreads past its grid cell into its neighbours' transparent frame margin: the frame art starts 7.8% in
-     from each side (alpha, 2026-11-15), so 1.1 (5% a side) keeps a visible gap and gives the portraits 10% more card. */
-  --hud-card-spread: 1.1;
+  /* The arena's minimum: it keeps at least 75.5% of the frame's height, 483 of 640 px at 360 x 640: the arena's 480 px
+     at the 0.75 scale where the boss HP number still shows (rumble-hud-data.js compactScale), plus its border and snap.
+     The dock gets what is left after the arena minimum and the chrome (top bar, frame padding, two row gaps); on a squat
+     screen (keyboard up, split screen) the cards shrink before the arena does. Unitless so calcs and tests can read it. */
+  --hud-arena-min: 75.5;
+  --hud-chrome: calc(var(--stage-logo-height) + var(--stage-gap) * 4);
+  --hud-dock-room: calc(var(--stage-frame-height) * (100 - var(--hud-arena-min)) / 100 - var(--hud-chrome));
+  --hud-dock-slots: 3;
+  /* Cards fill the dock's width, a stage gap apart, as in the concept. Each card is 6:5 when the dock room allows; on a
+     short phone the room caps its height and the side vines shorten, down to the art's own 328 x 204 shape. The card's
+     width is recomputed from the frame width here because a % height cannot read its own width. */
+  --hud-frame-flat: 328 / 204;
+  --hud-card-w-abs: min((var(--stage-frame-width) - var(--stage-pad) * 2 - var(--stage-gap) * (var(--hud-dock-slots) - 1)) / var(--hud-dock-slots), var(--hud-dock-room) * var(--hud-frame-flat));
+  --hud-card-height: min(var(--hud-card-w-abs) / (var(--hud-card-ratio)), var(--hud-dock-room));
   --hud-landscape-side: 160px;
   --hud-landscape-gap: 16px;
   --hud-landscape-card: 128px;
@@ -68,6 +113,11 @@
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
+  /* The side column stacks fixed-width cards with no height cap. */
+  :root[data-rumble-demo] {
+    --hud-dock-room: 100dvh;
+    --hud-card-w-abs: var(--hud-landscape-card);
+  }
   :root[data-rumble-demo] main {
     grid-template-columns: auto var(--hud-landscape-side);
     grid-template-rows: auto minmax(0, 1fr);
@@ -82,23 +132,23 @@
   :root[data-rumble-demo] .top > #menu-toggle { grid-column: 2; }
   :root.loft-art[data-rumble-demo] .roster {
     width: 100%; grid-template-columns: var(--hud-landscape-card);
-    align-content: center; justify-content: center;
+    align-content: center; justify-content: center; row-gap: var(--stage-gap);
   }
 }
 
 /* ---- Hero cards: backing, portrait, frame, name; the frame swaps to its amber twin when the special is ready. ---- */
-/* No grid gap: the frame art's own transparent margin (opening at 10.4% of the width) already spaces the cards, and the
-   width it frees goes to the portraits. */
-.loft-art[data-rumble-demo] .roster { gap: 0; }
+/* The card's box is the vines, so the stage gap is the visible gap between frames. */
+.loft-art[data-rumble-demo] .roster { gap: var(--stage-gap); }
 .loft-art[data-rumble-demo] .roster .card {
   --hud-back: var(--hud-back-custom);
   position: relative;
   display: block;
-  /* Grid items resolve percentage margins against their grid area, so the card grows evenly to both sides. */
-  width: calc(100% * var(--hud-card-spread));
-  margin-inline: calc((1 - var(--hud-card-spread)) * 50%);
-  aspect-ratio: var(--hud-card-ratio);
-  height: auto;
+  width: 100%;
+  margin-inline: 0;
+  /* The card is the size container for its frame, name, glows and rune (cqi). */
+  container-type: inline-size;
+  aspect-ratio: auto;
+  height: var(--hud-card-height);
   min-height: 0;
   min-width: 0;
   padding: 0;
@@ -123,16 +173,23 @@
   content: '';
   display: block;
   position: absolute;
-  inset: 0;
+  /* The art's transparent margin hangs outside the card, so the vines line up with the card's edges. */
+  inset: calc(var(--hud-u) * -1 * var(--hud-frame-margin-top)) calc(var(--hud-u) * -1 * var(--hud-frame-margin-right))
+    calc(var(--hud-u) * -1 * var(--hud-frame-margin-bottom)) calc(var(--hud-u) * -1 * var(--hud-frame-margin-left));
   z-index: 2;
   pointer-events: none;
-  border: 0;
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: transparent;
+  border-width: calc(var(--hud-u) * var(--hud-slice-top)) calc(var(--hud-u) * var(--hud-slice-right))
+    calc(var(--hud-u) * var(--hud-slice-bottom)) calc(var(--hud-u) * var(--hud-slice-left));
   border-radius: 0;
-  background: var(--art-lm-hero-frame-normal) center / 100% 100% no-repeat;
+  border-image: var(--art-lm-hero-frame-normal) var(--hud-slice-top) var(--hud-slice-right) var(--hud-slice-bottom) var(--hud-slice-left) fill / 1 / 0 stretch;
+  background: none;
   animation: none;
 }
 .loft-art[data-rumble-demo] .roster .card.ready::after {
-  background-image: var(--art-lm-hero-frame-ready);
+  border-image-source: var(--art-lm-hero-frame-ready);
   filter: drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready));
   animation: hud-ignite var(--hud-ignite) ease-out 1;
 }
@@ -145,23 +202,29 @@
 .loft-art[data-rumble-demo] .roster .portrait,
 .loft-art[data-rumble-demo] .roster .card.rumble-special-ready .portrait {
   position: absolute;
-  inset: var(--hud-opening-top) var(--hud-opening-right) var(--hud-portrait-bottom) var(--hud-opening-side);
+  /* The hero fills the opening behind the frame (z under its ::after): the vines cover its edges, and the clip keeps it
+     inside the opening's rounded corners. */
+  inset: var(--hud-opening-top) var(--hud-opening-right) var(--hud-opening-bottom) var(--hud-opening-side);
   z-index: 1;
   display: block;
   width: auto;
   height: auto;
-  border-radius: 0;
+  overflow: hidden;
+  border-radius: var(--hud-opening-radius);
   background: none;
   box-shadow: none;
 }
 .loft-art[data-rumble-demo] .roster .card .portrait img {
   display: block;
+  position: absolute;
+  left: 0;
+  top: calc(-1 * var(--hud-hero-lift));
   width: 100%;
-  height: 100%;
+  height: var(--hud-hero-scale);
   border-radius: 0;
   background: none;
   object-fit: contain;
-  object-position: center bottom;
+  object-position: var(--hud-hero-focus);
   transform: none;
   opacity: 1;
   filter: var(--art-sprite-finish);
@@ -171,6 +234,7 @@
   opacity: var(--hud-busy-opacity);
   filter: var(--art-sprite-finish) var(--hud-busy-finish);
 }
+.loft-art[data-rumble-demo] .roster .card.stunned .portrait { opacity: 1; filter: var(--hud-stun-finish); }
 .loft-art[data-rumble-demo] .roster .portrait::before,
 .loft-art[data-rumble-demo] .roster .portrait::after { display: none; }
 /* Name only: one centred line on the opening's lower edge, cream with a plum outline. A long name shrinks first
@@ -180,7 +244,7 @@
   left: var(--hud-opening-side);
   right: var(--hud-opening-right);
   bottom: var(--hud-name-bottom);
-  z-index: 3;
+  z-index: 4;
   width: auto;
   max-width: none;
   margin: 0;
@@ -202,12 +266,12 @@
 .loft-art[data-rumble-demo] .roster .dock-meter {
   position: absolute;
   left: 50%;
-  top: var(--hud-socket-y);
+  bottom: var(--hud-socket-y);
   z-index: 3;
   width: var(--hud-seed);
   aspect-ratio: 1;
   height: auto;
-  translate: -50% -50%;
+  translate: -50% 50%;
   border-radius: 50%;
   background: none;
   overflow: visible;
@@ -232,8 +296,8 @@
 .loft-art[data-rumble-demo] .roster .rumble-stun-ring {
   position: absolute;
   left: 50%;
-  top: calc(var(--hud-opening-top) + (100% - var(--hud-opening-top) - var(--hud-portrait-bottom)) / 2);
-  z-index: 3;
+  top: calc(var(--hud-opening-top) + (100% - var(--hud-opening-top) - var(--hud-opening-bottom)) / 2);
+  z-index: 4;
   width: var(--hud-stun-ring);
   height: auto;
   aspect-ratio: 1;
