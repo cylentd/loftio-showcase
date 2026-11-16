@@ -33,10 +33,11 @@
 .results-body{box-sizing:border-box;padding-block:var(--lm-scroll-pad);scroll-padding-block:var(--lm-scroll-pad)}
 .damage-row{scroll-margin-block:var(--lm-scroll-pad)}
 .results-head{display:flex;flex-direction:column}
-#demo-results h2{position:relative;z-index:1;margin:0;font-size:var(--lm-title);font-weight:800;line-height:1.15;color:var(--lm-amber);
+#demo-results h2{position:relative;z-index:1;margin:0;font-size:var(--lm-title);font-weight:var(--lm-strong);line-height:1.15;color:var(--lm-amber);
   text-shadow:var(--lm-title-shadow)}
 #demo-results[data-outcome="defeat"] h2{color:var(--lm-rose)}
-#demo-results h2{background:var(--lm-label-surface);border-radius:var(--lm-tight);padding-block:var(--lm-tight)}
+/* No plate behind the title (audit finding 4): it sits on the painted material with the HUD's ink outline instead. */
+#demo-results h2{padding-block:var(--lm-tight)}
 .results-stage{position:relative;aspect-ratio:var(--lm-stage-w)/var(--lm-stage-h);align-self:center;
   width:min(100%,calc(var(--lm-stage-max) * var(--lm-stage-w) / var(--lm-stage-h)));
   margin-top:0;
@@ -59,13 +60,13 @@
 .results-summary > div{flex:1 1 var(--lm-fact-min);display:flex;flex-direction:column;justify-content:space-between;padding:0 var(--lm-tight);
   margin-inline-start:calc(var(--lm-line-weight) * -1);border-inline-start:var(--lm-line-weight) solid var(--lm-line)}
 .results-summary dt{font-size:var(--lm-body);color:var(--lm-muted)}
-.results-summary dd{margin:0;font-size:var(--lm-value);font-weight:800;font-variant-numeric:tabular-nums}
+.results-summary dd{margin:0;font-size:var(--lm-value);font-weight:var(--lm-strong);font-variant-numeric:tabular-nums}
 .results-divider{height:var(--lm-divider-crest);background:url('art/results-spiral-crest.webp') center/contain no-repeat,
   linear-gradient(90deg,transparent,var(--lm-line) 20%,var(--lm-line) 80%,transparent) center/100% var(--lm-line-weight) no-repeat}
 
 /* Damage per resident: one shared row component, collapsed by default, one open at a time. */
 #demo-damage{text-align:left}
-#demo-damage h3{margin:0 0 var(--lm-tight);font-size:var(--lm-heading);font-style:italic;font-weight:800;color:var(--lm-cream)}
+#demo-damage h3{margin:0 0 var(--lm-tight);font-size:var(--lm-heading);font-style:italic;font-weight:var(--lm-strong);color:var(--lm-cream)}
 #demo-damage-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--lm-gap)}
 .results-hero{border:0 solid transparent;border-image:url('art/results-row-surface.webp') var(--lm-row-inset) fill/var(--lm-row-slice) stretch;
   --hero:var(--lm-teal)}
@@ -80,8 +81,8 @@
   display:grid;grid-template-columns:var(--lm-face) minmax(0,1fr) auto var(--lm-chevron);grid-template-rows:auto auto var(--lm-bar);
   column-gap:var(--lm-gap);row-gap:var(--lm-tight);align-items:center}
 .damage-face{grid-row:1/4;width:var(--lm-face);height:var(--lm-face);object-fit:contain}
-.damage-name{font-size:var(--lm-name);font-weight:800;line-height:1.2}
-.damage-total{font-size:var(--lm-name);font-weight:800;font-variant-numeric:tabular-nums}
+.damage-name{font-size:var(--lm-name);font-weight:var(--lm-strong);line-height:1.2}
+.damage-total{font-size:var(--lm-name);font-weight:var(--lm-strong);font-variant-numeric:tabular-nums}
 .results-chevron{width:var(--lm-chevron);height:var(--lm-chevron);background:url('art/results-chevron.webp') center/contain no-repeat;
   transition:transform var(--lm-turn) ease-out}
 .damage-row[aria-expanded="true"] .results-chevron{transform:rotate(90deg)}
@@ -98,7 +99,7 @@
 #demo-breakdown[hidden]{display:none}
 #demo-breakdown > div{display:flex;justify-content:space-between;gap:var(--lm-gap)}
 #demo-breakdown dt{color:var(--lm-muted)}
-#demo-breakdown dd{margin:0;display:flex;gap:var(--lm-gap);font-weight:800;font-variant-numeric:tabular-nums}
+#demo-breakdown dd{margin:0;display:flex;gap:var(--lm-gap);font-weight:var(--lm-strong);font-variant-numeric:tabular-nums}
 #demo-breakdown .damage-count{min-width:var(--lm-count-col);text-align:right;font-weight:normal;color:var(--lm-muted)}
 #demo-breakdown .results-note{display:block;font-size:var(--lm-helper);color:var(--lm-muted)}
 /* Teammates bumped counts setups, not damage: its own subsection under the damage parts. */
@@ -109,9 +110,10 @@
 .results-actions > *{flex:1 1 var(--lm-action-min);min-height:var(--lm-button);box-sizing:border-box;padding:0 var(--lm-button-pad);
   display:flex;align-items:center;justify-content:center;border:0 solid transparent;background:none;cursor:pointer;
   border-image:url('art/results-button-secondary.webp') var(--lm-button-inset) fill/var(--lm-button-slice) stretch;
-  color:var(--lm-cream);font:800 var(--lm-action-2)/1.2 var(--font-body);text-decoration:none}
+  color:var(--lm-cream);font:var(--lm-strong) var(--lm-action-2)/1.2 var(--font-body);text-decoration:none}
 .results-actions > .results-primary{flex-basis:100%;border-image-source:url('art/results-button-primary.webp');color:var(--lm-cream);font-size:var(--lm-action)}
-.results-action-label{background:var(--lm-label-surface);padding:var(--lm-label-pad);border-radius:var(--lm-tight)}
+/* The label reads on the painted button through the HUD's ink outline, not a dark plate (audit finding 4). */
+.results-action-label{text-shadow:var(--rumble-text-stroke)}
 #demo-results button:focus-visible{outline:var(--lm-focus) solid var(--lm-amber);outline-offset:calc(-1 * var(--lm-focus))}
 
 @keyframes lm-results-in{from{opacity:0;translate:0 var(--lm-rise)}}

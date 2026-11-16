@@ -1,5 +1,7 @@
 (function(root){
   'use strict';
+  // The boss's one name is LoftRumbleDemoData.copy.boss (loaded first on the page); 'the boss' only if that file is absent.
+  const boss=root.LoftRumbleDemoData?.copy.boss??'the boss';
   root.LoftRumbleDragData=Object.freeze({
     pickupLife:.16,pickupScale:.055,heldScale:.025,heldLift:2,
     pullReach:90,pullSquash:.04,
@@ -17,15 +19,15 @@
         label:'Throw',
         names:Object.freeze({fling:'Fling',sling:'Sling'}),
         board:Object.freeze({
-          fling:"Swipe any ready resident toward the enemy's gold weak spot to fling it, or drag, hold still to aim along the drag and let go. Several can move at once. Drag back to the start to cancel.",
-          sling:"Press on any ready resident, pull back and release to sling it at the enemy's gold weak spot. Several can move at once. Drag back to the start to cancel."
+          fling:"Swipe any ready resident toward "+boss+"'s gold weak spot to fling it, or drag, hold still to aim along the drag and let go. Several can move at once. Drag back to the start to cancel.",
+          sling:"Press on any ready resident, pull back and release to sling it at "+boss+"'s gold weak spot. Several can move at once. Drag back to the start to cancel."
         }),
-        start:Object.freeze({fling:'Swipe a resident toward the enemy.',sling:'Drag from any resident, pull back, release.'}),
+        start:Object.freeze({fling:'Swipe a resident toward '+boss+'.',sling:'Drag from any resident, pull back, release.'}),
         cancel:Object.freeze({fling:'Fling cancelled.',sling:'Sling cancelled.'}),
         tutor:Object.freeze({fling:'Swipe to fling',sling:'Pull back, release'}),   // the lab's first-battle step, 4 words max
         roster:Object.freeze({   // the team dock's screen-reader label
-          fling:'Residents. SPECIAL means the next fling fires the special.',
-          sling:'Residents. SPECIAL means the next sling fires the special.'
+          fling:'Residents. A full gold portrait means the next fling fires the special.',
+          sling:'Residents. A full gold portrait means the next sling fires the special.'
         })
       })
     }),
@@ -57,7 +59,7 @@
       // still turns it at once: no delay, and at most 3 px of slack on a reversal.
       steadyPx:3
     }),
-    copy:Object.freeze({on:'Rumble on',off:'Rumble off'}),
+    copy:Object.freeze({label:'Vibration'}), // the settings row; its switch shows the state
     cues:Object.freeze({
       grab:Object.freeze({buzz:10,freq:320,to:460,life:.045,gain:.035}),
       armed:Object.freeze({buzz:6,freq:480,to:620,life:.035,gain:.025}),

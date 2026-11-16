@@ -37,7 +37,7 @@
 
   function label(ctx,text,x,y,size,font,align,fill){
     const P=colours();
-    ctx.font='bold '+typeSize(size)+'px '+font;ctx.textAlign=align;ctx.textBaseline='alphabetic';ctx.lineJoin='round';
+    ctx.font=D.type.weight+' '+typeSize(size)+'px '+font;ctx.textAlign=align;ctx.textBaseline='alphabetic';ctx.lineJoin='round';
     ctx.lineWidth=D.textStroke;ctx.strokeStyle=P.ink;ctx.strokeText(text,x,y);
     ctx.fillStyle=fill??P.cream;ctx.fillText(text,x,y);
   }
@@ -103,7 +103,7 @@
   }
 
   function readoutWidth(ctx,max,font){
-    ctx.save();ctx.font='bold '+typeSize(D.team.numberFont)+'px '+font;const w=ctx.measureText(max+'/'+max).width;ctx.restore();return w;
+    ctx.save();ctx.font=D.type.weight+' '+typeSize(D.team.numberFont)+'px '+font;const w=ctx.measureText(max+'/'+max).width;ctx.restore();return w;
   }
 
   // The two health channels, for damage and heal words that fly into a bar. Null while the frame art is missing.
@@ -131,7 +131,7 @@
     }else if(lost){
       const n=String(lost.n);ctx.globalAlpha=Math.max(0,1-lost.age);ctx.textBaseline='middle';
       if(lost.shatter&&!reduced){
-        ctx.font='bold '+typeSize(D.combo.countFont)+'px '+font;
+        ctx.font=D.type.weight+' '+typeSize(D.combo.countFont)+'px '+font;
         const chars=[...n],total=ctx.measureText(n).width;let cx=L.count.x-total*HALF;
         chars.forEach((c,i)=>{const w=ctx.measureText(c).width,dir=i-(chars.length-1)*HALF||HALF;ctx.save();
           ctx.translate(cx+w*HALF+dir*lost.spread*lost.age,L.count.y+lost.spread*lost.age*lost.age);ctx.rotate(dir*lost.age);

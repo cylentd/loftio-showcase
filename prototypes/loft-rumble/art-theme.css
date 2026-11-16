@@ -12,37 +12,32 @@
   color-scheme: dark;
   --font-sans: var(--font-body);
   --foreground: var(--scene-actions-ink);
-  --background: #202a34;
+  --background: var(--rumble-page);
   --card: var(--scene-actions-bg);
   --secondary: var(--scene-actions-bg);
-  --primary: #e1bd76;
+  --primary: var(--rumble-amber);
   --muted-foreground: var(--scene-actions-muted);
   --border: var(--scene-actions-edge);
   --track: var(--color-surface-sunk);
-  --good: #70c894;
-  --warning: #efba60;
-  --chip: #c48d46;
-  --danger: #ee756e;
-  --pending: #7b8b9b;
+  --good: var(--rumble-good);
+  --warning: var(--rumble-amber);
+  --chip: var(--rumble-chip);
+  --danger: var(--rumble-danger);
+  --pending: var(--rumble-pending);
   --art-page-edge: var(--color-bg);
   --art-ring-inset: -3px;
   --art-border-size: 2px;
   --art-sprite-finish: contrast(1.06) saturate(.92);
   --art-danger-surface: color-mix(in srgb, var(--danger) 14%, var(--controls-bg));
-  --rumble-title-size: clamp(24px, calc(var(--col, 360px) * .088), 32px);
-  --rumble-kicker-size: 12px;
-  --rumble-title-spacing: -.045em;
-  --rumble-title-lean: -5deg;
-  --rumble-title-edge: 1px;
-  --rumble-title-depth: 0 3px 0 var(--controls-accent);
+  --rumble-kicker-size: var(--rumble-helper-size);
   --hero-card-footer: 4px;
   --hero-cutout-height: calc(var(--portrait) + var(--gap) * 3 - var(--hero-card-footer));
   --hero-cutout-bleed: 0px;
   --hero-cutout-lift: 0px;
   --hero-name-size: clamp(14px, calc(var(--col, 360px) * .035), 18px);
-  --hero-detail-size: 12px;
+  --hero-detail-size: var(--rumble-helper-size);
   --hero-card-gap: 0px;
-  --hero-frame-radius: 14px;
+  --hero-frame-radius: var(--rumble-radius-control);
   --hero-cutout-shadow: drop-shadow(0 4px 2px var(--controls-edge));
 }
 .loft-art body { background: var(--art-page-edge); }
@@ -63,15 +58,12 @@
   line-height: 1;
   letter-spacing: var(--tracking-label);
 }
+/* Painted logo is the only display lettering (owner, 2026-11-15); the text title reads at the title scale, upright.
+   Superseded: a 24-32 px skewed italic with an ink edge and amber depth. */
 .loft-art .rumble-title-name {
   font-size: var(--rumble-title-size);
-  font-style: italic;
+  font-weight: var(--rumble-title-weight);
   line-height: 1;
-  letter-spacing: var(--rumble-title-spacing);
-  transform: skewX(var(--rumble-title-lean));
-  -webkit-text-stroke: var(--rumble-title-edge) var(--controls-ink);
-  paint-order: stroke fill;
-  text-shadow: var(--rumble-title-depth);
 }
 .loft-art .battle-status { font-variant-numeric: tabular-nums; }
 .loft-art #pause, .loft-art #menu-toggle, .loft-art #help-toggle {

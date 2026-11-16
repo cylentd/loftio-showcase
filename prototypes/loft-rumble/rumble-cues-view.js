@@ -70,31 +70,25 @@
     if(attack&&attackChip.textContent!==attack.name)attackChip.textContent=attack.name;
   }
 
-  // Dock cards: a glowing portrait and READY in the status line while a special is ready; a draining ring round the
+  // Dock cards: a glowing portrait while a special is ready (no READY text, owner 2026-11-15); a draining ring round the
   // greyed portrait while stunned. The ring is the card's child, laid over the portrait's cell, because camera-stun.css
   // greys the portrait and everything inside it. The card's own label already says both, so these are hidden from
   // screen readers.
   function renderDock(field){
     for(const card of document.querySelectorAll('.roster [data-resident]')){
       const id=card.dataset.resident;if(!card.querySelector('.portrait'))continue;
-      let stamp=card.querySelector('.rumble-ready'),ring=card.querySelector('.rumble-stun-ring');
-      if(!stamp){
-        stamp=make('span','rumble-ready',options.copy.field.ready);stamp.setAttribute('aria-hidden','true');
-        stamp.style.setProperty('--moment-life',options.life.ready+'s');card.append(stamp);
-      }
+      let ring=card.querySelector('.rumble-stun-ring');
       if(!ring){ring=make('span','rumble-stun-ring');ring.setAttribute('aria-hidden','true');card.append(ring)}
       const ready=field.ready.includes(id),stun=field.stunned.find(item=>item.id===id);
-      stamp.hidden=!ready;ring.hidden=!stun;
+      ring.hidden=!stun;
       card.classList.toggle('rumble-special-ready',ready);
       if(stun)ring.style.setProperty('--stun-left',stun.left.toFixed(3));
-      const stamping=field.moment?.kind==='ready'&&field.moment.id===id;
-      if(stamping)stamp.dataset.moment='ready';else delete stamp.dataset.moment;
     }
   }
 
-  // The one moment layer node: a cut-in or a word pop. A READY stamp is drawn on its dock portrait instead.
+  // The one moment layer node: a cut-in or a word pop.
   function renderMoment(moment){
-    const key=moment&&moment.kind!=='ready'?moment.kind+(moment.id??moment.word)+(moment.at?.x??''):'';
+    const key=moment?moment.kind+(moment.id??moment.word)+(moment.at?.x??''):'';
     if(key!==momentKey){
       momentNode?.remove();momentNode=null;momentKey=key;
       if(key){

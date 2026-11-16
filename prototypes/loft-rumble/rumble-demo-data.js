@@ -1,9 +1,12 @@
 (function(root){
   'use strict';
+  // The boss's one name: copy.boss below, and every string that names it. Owner, 2026-11-15: "Bramble" everywhere a player sees it.
+  const boss='Bramble';
   root.LoftRumbleDemoData=Object.freeze({
-    enrageAt:0.35,enragedInterval:5.5,enrageLead:0.75,bannerLife:2.2,secondsPerMinute:60,
+    enrageAt:0.35,enragedInterval:5.5,enrageLead:0.75,secondsPerMinute:60,
     rotation:Object.freeze(['beam','slam','pulse']),
     tutorialKey:'loftRumbleDemoTutorialSeen',
+    soundKey:'loftRumbleSound',          // localStorage 'on' | 'off', read and written like loftRumbleMusic (docs/architecture/ICD.md)
     resident:Object.freeze({name:'Puff',trait:'piercing'}),
 playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','throw-style','reset','replay-tutorial']),
     // Living-magic results screen (LM6c, owner's results kit 2026-11-15). Every list here is data: the screen draws as many
@@ -34,15 +37,19 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','t
     }),
     copy:Object.freeze({
       menuLabel:'Pause and settings',resume:'Resume battle',helpMenu:'How to play',pausedTitle:'Battle paused',
-      arrivalLead:'Ready to',arrivalTitle:'Rumble',musicOn:'Music on',musicOff:'Music off',
-      boss:'Bramble Beetle',enragedBoss:'Bramble Beetle · Enraged',back:'Back to Loft',
-      enrage:'Bramble is enraged!',enrageSub:'Attacks come faster. Watch the windup.',
-      victory:'Bramble defeated!',defeat:'Team knocked out',
-      winHint:'Try another run. Build a longer chain.',lossHint:'Chain teammates. Watch the windups.',
-      time:'Fight time',combo:'Best combo',replay:'Play Again', // owner's pick, 2026-11-15
-      // End-screen damage list and breakdown: labels and numbers only.
+      arrivalLead:'Ready to',arrivalTitle:'Rumble',
+      // Settings rows: the label never changes; the switch shows the state (audit 2026-11-15, top 10 #6).
+      sound:'Sound',music:'Music',musicHint:'Turn on Sound', // the hint shows under Music while Sound is off
+      // Every player string that names the boss reads this one key (owner, 2026-11-15: Bramble).
+      boss,enragedBoss:boss+' · Enraged',back:'Back to Loft',
+      // Enrage shows on the field only (owner, 2026-11-15): no banner and no subline. This sentence is for screen readers.
+      enrage:boss+' is enraged!',
+      victory:boss+' defeated',defeat:'Team knocked out',
+      winHint:'Try another run. Build a longer combo.',lossHint:'Bump teammates. Watch the warnings.',
+      time:'Battle time',combo:'Best combo',replay:'Play Again', // "Play Again" is the owner's pick, 2026-11-15; it wins over the audit glossary's sentence case
+      // End-screen damage list and breakdown: labels and numbers only. Counts are plain numbers, never "×2" (audit glossary).
       // "Bumps" and "Teammates bumped" replace "Set off" and "Teammates set off" (owner, 2026-11-15); the stat key stays setOff.
-      damage:'Damage',hitMark:'×',setOff:'Teammates bumped',
+      damage:'Damage',hitMark:'',setOff:'Teammates bumped',
       // A collapsed row's counts, in order (owner, 2026-11-15). "Throws", not "Flung": it counts sling releases too.
       rowCounts:Object.freeze({throws:'Throws',specials:'Specials',setOff:'Bumps'}),countSeparator:' · ',
       parts:Object.freeze({direct:'Direct hits',weak:'Weak spot',walls:'Wall bounce',ability:'Ability',special:'Special'}),
@@ -52,19 +59,59 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','t
       // Results screen labels for keys with no label above: time, combo, replay and back keep their own keys. The screen
       // shows only what `results.summary` and `results.actions` name; these are ready for those lists.
       summary:Object.freeze({teamDamage:'Team damage',throws:'Throws'}),
-      actions:Object.freeze({tutorial:'Replay tutorial'}),
+      actions:Object.freeze({tutorial:'Replay training'}),
       // How to play and the danger hint, keyed by throw style (one style at a time, owner 2026-11-15). The page writes the set
       // for the style in use and rewrites it when the setting changes.
       throwHelp:Object.freeze({
         zone:Object.freeze({fling:'Fling out of the danger zone',sling:'Sling out of the danger zone'}),
+        // About three short lines (owner, 2026-11-15): the throw, the bump, the special (it fires on the next throw until the
+        // specials redesign), and a pointer to Training for the rest. Replay training is the menu's own button.
         teamHelp:Object.freeze({
-          fling:'Swipe any ready resident to fling it, even while others are moving. Bump a teammate to fire its ability. Each enemy hit builds your combo. Your combo expires after 2.5 seconds without a hit. Beam and Slam stun residents caught in their zones, including moving ones. A stun stops that resident, not your whole combo. A full gold portrait makes its next fling a special.',
-          sling:'Pull back any ready resident and let go to sling it, even while others are moving. Bump a teammate to fire its ability. Each enemy hit builds your combo. Your combo expires after 2.5 seconds without a hit. Beam and Slam stun residents caught in their zones, including moving ones. A stun stops that resident, not your whole combo. A full gold portrait makes its next sling a special.'
+          fling:'Swipe a ready resident to fling it at '+boss+'; bump a teammate to fire its ability.',
+          sling:'Pull back a ready resident and let go to sling it at '+boss+'; bump a teammate to fire its ability.'
         }),
         aimHelp:Object.freeze({
-          fling:'Hit the gold weak spot for 3× damage. Wall bounces add damage, up to ×2. To aim, drag and hold still: the dots point along your drag. Let go on the gold timing mark for bonus damage. Watch Bramble charge a Beam or crouch for a Slam, then fling residents clear of the marked ground. Collect hearts to heal. At low health, Bramble attacks faster.',
-          sling:'Hit the gold weak spot for 3× damage. Wall bounces add damage, up to ×2. Hold the pull still to aim: the dots point opposite your pull. Let go on the gold timing mark for bonus damage. Watch Bramble charge a Beam or crouch for a Slam, then sling residents clear of the marked ground. Collect hearts to heal. At low health, Bramble attacks faster.'
-        })
+          fling:'A full gold portrait makes your next fling a special.',
+          sling:'A full gold portrait makes your next sling a special.'
+        }),
+        // The page adds this only when Training is installed (it is with ?training), because only then does the menu hold the button.
+        training:'Replay training in the menu for the rest.'
+      }),
+      // Words the realtime page shows, keyed (audit 2026-11-15, top 10 #2). The page reads them as COPY.<key> and PAGE.<key>;
+      // `{name}`-style holes are filled by the page. Field cues only (owner, 2026-11-15): no enrage banner, no cut-in subline,
+      // no READY stamp.
+      page:Object.freeze({
+        gameName:'Loft Rumble',settings:'Settings',pause:'Pause',resume:'Resume',paused:'Paused · tap to resume',
+        newBattle:'New battle',reroll:'Reroll trait',replayTutorial:'Replay training',turnBased:'Try turn-based',
+        timingOn:'Timing on',timingOff:'Timing off',rechargeOn:'Recharge on',rechargeOff:'Recharge off', // lab-only rows keep a flipping label
+        portraitHint:'Best in portrait',dismiss:'Dismiss',bossBar:boss+' health',traitUnset:'Random trait',
+        name:Object.freeze({sprout:'Sprout',chomper:'Chomper',custom:'Custom'}), // Custom shows in the lab only; the demo names the third resident Puff
+        trait:Object.freeze({
+          springy:Object.freeze({name:'Springy',description:'Long, fast ricochets. Light hits; keep bouncing to build damage.'}),
+          heavy:Object.freeze({name:'Heavy hitter',description:'Weightier throws. Strong hits; aim for the weak spot.'}),
+          piercing:Object.freeze({name:'Piercing',description:'Pass through '+boss+'. Bank off a wall to strike again.'}),
+        }),
+        abilityName:Object.freeze({springy:'Seed burst',heavy:'Shockwave',piercing:'Piercing beam'}),
+        specialName:Object.freeze({springy:'Overdrive',heavy:'Meteor smash',piercing:'Comet shot'}),
+        attack:Object.freeze({
+          pulse:Object.freeze({name:'Pulse',tip:'Hits the whole team'}),
+          beam:Object.freeze({name:'Beam',tip:'Leave the purple lane'}),
+          slam:Object.freeze({name:'Slam',tip:'Leave the purple ring'}),
+        }),
+        ability:Object.freeze({springy:'Seeds chase '+boss,heavy:'Blasts '+boss+' up close',piercing:'Zaps from anywhere'}), // ally intro taglines, 4 words max
+        special:'Special',tutor:Object.freeze({bump:'Bump a teammate',zone:'Leave the zone'}), // first-battle steps, 4 words max
+        combo:'combo',comboMiles:Object.freeze(['Nice','Great','Rumble']),comboSaved:'Combo saved!',comboLost:'Combo lost',
+        blocked:'Blocked',pierce:'Pierce!',crack:'Crack!',shattered:'Shield broken!',
+        shieldToast:Object.freeze({title:'Piercing passes shields',sub:'Heavy hits crack it'}),
+        hornBroken:Object.freeze({beam:'Horn broken! No more Beam',slam:'Horn broken! No more Slam'}),
+        multiplier:'×{multiplier}', // the weak-spot mark and the bounce counter: the sign comes first, the number after (audit glossary)
+        perfect:'PERFECT',perfectStreak:'PERFECT ×{streak}',grade:Object.freeze({perfect:'Perfect',great:'Great'}),
+        weak:'Weak spot',missed:'Missed',dodged:'Dodged',heal:'Heal',newTrait:'New trait: {name}.',
+        miss:'Press on a resident to pick it up.',recharging:'{name} is recharging.',
+        ready:'Ready',recharge:'Recharging',moving:'Moving',focus:'Focus',attackNow:'Now',secondsSuffix:'s',
+        won:'Won in {time}',lost:'Knocked out at {time}',again:'Tap to play again',ready_sr:' special ready',ko:'Knocked out',
+        battle:'Battle time {time}',battleOver:'Battle finished',attackIn:'{attack} in {seconds} s',skip:'Tap to skip',
+        bossHealth:'{boss} · {hp} HP',bossDown:'{boss} defeated',teamHealth:'Team {now}/{max} HP',hp:'{hp} HP',teamName:'Your team',
       }),
     }),
   });

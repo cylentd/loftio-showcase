@@ -11,60 +11,86 @@
   --stage-logo-width: 144px;
   --stage-logo-height: 48px;
   --stage-control: 44px;
-  --stage-radius: 12px;
+  --stage-radius: var(--rumble-radius-control);
   --stage-dock-height: 64px;
   --stage-avatar: 36px;
-  --stage-name-size: 12px;
-  --stage-state-size: 11px;
+  --stage-name-size: var(--rumble-helper-size);
+  --stage-state-size: var(--rumble-helper-size);
   --stage-state-icon: 12px;
   --stage-back-size: 22px;
   --stage-border: 1px;
-  --stage-backdrop-shade: #16251fe0;
-  --stage-backdrop-bottom: #101b18f2;
-  --stage-chrome-surface: #182820e8;
-  --stage-dock-surface: #213b30;
-  --stage-dock-ink: #f6efdc;
-  --stage-dock-muted: #c6d3c4;
-  --stage-edge: #a4ac7a55;
+  --stage-backdrop-shade: color-mix(in srgb, var(--rumble-green-black) 88%, transparent);
+  --stage-backdrop-bottom: color-mix(in srgb, color-mix(in srgb, var(--rumble-green-black) 70%, var(--rumble-shadow)) 95%, transparent);
+  --stage-chrome-surface: color-mix(in srgb, var(--rumble-green-black) 91%, transparent);
+  --stage-dock-surface: var(--rumble-green-black);
+  --stage-dock-ink: var(--rumble-cream);
+  --stage-dock-muted: var(--rumble-dock-muted);
+  --stage-edge: color-mix(in srgb, var(--rumble-moss) 33%, transparent);
   --stage-arrival-life: 4000ms;
   --stage-arrival-reveal: 1100ms;
   --stage-arrival-ease: ease-in-out;
-  --stage-arrival-shade: #14231d59;
-  --stage-arrival-title: clamp(48px, calc(var(--col, 360px) * .17), 76px);
-  --stage-arrival-lead: 22px;
-  --stage-arrival-ink: #ffe6a5;
-  --stage-arrival-outline: #4b2639;
-  --stage-arrival-stroke: 2px;
-  --stage-arrival-lean: -5deg;
-  --stage-arrival-tracking: -.045em;
+  --stage-arrival-shade: color-mix(in srgb, var(--rumble-green-black) 35%, transparent);
+  /* Painted logo is the only display lettering (owner, 2026-11-15): the arrival words use the title scale, cream with
+     the HUD's ink outline, upright. Superseded: a 48-76 px skewed italic Nunito with stacked depth. */
+  --stage-arrival-title: var(--rumble-title-size);
+  --stage-arrival-lead: var(--rumble-name-size);
+  --stage-arrival-ink: var(--rumble-cream);
+  --stage-arrival-outline: var(--rumble-ink);
   --stage-arrival-gap: 2px;
-  --stage-arrival-depth: 0 4px 0 #9b5b31, 0 7px 0 #4b2639, 0 12px 22px #0008;
+  --stage-arrival-depth: 0 3px 0 var(--rumble-amber-deep), 0 6px 14px color-mix(in srgb, var(--rumble-shadow) 53%, transparent);
   --stage-arrival-layer: 4;
   --stage-results-layer: 1;
-  --stage-arrival-shadow: 0 2px 8px #000b;
+  --stage-arrival-shadow: var(--rumble-text-stroke);
   --stage-sheet-width: 360px;
   --stage-help-viewport-gap: 48px; /* UI standards L4: total top/bottom clearance. */
   --stage-sheet-space: 20px;
   --stage-sheet-gap: 12px;
-  --stage-sheet-radius: 24px;
-  --stage-sheet-art-height: 88px;
-  --stage-sheet-title: 26px;
-  --stage-sheet-copy: 14px;
+  --stage-sheet-radius: var(--rumble-radius-surface);
+  --stage-sheet-title: var(--rumble-title-size);
+  --stage-sheet-copy: var(--rumble-body-size);
   --stage-sheet-control: 48px;
-  --stage-sheet-surface: #f5ecd9;
-  --stage-sheet-ink: #332c23;
-  --stage-sheet-muted: #68634f;
-  --stage-sheet-edge: #bda77a;
-  --stage-sheet-rule: #d7c9ab;
-  --stage-sheet-accent: #f4c566;
-  --stage-sheet-backdrop: #101a16c9;
-  --stage-sheet-toggle: #637c53;
-  --stage-sheet-toggle-off: #b3ad9b;
+  /* Pause and How to play use the results kit (audit finding 1): plum material, the root frame, painted buttons, cream
+     text. Superseded: a light cream card (#f5ecd9) with a 1 px hairline. The names stay so the contrast pairs in
+     tests/capture_hud_acceptance.py keep measuring the real sheet. */
+  --stage-sheet-surface: var(--rumble-plum);
+  --stage-sheet-ink: var(--rumble-cream);
+  --stage-sheet-muted: var(--rumble-muted);
+  --stage-sheet-edge: var(--rumble-amber);
+  --stage-sheet-rule: color-mix(in srgb, var(--rumble-amber) 33%, transparent);
+  --stage-sheet-accent: var(--rumble-amber);
+  --stage-sheet-accent-ink: var(--rumble-ink);
+  --stage-sheet-hover: color-mix(in srgb, var(--rumble-cream) 10%, transparent);
+  --stage-sheet-backdrop: color-mix(in srgb, color-mix(in srgb, var(--rumble-green-black) 70%, var(--rumble-shadow)) 79%, transparent);
+  --stage-sheet-toggle: var(--rumble-team-fill);
+  --stage-sheet-toggle-off: var(--rumble-track);
+  --stage-sheet-toggle-knob: var(--rumble-cream);
   --stage-sheet-toggle-width: 32px;
   --stage-sheet-toggle-height: 20px;
   --stage-sheet-toggle-dot: 12px;
-  --stage-throw-option: 72px; /* each Fling / Sling segment: wide enough for either word at 14px, over the 44px target */
-  --stage-sheet-shadow: 0 16px 64px #0008;
+  --stage-throw-option: 72px; /* each Fling / Sling segment: wide enough for either word at 15px, over the 44px target */
+  --stage-sheet-shadow: 0 16px 64px color-mix(in srgb, var(--rumble-shadow) 53%, transparent);
+  /* The results kit's frame (results-v1/manifest.json): a 64 px art slice drawn at 32 px, hung 8 px outside the sheet so
+     the plum material starts under the vine, as on the results screen (--lm-material-inset). Measured from the art's
+     alpha, the vine's inner edge then sits 10 px inside the sheet at the sides and 12.5 px at the top and bottom. The
+     padding clears L1 from that edge: 16 px on a 390 px phone, 24 px at 1500 px, growing linearly with the viewport
+     between them (the slope is the extra padding over those 1110 px). */
+  --stage-sheet-frame-slice: 64;
+  --stage-sheet-frame: 32px;
+  --stage-sheet-frame-outset: 8px;
+  --stage-sheet-pad-inline-phone: 28px;
+  --stage-sheet-pad-inline-desktop: 34px;
+  --stage-sheet-pad-block-phone: 30px;
+  --stage-sheet-pad-block-desktop: 38px;
+  --stage-sheet-pad-from: 390px;
+  --stage-sheet-pad-inline: clamp(var(--stage-sheet-pad-inline-phone), calc(var(--stage-sheet-pad-inline-phone) + (100vw - var(--stage-sheet-pad-from)) * .0055), var(--stage-sheet-pad-inline-desktop));
+  --stage-sheet-pad-block: clamp(var(--stage-sheet-pad-block-phone), calc(var(--stage-sheet-pad-block-phone) + (100vw - var(--stage-sheet-pad-from)) * .0073), var(--stage-sheet-pad-block-desktop));
+  --stage-material-tile: 128px 128px;
+  --stage-button-slice: 20px 28px;
+  --stage-button-inset: 40 56;
+  --stage-focus: 3px;
+  /* Training line: never closer than this to the board's rim (audit finding 9: "Swipe toward Bramble" touched it). */
+  --stage-training-edge: 8px;
+  --stage-training-pad: 6px 10px;
   --stage-dock-pad: 8px;
   --stage-dock-gap: 4px;
   --stage-dock-row: 16px;
@@ -174,6 +200,9 @@
 .loft-art[data-rumble-demo] #portrait-hint { display: none; }
 /* Dock hero cards and the top-bar pause stone: rumble-hud.css (living-magic HUD, LM6b). */
 
+/* Pause and How to play: the results kit (audit finding 1). The root frame is hung outside the sheet so the plum
+   material runs under its vine; the primary action is the painted primary button, every other control the painted
+   secondary or a plain row on the plum. */
 [data-rumble-demo] :is(#menu, #help-panel) {
   position: fixed;
   inset: 0;
@@ -183,10 +212,11 @@
   max-width: none;
   max-height: calc(100dvh - var(--stage-sheet-space) * 2);
   box-sizing: border-box;
-  padding: var(--stage-sheet-space);
-  border: var(--stage-border) solid var(--stage-sheet-edge);
+  padding: var(--stage-sheet-pad-block) var(--stage-sheet-pad-inline);
+  border: 0 solid transparent;
+  border-image: url('art/results-frame.webp') var(--stage-sheet-frame-slice) / var(--stage-sheet-frame) / var(--stage-sheet-frame-outset) stretch;
   border-radius: var(--stage-sheet-radius);
-  background: var(--stage-sheet-surface);
+  background: var(--stage-sheet-surface) url('art/results-panel-surface.webp') repeat 0 0 / var(--stage-material-tile);
   color: var(--stage-sheet-ink);
   box-shadow: var(--stage-sheet-shadow);
   overflow-y: auto;
@@ -195,15 +225,17 @@
 [data-rumble-demo] :is(#menu, #help-panel)::backdrop { background: var(--stage-sheet-backdrop); }
 [data-rumble-demo] #menu { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--stage-sheet-gap); }
 [data-rumble-demo] #menu > :is(.pause-brand, h2) { grid-column: 1 / -1; margin: 0; }
-[data-rumble-demo] .pause-brand {
-  display: grid;
-  place-items: center;
-  height: var(--stage-sheet-art-height);
-  margin: calc(-1 * var(--stage-sheet-space)) calc(-1 * var(--stage-sheet-space)) 0 !important;
-  background: linear-gradient(var(--stage-backdrop-shade), var(--stage-backdrop-shade)), url('assets/camera-storybook/arena.webp') center / cover;
-}
+/* The painted logo sits on the plum: the arena photo band behind it belonged to the light card. */
+[data-rumble-demo] .pause-brand { display: grid; place-items: center; }
 [data-rumble-demo] .pause-brand img { width: var(--stage-logo-width); height: var(--stage-logo-height); object-fit: contain; }
-[data-rumble-demo] :is(#menu, #help-panel) h2 { font-size: var(--stage-sheet-title); font-weight: 600; line-height: 1.2; text-align: center; color: var(--stage-sheet-ink); }
+[data-rumble-demo] :is(#menu, #help-panel) h2 {
+  font-size: var(--stage-sheet-title);
+  font-weight: var(--rumble-title-weight);
+  line-height: 1.2;
+  text-align: center;
+  color: var(--stage-sheet-accent);
+  text-shadow: var(--rumble-text-stroke), 0 3px 0 var(--rumble-amber-deep);
+}
 [data-rumble-demo] #menu > button {
   grid-column: auto;
   grid-row: auto;
@@ -212,24 +244,29 @@
   min-height: var(--stage-sheet-control);
   height: auto;
   padding: var(--stage-sheet-gap);
-  border: var(--stage-border) solid var(--stage-sheet-rule);
+  border: 0 solid transparent;
+  border-image: url('art/results-button-secondary.webp') var(--stage-button-inset) fill / var(--stage-button-slice) stretch;
   border-radius: var(--stage-radius);
   background: transparent;
   color: var(--stage-sheet-ink);
   box-shadow: none;
   font-size: var(--stage-sheet-copy);
-  font-weight: 500;
+  font-weight: var(--rumble-name-weight);
   line-height: 1.4;
+  text-shadow: var(--rumble-text-stroke);
   white-space: nowrap;
 }
 [data-rumble-demo] #menu #pause,
 [data-rumble-demo] .help-resume {
   grid-column: 1 / -1;
   min-height: var(--stage-sheet-control);
-  border-color: var(--stage-sheet-edge);
-  background: var(--stage-sheet-accent);
+  border: 0 solid transparent;
+  border-image: url('art/results-button-primary.webp') var(--stage-button-inset) fill / var(--stage-button-slice) stretch;
+  background: transparent;
   color: var(--stage-sheet-ink);
-  font-weight: 600;
+  font-size: var(--stage-sheet-copy);
+  font-weight: var(--rumble-title-weight);
+  text-shadow: var(--rumble-text-stroke);
   border-radius: var(--stage-radius);
 }
 [data-rumble-demo] #menu :is(#sound, #music, #haptics) {
@@ -237,9 +274,13 @@
   grid-template-columns: minmax(0, 1fr) var(--stage-sheet-toggle-width);
   justify-items: start;
   border: 0;
+  border-image: none;
   border-bottom: var(--stage-border) solid var(--stage-sheet-rule);
   border-radius: 0;
   padding: var(--stage-sheet-gap) 0;
+  background: transparent;
+  color: var(--stage-sheet-ink);
+  text-shadow: none;
 }
 [data-rumble-demo] #menu :is(#sound, #music, #haptics)::after {
   content: '';
@@ -248,10 +289,11 @@
   width: var(--stage-sheet-toggle-width);
   height: var(--stage-sheet-toggle-height);
   border-radius: var(--stage-sheet-toggle-height);
-  background: radial-gradient(circle at calc(var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-surface) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle-off);
+  background: radial-gradient(circle at calc(var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-toggle-knob) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle-off);
+  box-shadow: inset 0 0 0 var(--stage-border) var(--stage-sheet-rule);
 }
 [data-rumble-demo] #menu :is(#sound, #music, #haptics)[aria-pressed=true]::after {
-  background: radial-gradient(circle at calc(100% - var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-surface) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle);
+  background: radial-gradient(circle at calc(100% - var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-toggle-knob) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle);
 }
 [data-rumble-demo] #menu #help-toggle { grid-column: 1 / -1; }
 /* Throw style (unit B): a labelled row like the toggles, with a two-option segmented control on the right. */
@@ -265,7 +307,7 @@
   padding-bottom: var(--stage-sheet-gap);
   color: var(--stage-sheet-ink);
   font-size: var(--stage-sheet-copy);
-  font-weight: 500;
+  font-weight: var(--rumble-body-weight);
   line-height: 1.4;
 }
 [data-rumble-demo] #throw-style .throw-options {
@@ -273,6 +315,7 @@
   grid-template-columns: repeat(2, minmax(var(--stage-throw-option), auto));
   border: var(--stage-border) solid var(--stage-sheet-rule);
   border-radius: var(--stage-radius);
+  background: var(--stage-sheet-toggle-off);
 }
 [data-rumble-demo] #throw-style button {
   min-width: var(--stage-throw-option);
@@ -286,13 +329,13 @@
   font: inherit;
   white-space: nowrap;
 }
-[data-rumble-demo] #throw-style button:hover { background-color: var(--stage-sheet-rule); }
-[data-rumble-demo] #throw-style button[aria-pressed=true] { border-color: var(--stage-sheet-edge); background: var(--stage-sheet-accent); font-weight: 600; }
-[data-rumble-demo] #menu :is(#reset, #replay-tutorial) { border: 0; font-size: var(--stage-name-size); color: var(--stage-sheet-muted); padding-inline: 0; }
+[data-rumble-demo] #throw-style button:hover { background-color: var(--stage-sheet-hover); }
+[data-rumble-demo] #throw-style button[aria-pressed=true] { border-color: var(--stage-sheet-edge); background: var(--stage-sheet-accent); color: var(--stage-sheet-accent-ink); font-weight: var(--rumble-name-weight); }
+[data-rumble-demo] #menu :is(#reset, #replay-tutorial) { border: 0; border-image: none; font-size: var(--stage-name-size); font-weight: var(--rumble-helper-weight); color: var(--stage-sheet-muted); text-shadow: none; padding-inline: 0; }
 [data-rumble-demo] #menu:not(:has(#replay-tutorial)) #reset { grid-column: 1 / -1; } /* Replay is removed without ?training; New battle takes the whole row */
-[data-rumble-demo] #menu > button:hover { background-color: var(--stage-sheet-rule); }
-[data-rumble-demo] #menu #pause:hover { background-color: var(--warning); }
-[data-rumble-demo] :is(#menu, #help-panel) button:focus-visible { outline: var(--stage-dock-gap) solid var(--stage-sheet-toggle); outline-offset: var(--stage-dock-gap); }
+[data-rumble-demo] #menu > button:hover { background-color: var(--stage-sheet-hover); }
+[data-rumble-demo] :is(#menu #pause, .help-resume):hover { background-color: transparent; filter: brightness(1.08); }
+[data-rumble-demo] :is(#menu, #help-panel) button:focus-visible { outline: var(--stage-focus) solid var(--stage-sheet-accent); outline-offset: var(--stage-dock-gap); }
 [data-rumble-demo] #help-panel {
   gap: var(--stage-sheet-space);
   max-height: calc(100dvh - var(--stage-help-viewport-gap));
@@ -301,14 +344,40 @@
 }
 [data-rumble-demo] .help-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 [data-rumble-demo] .help-body:focus-visible {
-  outline: var(--stage-dock-gap) solid var(--stage-sheet-toggle);
+  outline: var(--stage-focus) solid var(--stage-sheet-accent);
   outline-offset: var(--stage-dock-gap);
 }
 [data-rumble-demo] .help-body > * + * { margin-top: var(--stage-sheet-gap) !important; }
 [data-rumble-demo] .help-footer { display: flex; gap: var(--stage-sheet-gap); }
 [data-rumble-demo] .help-footer .help-resume { width: 100%; }
 [data-rumble-demo] #help-panel h2 { margin: 0; }
-[data-rumble-demo] #help-panel :is(#help, #team-help) { color: var(--stage-sheet-ink); font-size: var(--stage-sheet-copy); line-height: 1.65; }
+[data-rumble-demo] #help-panel :is(#help, #team-help) { color: var(--stage-sheet-ink); font-size: var(--stage-sheet-copy); font-weight: var(--rumble-body-weight); line-height: 1.65; }
+
+/* Training (rumble-tutorial-plain.js): the line sits over the resident it names, Skip under the boss bar. Both carry the
+   dock's plate and ink over bright arena art (L9). */
+.rumble-training-line,
+.rumble-training-skip {
+  position: absolute;
+  box-sizing: border-box;
+  border: var(--stage-border) solid var(--stage-edge);
+  border-radius: var(--stage-radius);
+  background: var(--stage-chrome-surface);
+  color: var(--stage-dock-ink);
+  font-size: var(--rumble-name-size);
+  font-weight: var(--rumble-name-weight);
+  line-height: 1.3;
+}
+.rumble-training-line {
+  margin: 0;
+  padding: var(--stage-training-pad);
+  white-space: nowrap;
+  transform: translate(-50%, -150%);
+  pointer-events: none;
+}
+.rumble-training-skip { right: var(--stage-training-edge); min-height: var(--stage-control); padding: 0 var(--stage-sheet-gap); }
+/* Training is its own intro: while its line shows, the arrival words step aside (audit finding 9: the Training line sat
+   over "Ready to"). The cue still runs, so it still ends and clears the arrival. */
+[data-rumble-demo]:has(.rumble-training-line:not([hidden])) .battle-arrival { visibility: hidden; }
 
 [data-rumble-demo][data-rumble-arriving] main {
   animation: arena-arrive var(--stage-arrival-reveal) var(--stage-arrival-ease) both;
@@ -334,15 +403,9 @@
 [data-rumble-demo] .battle-arrival strong {
   font-size: var(--stage-arrival-title);
   line-height: 1.15;
-  font-weight: 600;
-  font-style: italic;
-  text-transform: uppercase;
-  letter-spacing: var(--stage-arrival-tracking);
+  font-weight: var(--rumble-title-weight);
   color: var(--stage-arrival-ink);
-  -webkit-text-stroke: var(--stage-arrival-stroke) var(--stage-arrival-outline);
-  paint-order: stroke fill;
-  text-shadow: var(--stage-arrival-depth);
-  transform: rotate(var(--stage-arrival-lean));
+  text-shadow: var(--stage-arrival-shadow), var(--stage-arrival-depth);
 }
 
 @keyframes arena-arrive { from { opacity: 0; } to { opacity: 1; } }

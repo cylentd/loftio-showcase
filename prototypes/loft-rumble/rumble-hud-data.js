@@ -21,7 +21,7 @@
       width:330,         // frame width: keeps the crest-to-lip band inside the 50-unit top strip with the name above it
       nameBaseline:17,   // the centred boss name; the crest starts nameGap below it
       nameGap:2,
-      nameFont:15,hpFont:12,
+      nameFont:15,hpFont:13, // hpFont at the helper floor (type.helper; audit finding 3)
     }),
     // Team frame: visible 0.281-0.719 tall; the trough right of the empty left socket runs 0.107-0.935 wide, 0.393-0.6 tall.
     // The socket (centre 0.082, 0.5; 0.042 of the width across) holds the spiral seed.
@@ -30,14 +30,14 @@
       channel:Object.freeze({x:.107,y:.405,w:.826,h:.18}),
       socket:Object.freeze({x:.082,y:.5,size:.042}),
       numberGap:6,       // between the frame's right end and the live "HP/max" readout
-      numberFont:12,
+      numberFont:13,     // the helper floor (type.helper; audit finding 3)
       seedScale:1.25,    // the seed reads a little larger than the socket opening, as on boss-layout.webp
     }),
     // The fill: the top share that catches the upper-left light and how strongly; hud-health-fill's luminous strand spans
     // 35 of the texture's 77 rows (alpha bbox), so it is drawn that much taller than the channel to fill it.
     fill:Object.freeze({sheen:.45,sheenAlpha:.22,strandBand:35/77}),
     inset:8,            // the frames' distance from the arena's side edges
-    type:Object.freeze({body:15,helper:13}), // UI standards L11, in CSS pixels
+    type:Object.freeze({body:15,helper:13,weight:600}), // UI standards L11, in CSS pixels; weight is the bundled Nunito's top (rumble-tokens.css)
     pixels:Object.freeze({channels:4,alpha:3}), // Canvas ImageData RGBA byte layout
     compactScale:.75,   // below this, omit the redundant boss number to preserve the centred name
     topStrip:50,        // existing page hudTop; layout must not change the combat bounds
@@ -45,7 +45,7 @@
     combo:Object.freeze({
       x:8,y:118,         // ornament's top-left; y clears the boss header and the intent chip's highest row
       width:46,          // ornament draw width; height follows its 192 x 174 texture
-      countFont:20,labelFont:10,labelGap:11,
+      countFont:20,labelFont:13,labelGap:12, // label at the helper floor (audit finding 3); the gap grows with it
       milestonePop:.45,  // scale a milestone hit adds at its peak, on the page's own hit-pop clock (comboPopLife)
     }),
     // Stroke round live text so cream reads on any of the three arena backgrounds (L9).

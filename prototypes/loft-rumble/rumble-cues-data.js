@@ -16,12 +16,11 @@
       plate:Object.freeze({weak:'stickerPerfect',dodge:'stickerGreat',combo:'stickerGreat'}),  // gold for the weak spot (the gold rule), steel for a dodge or a combo
       cells:Object.freeze({targetMarker:2,stunSpiral:3})                // states or frames side by side in each sheet, per its prompt
     }),
-    // Moments: a cut-in, a READY stamp or a word pop. One on screen at a time (owner's brief, 2026-11-14).
+    // Moments: a cut-in or a word pop. One on screen at a time (owner's brief, 2026-11-14). No READY stamp (owner, 2026-11-15).
     moment:Object.freeze({
       wait:.5,                             // a moment that cannot show within this many real seconds is dropped, not queued (the brief's ~0.5 s)
       cutin:.8,                            // ally cut-in, slide in and out included: the brief caps it under 1 s
-      ready:.7,                            // READY stamp on a dock portrait
-      word:.7                              // one-word pop at the event, the length of the old Great/Perfect pop
+      word:.7                             // one-word pop at the event, the length of the old Great/Perfect pop
     }),
     // Owner-generated art (LOFT-RUMBLE-ASSET-PROMPTS.md, feedback batch). Missing files show nothing in their place.
     art:Object.freeze({
@@ -37,10 +36,10 @@
       cue:Object.freeze({
         rail:'Battle cues',
         live:'Battle news',
-        hit:'{actor} {kind} hit: {amount} damage to Bramble',
+        hit:'{actor} {kind} hit: {amount} damage to {boss}',
         bodyKind:'body',
         weakKind:'weak spot ×3',
-        ally:'{actor} bumped {ally}: {ability} hit Bramble for {amount}',
+        ally:'{actor} bumped {ally}: {ability} hit {boss} for {amount}',
         allyLaunch:'{actor} bumped {ally}: {ability} fired',
         ready:'{name} {special} ready: next {throw} {effect}',   // {throw}: throwWord for the style in use
         effect:'{name} {special}: {effect}',
@@ -50,7 +49,7 @@
         dangerTeam:'{attack} in {seconds} s: hits the whole team',
         dangerTeamNow:'{attack} now: hits the whole team',
         dangerClear:'{attack} in {seconds} s: everyone is clear',
-        root:'Root snap on {names}: move away from Bramble',
+        root:'Root snap on {names}: move away from {boss}',
         rootLive:'Root snap caught {names}: {amount} team damage',
         caughtLive:'{attack} hit {names}: {amount} team damage, stunned',
         teamLive:'{attack} hit the team: {amount} team damage',
@@ -68,7 +67,6 @@
       // Words on the field: names and single words only, never a sentence (owner, 2026-11-14).
       field:Object.freeze({
         rootSnap:'Root snap',              // the close-range danger's name at the boss bar
-        ready:'READY',
         // weak: {multiplier} is the battle's weak-spot multiplier. combo: one word per FEEL.comboMilestones entry, in order.
         word:Object.freeze({weak:'WEAK ×{multiplier}',dodge:'DODGED',combo:Object.freeze(['NICE','GREAT','RUMBLE'])})
       })

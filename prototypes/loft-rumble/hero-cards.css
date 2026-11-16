@@ -1,10 +1,10 @@
 :root.loft-art {
-  --hero-sprout-ink: #385542;
-  --hero-sprout-surface: #dce8d5;
-  --hero-chomper-ink: #5d4268;
-  --hero-chomper-surface: #e8dff0;
-  --hero-custom-ink: #35576f;
-  --hero-custom-surface: #dce9f2;
+  --hero-sprout-ink: var(--rumble-card-sprout-ink);
+  --hero-sprout-surface: var(--rumble-card-sprout-surface);
+  --hero-chomper-ink: var(--rumble-card-chomper-ink);
+  --hero-chomper-surface: var(--rumble-card-chomper-surface);
+  --hero-custom-ink: var(--rumble-card-custom-ink);
+  --hero-custom-surface: var(--rumble-card-custom-surface);
   --hero-mark-strength: 12%;
   --hero-trait-height: 32px;
   --hero-chip-height: 22px;

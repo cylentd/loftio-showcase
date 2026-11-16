@@ -1,24 +1,31 @@
-/* Results kit geometry, palette and motion tokens. */
+/* Results kit geometry and motion tokens; colour, radius and type read rumble-tokens.css. */
 #demo-results{
-  --lm-focus:3px;--lm-title-shadow:0 2px 0 var(--lm-amber-deep),0 3px 12px var(--lm-shadow);
+  --lm-focus:3px;--lm-title-shadow:var(--rumble-text-stroke),0 3px 0 var(--lm-amber-deep),0 4px 12px var(--lm-shadow);
   /* Colour */
-  --lm-cream:#f7ecd4;--lm-muted:#d3c3d6;--lm-amber:#ffc95a;--lm-amber-deep:#9a4f0e;--lm-rose:#ff9a8f;--lm-ink:#1c0f1f;
-  --lm-plum:#2b1a2e;--lm-well:#1e1121cc;--lm-track:#160b18;--lm-line:#e3a54a55;--lm-shadow:#0b050ccc;--lm-drop:0 18px 60px #000a;
-  --lm-violet:#c06bff;--lm-teal:#33e3c2;--lm-blue:#4cb2ff;--lm-amber-hero:#ffb43d;--lm-rose-hero:#ff74a6;--lm-lime:#a6e65c;--lm-coral:#ff8d5e;
+  --lm-cream:var(--rumble-cream);--lm-muted:var(--rumble-muted);--lm-amber:var(--rumble-amber);--lm-amber-deep:var(--rumble-amber-deep);
+  --lm-rose:var(--rumble-rose);--lm-ink:var(--rumble-ink);
+  --lm-plum:var(--rumble-plum);--lm-well:color-mix(in srgb,var(--rumble-track) 80%,transparent);--lm-track:var(--rumble-track);
+  --lm-line:color-mix(in srgb,var(--rumble-amber) 33%,transparent);--lm-shadow:color-mix(in srgb,var(--rumble-shadow) 80%,transparent);
+  --lm-drop:0 18px 60px color-mix(in srgb,var(--rumble-shadow) 67%,transparent);
+  --lm-violet:var(--rumble-hero-violet);--lm-teal:var(--rumble-hero-teal);--lm-blue:var(--rumble-hero-blue);--lm-amber-hero:var(--rumble-hero-amber);
+  --lm-rose-hero:var(--rumble-hero-rose);--lm-lime:var(--rumble-hero-lime);--lm-coral:var(--rumble-hero-coral);
   --lm-defeat-stage:saturate(.5) brightness(.62);
   /* Size: the kit's CSS-pixel slices (manifest.json), the frame's visible rim, and the standards' padding and targets */
   --lm-content-width:1040px;
-  --lm-label-surface:#1c1823;--lm-label-pad:2px 6px;--lm-scroll-pad:6px;
-  --lm-frame-slice:32px;--lm-frame-inset:64;--lm-rim:20px;--lm-material-inset:8px;--lm-material-radius:16px;--lm-pad:16px;
+  --lm-scroll-pad:6px;
+  --lm-frame-slice:32px;--lm-frame-inset:64;--lm-rim:20px;--lm-material-inset:8px;--lm-material-radius:var(--rumble-radius-surface);--lm-pad:16px;
   --lm-crest:38px;--lm-crest-top:-3px;--lm-divider-crest:26px;--lm-line-weight:2px;
   --lm-row-slice:20px 24px;--lm-row-inset:40 48;--lm-button-slice:20px 28px;--lm-button-inset:40 56;
   --lm-button:52px;--lm-button-pad:36px;--lm-action-min:180px;--lm-gap:12px;--lm-tight:6px;
   /* Keep phone rows unchanged; use the taller frame's spare space within the rows, not a footer void. */
   --lm-row-pad:clamp(14px, calc(14px + (var(--stage-frame-height) - 844px) / 9.5), 22px) 12px;
-  --lm-face:40px;--lm-chevron:16px;--lm-bar:10px;--lm-bar-core:4px;--lm-fact-min:120px;--lm-count-col:3.5ch;--lm-radius:10px;
+  --lm-face:40px;--lm-chevron:16px;--lm-bar:10px;--lm-bar-core:4px;--lm-fact-min:120px;--lm-count-col:3.5ch;--lm-radius:var(--rumble-radius-control);
   --lm-stage-w:360;--lm-stage-h:210;--lm-stage-max:240px;--lm-material-tile:128px 128px;
-  /* Type: Nunito only (L11): body 15 px or more, helper 13 px or more */
-  --lm-title:28px;--lm-value:28px;--lm-heading:19px;--lm-name:17px;--lm-body:15px;--lm-helper:13px;--lm-action:18px;--lm-action-2:16px;
+  /* Type: the rumble-tokens.css scale. The two action sizes and the summary value are the kit's own: Play again reads at
+     18 px on its 52 px button, a further action at 16 px, and a summary number at the title size. */
+  --lm-title:var(--rumble-title-size);--lm-value:var(--rumble-title-size);--lm-heading:19px;--lm-name:var(--rumble-name-size);
+  --lm-body:var(--rumble-body-size);--lm-helper:var(--rumble-helper-size);--lm-action:18px;--lm-action-2:16px;
+  --lm-strong:var(--rumble-title-weight);
   /* Motion */
   --lm-in:280ms;--lm-turn:160ms;--lm-stagger:90ms;--lm-rise:12px;
 }

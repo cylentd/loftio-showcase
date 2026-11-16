@@ -1,0 +1,79 @@
+/* Loft Rumble tokens: the one place a colour, radius or type size is defined (UI standards L11, L12).
+   Scale from docs/design/LOFT-RUMBLE-UI-AUDIT.md, "Type, colour and radius" (2026-11-15). The page's other sheets
+   (art-theme, hero-cards, rumble-demo, results-tokens, rumble-stage, rumble-cues, rumble-hud, rumble-cinematic) read these
+   and hold no colour literal of their own (rumble-tokens.test.cjs). Canvas reads some through the --hud-* names, so a
+   token a canvas reads stays a plain hex: canvas fill styles do not take every CSS colour function on every browser. */
+:root {
+  /* ---- The palette the audit asked for: one cream, one amber and its deep shade, two surfaces. ---- */
+  --rumble-cream: #fff3d6;        /* the HUD's live-text cream; replaces #f7ecd4, #fff7e5, #f6efdc, #f5ecd9 and #ffe6a5 */
+  --rumble-amber: #ffc95a;        /* the results title amber; replaces #ffb23d, #f4c566 and #efba60 */
+  --rumble-amber-deep: #9a4f0e;   /* the results title's under-shadow; replaces the arrival's #9b5b31 */
+  --rumble-plum: #2b1a2e;         /* the results material: every framed sheet (results, pause, how to play) */
+  --rumble-green-black: #182820;  /* the stage chrome: top bar buttons, scrims, training lines */
+
+  /* ---- Ink and signal colours (not surfaces). ---- */
+  --rumble-ink: #2b1630;          /* the plum outline round cream text; replaces #1c0f1f and #4b2639 */
+  --rumble-muted: #d3c3d6;        /* secondary text on plum: 9.6:1 on --rumble-plum (L9) */
+  --rumble-rose: #ff9a8f;         /* the defeat title */
+  --rumble-danger: #ee756e;
+  --rumble-danger-deep: #7b2a20;  /* the attack-name chip */
+  --rumble-danger-edge: #f3b6a2;
+  --rumble-danger-back: #4a1626;  /* a portrait's backing while its resident stands in a zone */
+  --rumble-good: #70c894;
+  --rumble-chip: #c48d46;
+  --rumble-pending: #7b8b9b;
+  --rumble-boss-fill: #9b4fd8;    /* the pack's violet boss bar */
+  --rumble-team-fill: #2fbfa3;    /* the pack's teal team bar; also a switch that is on */
+  --rumble-scrim: #1b0f1e;        /* the canvas's top-of-arena shade */
+  --rumble-flash: #ffffff;
+  --rumble-shadow: #000000;       /* every drop shadow, mixed down with color-mix */
+  --rumble-page: #202a34;         /* the page behind the stage frame (lab only shows it) */
+  --rumble-track: #160b18;        /* an empty bar or switch track on plum */
+  --rumble-moss: #a4ac7a;         /* the stage chrome's hairline, mixed down */
+  --rumble-dock-muted: #c6d3c4;
+
+  /* ---- Resident colours: dark backings behind each portrait, and the results bar palette. ---- */
+  --rumble-back-sprout: #183f33;
+  --rumble-back-chomper: #35214a;
+  --rumble-back-custom: #173552;
+  --rumble-hero-violet: #c06bff;
+  --rumble-hero-teal: #33e3c2;
+  --rumble-hero-blue: #4cb2ff;
+  --rumble-hero-amber: #ffb43d;
+  --rumble-hero-rose: #ff74a6;
+  --rumble-hero-lime: #a6e65c;
+  --rumble-hero-coral: #ff8d5e;
+  /* The pre-HUD hero cards (hero-cards.css): lab page only. */
+  --rumble-card-sprout-ink: #385542;
+  --rumble-card-sprout-surface: #dce8d5;
+  --rumble-card-chomper-ink: #5d4268;
+  --rumble-card-chomper-surface: #e8dff0;
+  --rumble-card-custom-ink: #35576f;
+  --rumble-card-custom-surface: #dce9f2;
+
+  /* ---- Radius: four steps. ---- */
+  --rumble-radius-tight: 6px;     /* labels, small chips */
+  --rumble-radius-control: 12px;  /* buttons, rows, chips */
+  --rumble-radius-surface: 24px;  /* sheets, bands */
+  --rumble-radius-round: 50%;     /* rings, round buttons */
+
+  /* ---- Type: Nunito only (L11). Body 15 and helper 13 are the floors. Nunito ships 400-600 (art-theme.css). ---- */
+  --rumble-title-size: 28px;
+  --rumble-title-weight: 600;
+  --rumble-name-size: 15px;
+  --rumble-name-weight: 600;
+  --rumble-body-size: 15px;
+  --rumble-body-weight: 400;
+  --rumble-helper-size: 13px;
+  --rumble-helper-weight: 500;
+  /* The outline the HUD draws round cream text (rumble-hud-data.js textStroke, 3 px on canvas): a 2 px ring of ink in
+     eight directions, so text reads on painted art without a plate behind it. */
+  --rumble-stroke: 2px;
+  --rumble-stroke-diagonal: 1.5px;
+  --rumble-text-stroke: 0 var(--rumble-stroke) 0 var(--rumble-ink), 0 calc(-1 * var(--rumble-stroke)) 0 var(--rumble-ink),
+    var(--rumble-stroke) 0 0 var(--rumble-ink), calc(-1 * var(--rumble-stroke)) 0 0 var(--rumble-ink),
+    var(--rumble-stroke-diagonal) var(--rumble-stroke-diagonal) 0 var(--rumble-ink),
+    calc(-1 * var(--rumble-stroke-diagonal)) var(--rumble-stroke-diagonal) 0 var(--rumble-ink),
+    var(--rumble-stroke-diagonal) calc(-1 * var(--rumble-stroke-diagonal)) 0 var(--rumble-ink),
+    calc(-1 * var(--rumble-stroke-diagonal)) calc(-1 * var(--rumble-stroke-diagonal)) 0 var(--rumble-ink);
+}

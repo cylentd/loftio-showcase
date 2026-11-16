@@ -1,7 +1,8 @@
 // Loft Rumble battle cues. Since 2026-11-14 the live fight puts no sentence on screen (owner, ledger #333): every event
 // shows on the field. A boss attack names itself at the boss bar and marks each resident it will hit; a stun circles the
-// resident and drains its dock portrait; a first ally bump cuts in; a ready special stamps READY; a weak hit or a dodge
-// pops one word, and so does a combo milestone. Cut-ins, stamps and word pops are moments: one at a time, and one that
+// resident and drains its dock portrait; a first ally bump cuts in; a ready special glows its dock portrait amber (no READY
+// stamp, owner 2026-11-15); a weak hit or a dodge pops one word, and so does a combo milestone. Cut-ins and word pops are
+// moments: one at a time, and one that
 // cannot show within its wait is dropped. The sentences remain for screen readers: the soonest danger, else a stun, in a visually hidden list, and every
 // other cue as news in the visually hidden live region (owner's option a, 2026-11-13). The battle runs in real time and
 // the cues only report. Every hook is a no-op until install(), and during the aim forecast (camera.predicting).
@@ -9,7 +10,9 @@
   'use strict';
   const data=root.LoftRumbleCuesData,copy=data.copy;
   let host=null,events=[],moment=null,waiting=null,stunTotal={};
-  const fill=(template,values)=>template.replace(/\{(\w+)\}/g,(_,key)=>String(values[key]??''));
+  // {boss} is the boss's one name (LoftRumbleDemoData.copy.boss); it fills in without every caller passing it.
+  const boss=root.LoftRumbleDemoData?.copy.boss;
+  const fill=(template,values)=>template.replace(/\{(\w+)\}/g,(_,key)=>String({boss,...values}[key]??''));
   const predicting=()=>!!host?.camera()?.predicting;
   const paused=()=>!!host?.paused();  // Training coaches in its own words, so the cues stay quiet while it runs
   const live=()=>!!host&&!predicting()&&!paused();
@@ -62,7 +65,6 @@
   }
   // The first bump by an ally in a fight. True when the cues own it, so the battle skips its old toast card.
   function onAllyIntro(id){return offer({kind:'cutin',id})}
-  function onReady(id){offer({kind:'ready',id})}
   function onSpecialBonus(id,amount){
     if(!live())return;
     const trait=host.kind(id);
@@ -156,5 +158,5 @@
 
   root.LoftRumbleCues=Object.freeze({install,reset,installed:()=>!!host,danger:()=>!!host&&!paused()&&dangerCues().length>0,
     drawsStun:()=>!!host&&root.LoftRumbleCuesView.hasArt('stunSpiral'),field,
-    tick,render,onFling,onHit,onCombo,onAlly,onAllyIntro,onReady,onSpecialBonus,onImpact,onRoot});
+    tick,render,onFling,onHit,onCombo,onAlly,onAllyIntro,onSpecialBonus,onImpact,onRoot});
 })(globalThis);

@@ -8,15 +8,15 @@
 :root {
   /* Canvas HUD colours. Cream text with a deep plum stroke reads on all three arena backgrounds; the fills are the pack's
      violet (boss) and teal (team) tints; pending damage is a pale cream segment. */
-  --hud-cream: #fff3d6;
-  --hud-ink: #2b1630;
-  --hud-boss-fill: #9b4fd8;
-  --hud-team-fill: #2fbfa3;
-  --hud-pending: #f6e6c4;
-  --hud-scrim: #1b0f1e;
-  --hud-flash: #ffffff;
+  --hud-cream: var(--rumble-cream);
+  --hud-ink: var(--rumble-ink);
+  --hud-boss-fill: var(--rumble-boss-fill);
+  --hud-team-fill: var(--rumble-team-fill);
+  --hud-pending: var(--rumble-cream);
+  --hud-scrim: var(--rumble-scrim);
+  --hud-flash: var(--rumble-flash);
   /* Special-ready amber, the brief's "amber special-ready energy". */
-  --hud-ready: #ffb23d;
+  --hud-ready: var(--rumble-amber);
   /* Glows are a share of the card (cqi: the card is the size container), so they scale with it: 6 px and 5 px were
      tuned on the 136 px card at 390 x 844 (LM6d, 2026-11-15). */
   --hud-ready-glow: 4.4cqi;
@@ -82,10 +82,10 @@
   --hud-stun-finish: grayscale(1) brightness(.8); /* camera-stun.css's grey, opaque: its .5 opacity washed into the backing */
   --hud-stun-ring: 24px; /* fits the smallest portrait opening without crossing its frame or name */
   /* Resident-colour dark backings behind each portrait (README: "resident-color dark backing"). */
-  --hud-back-sprout: #183f33;
-  --hud-back-chomper: #35214a;
-  --hud-back-custom: #173552;
-  --hud-back-danger: #4a1626;
+  --hud-back-sprout: var(--rumble-back-sprout);
+  --hud-back-chomper: var(--rumble-back-chomper);
+  --hud-back-custom: var(--rumble-back-custom);
+  --hud-back-danger: var(--rumble-danger-back);
   --hud-pause-glyph: 34%;
   --hud-focus: 3px;
   /* The arena's minimum: it keeps at least 75.5% of the frame's height, 483 of 640 px at 360 x 640: the arena's 480 px
@@ -106,10 +106,6 @@
   --hud-landscape-gap: 16px;
   --hud-landscape-card: 128px;
   --hud-arena-ratio: .5625; /* existing 360 / 640 combat arena */
-}
-:root[data-rumble-demo] {
-  --stage-sheet-copy: 15px;
-  --stage-name-size: 13px;
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
@@ -261,7 +257,7 @@
 }
 /* No state words on the card: ready, moving, stunned and danger show by frame, glow, grey and ring. The words stay in the
    card's aria-label and the cue rail's live region. */
-.loft-art[data-rumble-demo] .roster .card:is(*, .ready, .danger, .stunned) :is(em, small, .badge, .dock-charge, .dock-danger, .rumble-ready) { display: none; }
+.loft-art[data-rumble-demo] .roster .card:is(*, .ready, .danger, .stunned) :is(em, small, .badge, .dock-charge, .dock-danger) { display: none; }
 /* The special charge: the spiral seed in the frame's socket fills from the bottom as it charges, amber when ready. */
 .loft-art[data-rumble-demo] .roster .dock-meter {
   position: absolute;
@@ -292,16 +288,19 @@
 }
 /* The glow sits on the meter, not the clipped fill: a filter on a clip-path layer is cut to a square. */
 .loft-art[data-rumble-demo] .roster .card.ready .dock-meter { filter: drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready)); }
-/* Stunned: the portrait greys (camera-stun.css) and the cue rail's ring drains over it. */
+/* Stunned: the portrait greys (camera-stun.css) and the cue rail's ring drains in the opening's top-right corner, where
+   no portrait draws its face (every portrait's face sits at --hud-hero-focus, centred, 35% down). Centred on the
+   portrait, it covered Chomper's mouth (LOFT-RUMBLE-UI-AUDIT.md, finding 10). */
 .loft-art[data-rumble-demo] .roster .rumble-stun-ring {
   position: absolute;
-  left: 50%;
-  top: calc(var(--hud-opening-top) + (100% - var(--hud-opening-top) - var(--hud-opening-bottom)) / 2);
+  top: var(--hud-opening-top);
+  right: var(--hud-opening-right);
+  left: auto;
   z-index: 4;
   width: var(--hud-stun-ring);
   height: auto;
   aspect-ratio: 1;
-  translate: -50% -50%;
+  translate: 0 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .loft-art[data-rumble-demo] .roster .card.ready::after { animation: none; }

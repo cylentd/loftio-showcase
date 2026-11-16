@@ -13,19 +13,21 @@
 (function(root){
   'use strict';
   // Placeholder words until the copy file exists. Selectors for tests are data attributes, never these words.
+  // The boss's one name is LoftRumbleDemoData.copy.boss (loaded first on the page); 'the boss' only if that file is absent.
+  const boss=root.LoftRumbleDemoData?.copy.boss??'the boss';
   const copy={skip:'Skip training',replay:'Replay training',
-    confirm:{title:'Restart this fight for Training?',body:'Replaying Training starts a fresh fight and drops the one in progress.',accept:'Restart',cancel:'Cancel'},
-    line:{intro:{show:'Training'},weak:{show:'Hit the gold spot',try:'Hit the gold spot',cheer:'Weak spot!'},
+    confirm:{title:'Restart this battle for Training?',body:'Replaying Training starts a fresh battle and drops the one in progress.',accept:'Restart',cancel:'Cancel'},
+    line:{intro:{show:'Training'},weak:{show:'Hit the weak spot',try:'Hit the weak spot',cheer:'Weak spot!'},
       graduate:{show:'Training complete',cheer:'Ready to Rumble'}},
     // Beats that name the gesture, keyed by throw style (one style at a time, owner 2026-11-15). The beat id 'sling' is the
-    // first lesson's name in the script, whatever the style.
+    // first lesson's name in the script, whatever the style. The id 'chain' is the bump lesson; its words say bump.
     byStyle:{
-      fling:{sling:{show:'Swipe toward Bramble',try:'Swipe toward Bramble',cheer:'Nice fling!'},
-        chain:{show:'Fling into a teammate',try:'Fling into a teammate',cheer:'Chain!'},
+      fling:{sling:{show:'Swipe toward '+boss,try:'Swipe toward '+boss,cheer:'Nice fling!'},
+        chain:{show:'Fling into a teammate',try:'Fling into a teammate',cheer:'Bump!'},
         dodge:{show:'Fling Chomper out of the lane',try:'Fling Chomper out of the lane',cheer:'Dodged!'},
         special:{show:'Fling Puff for a special',try:'Fling Puff for a special',cheer:'Special!'}},
       sling:{sling:{show:'Pull back, then let go',try:'Pull back, then let go',cheer:'Nice sling!'},
-        chain:{show:'Sling into a teammate',try:'Sling into a teammate',cheer:'Chain!'},
+        chain:{show:'Sling into a teammate',try:'Sling into a teammate',cheer:'Bump!'},
         dodge:{show:'Sling Chomper out of the lane',try:'Sling Chomper out of the lane',cheer:'Dodged!'},
         special:{show:'Sling Puff for a special',try:'Sling Puff for a special',cheer:'Special!'}}}};
   let line=null,arenaSkip=null,menuSkip=null,dialog=null;
@@ -34,12 +36,11 @@
   function install({skip,replay,closeMenus}){
     const arena=document.getElementById('arena'),menu=document.getElementById('menu'),help=document.getElementById('help-panel');
     line=document.createElement('p');line.hidden=true;line.setAttribute('aria-live','polite');
-    // The dock's plate and ink: the line and Skip sit over bright arena art, so they carry their own surface (contrast, L9).
-    const plate={background:'var(--stage-chrome-surface)',color:'var(--stage-dock-ink)',borderRadius:'var(--radius)'};
-    Object.assign(line.style,plate,{position:'absolute',pointerEvents:'none',whiteSpace:'nowrap',transform:'translate(-50%,-150%)',margin:0,padding:'var(--gap)'});
+    // The line and Skip sit over bright arena art, so they carry the dock's plate and ink (contrast, L9): rumble-stage.css.
+    line.className='rumble-training-line';
     arenaSkip=make('button',copy.skip,'skip');arenaSkip.type='button';arenaSkip.onclick=skip;
     // Top right of the board, under the boss bar (onBeat sets top): the arena's own corners hold the HP readout and team bar.
-    Object.assign(arenaSkip.style,plate,{position:'absolute',right:'var(--gap)',minHeight:'var(--stage-control)'});
+    arenaSkip.className='rumble-training-skip';
     arena.append(line,arenaSkip);
     menuSkip=make('button',copy.skip,'skip');menuSkip.type='button';
     menuSkip.onclick=()=>{closeMenus();skip()};
@@ -76,8 +77,10 @@
     line.dataset.tutorialBeat=state.beat;line.dataset.tutorialPhase=state.phase;
     const words=copy.byStyle[style][state.beat]??copy.line[state.beat];
     line.textContent=words[state.phase]??words.show;
-    // Centred over the resident, but kept inside the board so a resident near a wall never pushes the words off it.
-    const board=document.getElementById('board'),half=line.offsetWidth/2;
+    // Centred over the resident, but kept inside the board, the edge gap clear of its rim (--stage-training-edge), so a
+    // resident near a wall never pushes the words onto it.
+    const board=document.getElementById('board'),edge=parseFloat(getComputedStyle(line).getPropertyValue('--stage-training-edge'))||0;
+    const half=line.offsetWidth/2+edge;
     const x=Math.min(Math.max(anchor.x,half),board.offsetWidth-half);
     Object.assign(line.style,{left:board.offsetLeft+x+'px',top:board.offsetTop+anchor.y+'px'});
     arenaSkip.style.top='calc('+(board.offsetTop+top)+'px + var(--gap))';

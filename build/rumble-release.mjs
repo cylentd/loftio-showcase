@@ -51,7 +51,7 @@ async function renderRumbleFile(source, target, paths, gameRoot) {
   if (source.endsWith('.html')) bytes = bytes.toString()
     .replace('<html lang="en">', '<html lang="en" data-published-rumble>')
     .replace('<title>Loft Rumble · Real-time</title>', '<title>Loft Rumble · Loftio</title>')
-    .replace('<a class="mode-link" href="loft-rumble.html">Try turn-based</a>', '');
+    .replace('<a class="mode-link" href="loft-rumble.html"></a>', '');
   return bytes;
 }
 

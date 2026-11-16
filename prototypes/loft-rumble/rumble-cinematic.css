@@ -1,14 +1,14 @@
 :root {
-  --cinematic-surface: #000;
-  --cinematic-ink: #fff7e5;
+  --cinematic-surface: var(--rumble-shadow);
+  --cinematic-ink: var(--rumble-cream);
   --cinematic-control-size: 44px;
   --cinematic-icon-size: 20px;
   --cinematic-inset: 20px;
-  --cinematic-radius: 12px;
-  --cinematic-font-size: 13px;
+  --cinematic-radius: var(--rumble-radius-control);
+  --cinematic-font-size: var(--rumble-helper-size);
   --cinematic-focus: 2px;
-  --cinematic-shadow: 0 1px 3px #000, 0 0 8px #000;
-  --cinematic-icon-shadow: 0 1px 3px #000;
+  --cinematic-shadow: 0 1px 3px var(--rumble-shadow), 0 0 8px var(--rumble-shadow);
+  --cinematic-icon-shadow: 0 1px 3px var(--rumble-shadow);
   --cinematic-fade: 600ms;
   --cinematic-easing: ease-out;
   --cinematic-layer: 100;

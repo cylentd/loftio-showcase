@@ -2,24 +2,25 @@
    events where they happen: an attack name at the boss bar, markers and spirals over residents, one moment at a time.
    Every value is a token below or in rumble-stage.css. */
 :root[data-rumble-demo] {
-  --cue-pill: 999px;
+  --cue-pill: var(--rumble-radius-control);
   --cue-pad: 4px 10px;
   --cue-gap: 4px;
   --cue-inset: 8px;
   --cue-surface: var(--stage-chrome-surface);
   --cue-ink: var(--stage-dock-ink);
-  --cue-danger-surface: #7b2a20f2;
-  --cue-danger-edge: #f3b6a2;
-  --cue-shadow: 0 2px 6px #0007;
+  --cue-danger-surface: color-mix(in srgb, var(--rumble-danger-deep) 95%, transparent);
+  --cue-danger-edge: var(--rumble-danger-edge);
+  --cue-shadow: 0 2px 6px color-mix(in srgb, var(--rumble-shadow) 44%, transparent);
   --cue-layer: 3;
   /* The standard visually hidden box: one pixel, clipped to nothing. */
   --cue-hidden-size: 1px;
   --cue-hidden-clip: inset(50%);
   /* Field. The attack name: one or two words at the boss bar, the size of the old danger line's emphasis. */
-  --field-name: 15px;
+  --field-name: var(--rumble-body-size);
   --field-tracking: .06em;
-  --field-bold: 800;
-  --field-heavy: 900;
+  /* Both were 800 and 900, which the bundled Nunito (400-600) could only fake (audit finding 5). */
+  --field-strong: var(--rumble-name-weight);
+  --field-title-weight: var(--rumble-title-weight);
   --field-leading: 1.2;
   --field-tight: 1;
   /* Target marker: its prompt asks it to read at 40 px tall. The spiral is a little wider than a 46 px sprite's head. */
@@ -42,17 +43,16 @@
   --field-cutin-height: 56px;
   --field-cutin-art: 48px;
   --field-cutin-name: 18px;
-  --field-cutin-edge: var(--stage-sheet-accent);
+  --field-cutin-edge: var(--rumble-amber);
   --field-cutin-pad: 4px 18px 4px 12px;
-  --field-cutin-radius: 0 var(--cue-pill) var(--cue-pill) 0;
+  --field-cutin-radius: 0 var(--rumble-radius-surface) var(--rumble-radius-surface) 0;
   /* Dock: the ready glow and the stun ring on the 36 px avatar. The ring sits 4 px outside the avatar on each side. */
   --field-glow: 10px;
   --field-glow-ring: 2px;
   --field-ring: 3px;
   --field-ring-size: calc(var(--stage-avatar) + 8px);
-  --field-ring-track: #0006;
-  --field-mask: #000;
-  --field-stamp-grow: 1.35;
+  --field-ring-track: color-mix(in srgb, var(--rumble-shadow) 40%, transparent);
+  --field-mask: var(--rumble-shadow);
   /* Keyframe stops (the percentages in each @keyframes below) cannot read a custom property, so they stay literal:
      each moment's length is the token, --moment-life from rumble-cues-data.js, and the stops are its phases. */
 }
@@ -84,7 +84,6 @@
   font-family: var(--font-sans);
 }
 [data-rumble-demo] .rumble-field [hidden],
-[data-rumble-demo] .roster .rumble-ready[hidden],
 [data-rumble-demo] .roster .rumble-stun-ring[hidden] { display: none; }
 [data-rumble-demo] .rumble-attack-name {
   position: absolute;
@@ -99,7 +98,7 @@
   color: var(--cue-ink);
   box-shadow: var(--cue-shadow);
   font-size: var(--field-name);
-  font-weight: var(--field-bold);
+  font-weight: var(--field-strong);
   letter-spacing: var(--field-tracking);
   line-height: var(--field-leading);
   text-transform: uppercase;
@@ -141,7 +140,7 @@
   background: none center / 100% 100% no-repeat;
   color: var(--field-word-ink);
   font-size: var(--field-word);
-  font-weight: var(--field-heavy);
+  font-weight: var(--field-title-weight);
   letter-spacing: var(--field-tracking);
   line-height: var(--field-tight);
   -webkit-text-stroke: var(--field-word-stroke) var(--field-word-outline);
@@ -184,7 +183,7 @@
 }
 [data-rumble-demo] .rumble-moment[data-moment=cutin] b {
   font-size: var(--field-cutin-name);
-  font-weight: var(--field-bold);
+  font-weight: var(--field-strong);
   white-space: nowrap;
 }
 @keyframes rumble-cutin {
@@ -194,25 +193,10 @@
   100% { translate: -100% 0; opacity: 0; }
 }
 
-/* Dock: READY takes the status line; the portrait glows gold (the special's colour). A stun drains a ring round it. */
-[data-rumble-demo] .roster .rumble-ready {
-  grid-column: 2;
-  grid-row: 2;
-  align-self: start;
-  justify-self: start;
-  color: var(--warning);
-  font-size: var(--stage-state-size);
-  font-weight: var(--field-bold);
-  letter-spacing: var(--field-tracking);
-  line-height: var(--field-tight);
-}
-[data-rumble-demo] .roster .rumble-ready[data-moment] { animation: rumble-stamp var(--moment-life) ease-out; }
-@keyframes rumble-stamp { 0% { scale: var(--field-stamp-grow); opacity: 0; } 40% { scale: 1; opacity: 1; } }
-[data-rumble-demo] .roster .card.rumble-special-ready .dock-charge,
-[data-rumble-demo] .roster .card.danger .rumble-ready { visibility: hidden; }
+/* Dock: the portrait glows gold (the special's colour); no READY text (owner, 2026-11-15). A stun drains a ring round it. */
 [data-rumble-demo] .roster .card.rumble-special-ready .dock-charge { display: none; }
 [data-rumble-demo] .roster .card.rumble-special-ready .portrait {
-  border-radius: var(--cue-pill);
+  border-radius: var(--rumble-radius-round);
   box-shadow: 0 0 0 var(--field-glow-ring) var(--warning), 0 0 var(--field-glow) var(--warning);
 }
 /* The ring is the card's child laid over the portrait's grid cell, so the portrait's grey filter never reaches it. */
@@ -223,14 +207,13 @@
   justify-self: center;
   width: var(--field-ring-size);
   height: var(--field-ring-size);
-  border-radius: var(--cue-pill);
+  border-radius: var(--rumble-radius-round);
   background: conic-gradient(var(--warning) calc(var(--stun-left, 1) * 1turn), var(--field-ring-track) 0);
   mask: radial-gradient(farthest-side, transparent calc(100% - var(--field-ring)), var(--field-mask) calc(100% - var(--field-ring)));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-rumble-demo] .rumble-spiral,
-  [data-rumble-demo] .roster .rumble-ready[data-moment] { animation: none; }
+  [data-rumble-demo] .rumble-spiral { animation: none; }
   [data-rumble-demo] .rumble-moment[data-moment=word] { animation-name: rumble-fade; }
   [data-rumble-demo] .rumble-moment[data-moment=cutin] { animation-name: rumble-fade; }
 }
