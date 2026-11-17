@@ -46,5 +46,23 @@
     return 1+D.combo.milestonePop*k*k;
   }
 
-  root.LoftRumbleHudModel=Object.freeze({fillWidth,bossLayout,teamLayout,comboLayout,milestoneScale,textSize});
+  // Special charge as the hero-card border lighting clockwise (owner direction, 2026-11-15). The lit front starts at the
+  // rune socket (bottom centre) and walks the card's edge clockwise at a steady speed, so `charge` is the share of the
+  // perimeter lit. Returns that front as a conic-gradient angle in degrees: 0 points straight down, angles run clockwise
+  // (CSS `conic-gradient(from 180deg ...)`), measured from the centre of a card `aspect` wide by 1 tall. A steady angle
+  // would rush along the short sides and crawl along the long ones; this keeps the front moving at one speed.
+  const FULL_TURN=360;
+  function chargeSweep(charge,aspect){
+    const k=clamp01(charge);
+    if(k>=1)return FULL_TURN;
+    const w=aspect,h=1,walk=k*2*(w+h);
+    const legs=[[w*HALF,s=>[-s,h*HALF]],[h,s=>[-w*HALF,h*HALF-s]],[w,s=>[s-w*HALF,-h*HALF]],
+      [h,s=>[w*HALF,s-h*HALF]],[w*HALF,s=>[w*HALF-s,h*HALF]]];
+    let left=walk,point=[0,h*HALF];
+    for(const [length,at] of legs){if(left<=length){point=at(left);break}left-=length}
+    const degrees=Math.atan2(-point[0],point[1])*FULL_TURN/(2*Math.PI);
+    return degrees<0?degrees+FULL_TURN:degrees;
+  }
+
+  root.LoftRumbleHudModel=Object.freeze({fillWidth,bossLayout,teamLayout,comboLayout,milestoneScale,textSize,chargeSweep});
 })(globalThis);

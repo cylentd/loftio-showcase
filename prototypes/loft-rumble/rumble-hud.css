@@ -1,10 +1,11 @@
 /* Living-magic HUD (LM6b): the owner's ui-v1 hero frames, spiral seed and pause stone in the live fight.
    The boss header, team bar and combo count draw on the canvas (rumble-hud.js) and read the --hud-* colours below.
    Spec: docs/design/LOFT-RUMBLE-LIVING-MAGIC.md ("HUD, bumpers and unfinished art"); art rules: assets/living-magic/ui-v1/README.md.
-   The frame is nine-sliced (border-image) so a card can be squarer than the art: the corners, the top bar and the bottom bar
-   with its socket keep the art's scale, and only the straight side vines (art rows 88-192) lengthen. Every inset below is
-   in frame-art pixels (--hud-u, one art pixel at the card's scale), measured from the frames' alpha on 2026-11-15: the
-   vines span x 29-357 and y 32-236 of the 384 x 274 art, the opening x 40-338 and y 52-219, the socket centre y 220.8. */
+   The frame is the owner's v2 pair (delivered 2026-11-15; ui-v1/tools/import_hero_frame_v2.py), nine-sliced (border-image) so a
+   card can be squarer than the art: the corners, the top bar and the bottom bar with its socket keep the art's scale, and
+   only the straight side vines (art rows 110-300) lengthen. Every inset below is in frame-art pixels (--hud-u, one art
+   pixel at the card's scale), measured from the cleaned normal frame's alpha on 2026-11-15: the vines span x 17-462 and
+   y 27-365 of the 480 x 400 art, the opening x 46-431 and y 56-336 with 48 px corners, the socket centre (240, 347). */
 :root {
   /* Canvas HUD colours. Cream text with a deep plum stroke reads on all three arena backgrounds; the fills are the pack's
      violet (boss) and teal (team) tints; pending damage is a pale cream segment. */
@@ -17,6 +18,12 @@
   --hud-flash: var(--rumble-flash);
   /* Special-ready amber, the brief's "amber special-ready energy". */
   --hud-ready: var(--rumble-amber);
+  --hud-frame-rest-finish: saturate(.65) brightness(.52);
+  --hud-charge-finish: sepia(.22) saturate(1.6) brightness(1.65);
+  --hud-energy-feather: 8deg;
+  --hud-energy-period: 4s;
+  --hud-energy-crest: 1.08;
+  --hud-energy-state: brightness(1);
   /* Glows are a share of the card (cqi: the card is the size container), so they scale with it: 6 px and 5 px were
      tuned on the 136 px card at 390 x 844 (LM6d, 2026-11-15). */
   --hud-ready-glow: 4.4cqi;
@@ -25,25 +32,27 @@
   /* Dock card geometry. The card's box is the frame's visible vines, so its aspect is the one a player sees. The concept
      cards (boss-layout.webp and the owner's 2026-11-15 concept) are about 240 x 200 px: 1.2 wide to 1 tall. */
   --hud-card-ratio: 6 / 5;
-  --hud-frame-vines: 328; /* art px across the vines, x 29-357 */
+  --hud-frame-vines: 445; /* art px across the vines, x 17-462 */
   --hud-u: calc(100cqi / var(--hud-frame-vines));
-  /* The art's transparent margin around the vines (art px), drawn outside the card box. */
-  --hud-frame-margin-top: 32;
-  --hud-frame-margin-right: 27;
-  --hud-frame-margin-bottom: 38;
-  --hud-frame-margin-left: 29;
-  /* Nine-slice lines (art px from each edge): the corner leaves end above row 88 and start below row 192; 64 px clears
-     the corner curve sideways. */
-  --hud-slice-top: 88;
-  --hud-slice-right: 64;
-  --hud-slice-bottom: 82;
-  --hud-slice-left: 64;
+  /* The art's transparent margin around the vines (art px), drawn outside the card box: the leaves, the socket's lower
+     lip and the ready glow and spiral live in it, so none of them is cropped. */
+  --hud-frame-margin-top: 27;
+  --hud-frame-margin-right: 18;
+  --hud-frame-margin-bottom: 35;
+  --hud-frame-margin-left: 17;
+  /* Nine-slice lines (art px from each edge): the corner curve and leaves end above row 110 and start below row 300; the
+     ready spiral (x 420-450, y 45-80) sits inside the top-right corner, so it never stretches. 100 px clears the corner
+     curve sideways (the top and bottom ropes run straight from x 100 to 380). */
+  --hud-slice-top: 110;
+  --hud-slice-right: 100;
+  --hud-slice-bottom: 100;
+  --hud-slice-left: 100;
   /* The opening, from the card's (vines') edges, in art px. */
-  --hud-opening-top: calc(var(--hud-u) * 20);
-  --hud-opening-side: calc(var(--hud-u) * 11);
-  --hud-opening-right: calc(var(--hud-u) * 19);
-  --hud-opening-bottom: calc(var(--hud-u) * 17);
-  --hud-opening-radius: calc(var(--hud-u) * 30);
+  --hud-opening-top: calc(var(--hud-u) * 29);
+  --hud-opening-side: calc(var(--hud-u) * 29);
+  --hud-opening-right: calc(var(--hud-u) * 31);
+  --hud-opening-bottom: calc(var(--hud-u) * 29);
+  --hud-opening-radius: calc(var(--hud-u) * 48);
   /* The hero fills the opening's height and the frame covers its edges, as in the concept: Sprout's curl runs under the
      top vine and its feet under the name. The art's box is the opening's width and 112% of its height, lifted 4% so
      the curl tucks under the top vine; the opening clips the rest. Object-fit contain, so a square portrait is as tall
@@ -53,9 +62,9 @@
   --hud-hero-scale: 112%;
   --hud-hero-lift: 4%;
   --hud-hero-focus: 50% 35%;
-  /* The name sits over the hero's lower body, its bottom on the rune's top, as in the concept. */
+  /* The name sits over the hero's lower body, its bottom on the socket ring's top, as in the concept. */
   --hud-name-line: 1.15;
-  --hud-name-bottom: calc(var(--hud-socket-y) + var(--hud-seed) / 2);
+  --hud-name-bottom: calc(var(--hud-socket-y) + var(--hud-socket-ring));
   /* The name is a share of its card, so a small phone's card keeps its resident: on boss-layout.webp "Chomper" spans
      half the 222 px card, which is 11% of the card at Nunito bold. The floor is L11's 13 px helper-text size, the same
      floor the long-name fit stops at (rumble-hud-data.js nameFit.min). */
@@ -63,15 +72,23 @@
   --hud-name-floor: 13px;
   --hud-name-size: max(var(--hud-name-floor), var(--hud-name-share));
   --hud-name-stroke: 0 1px 0 var(--hud-ink), 0 -1px 0 var(--hud-ink), 1px 0 0 var(--hud-ink), -1px 0 0 var(--hud-ink), 0 2px 3px var(--hud-ink);
-  /* The socket's centre above the card's bottom edge: art row 220.8 against the vines' bottom at 236. */
-  --hud-socket-y: calc(var(--hud-u) * 15.2);
-  /* The charge rune: boss-layout.webp shows the socket rune about 30 px across on a 222 px card (13.5%). It sits on the
-     socket as an insert, wider than the socket hole. The unlit part is the same spiral, dark stone; the lit part rises
-     from the bottom in the seed's own cream, so half charge reads as half a lit rune on phone. */
-  --hud-seed: 13.5cqi;
-  --hud-seed-dim: .85;
-  --hud-seed-unlit: grayscale(1) brightness(.4);
-  --hud-seed-lit-shadow: drop-shadow(0 0 1px var(--hud-ink));
+  /* The socket's centre above the card's bottom edge: art row 347 against the vines' bottom at 365. */
+  --hud-socket-y: calc(var(--hud-u) * 18);
+  /* Special charge is the border lighting clockwise (owner direction, 2026-11-15; supersedes the rising rune fill). The
+     ready frame lies over the normal one and shows through a conic mask from the rune socket at the bottom centre round
+     to --sweep (hero-cards.js, from rumble-hud-model.js chargeSweep, which spaces the angle so the front moves at one
+     speed along the edge). The socket starts and finishes the loop: it stays dark until ready, as does the ready
+     spiral in the top-right corner, so ready pops. Both are fixed-size corner and bottom slices of the nine-slice, so
+     their art px hold at any card height: the socket's ring is 53 art px across round (240, 347) and its glow reaches
+     about 7 px past that; the spiral spans x 420-450, y 45-80 with its glow. Distances are from the layer's edges
+     (the whole 480 x 400 art box). */
+  --hud-socket-ring: calc(var(--hud-u) * 27); /* half the socket ring's 53 art px */
+  --hud-socket-from-bottom: calc(var(--hud-u) * 53); /* 400 - 347 */
+  --hud-socket-dark: calc(var(--hud-u) * 34); /* the ring plus its ready glow */
+  --hud-spiral-from-right: calc(var(--hud-u) * 45); /* 480 - 435, the spiral's centre */
+  --hud-spiral-from-top: calc(var(--hud-u) * 62);
+  --hud-spiral-dark: calc(var(--hud-u) * 26); /* half its 35 px height plus its glow */
+  --hud-sweep-ease: .25s linear; /* one 1/40 charge step (loft-rumble-realtime.html roster) glides instead of ticking */
   /* Moving and recharging: the portrait steps back (dimmer, less saturated) so a resting hero reads as the one to fling.
      Opacity matches the pre-HUD hero cards (hero-cards.css --hero-busy-opacity, .55), softened so the plush still reads on
      the dark backing; stunned keeps its full grey (camera-stun.css). */
@@ -93,13 +110,15 @@
      The dock gets what is left after the arena minimum and the chrome (top bar, frame padding, two row gaps); on a squat
      screen (keyboard up, split screen) the cards shrink before the arena does. Unitless so calcs and tests can read it. */
   --hud-arena-min: 75.5;
-  --hud-chrome: calc(var(--stage-logo-height) + var(--stage-gap) * 4);
+  /* Reserve another stage gap below the dock for the frame's painted socket/leaf overhang. */
+  --hud-dock-clearance: calc(var(--stage-gap) * 2);
+  --hud-chrome: calc(var(--stage-logo-height) + var(--stage-gap) * 4 + var(--stage-gap));
   --hud-dock-room: calc(var(--stage-frame-height) * (100 - var(--hud-arena-min)) / 100 - var(--hud-chrome));
   --hud-dock-slots: 3;
   /* Cards fill the dock's width, a stage gap apart, as in the concept. Each card is 6:5 when the dock room allows; on a
-     short phone the room caps its height and the side vines shorten, down to the art's own 328 x 204 shape. The card's
+     short phone the room caps its height and the side vines shorten, down to the art's own 445 x 338 shape. The card's
      width is recomputed from the frame width here because a % height cannot read its own width. */
-  --hud-frame-flat: 328 / 204;
+  --hud-frame-flat: 445 / 338;
   --hud-card-w-abs: min((var(--stage-frame-width) - var(--stage-pad) * 2 - var(--stage-gap) * (var(--hud-dock-slots) - 1)) / var(--hud-dock-slots), var(--hud-dock-room) * var(--hud-frame-flat));
   --hud-card-height: min(var(--hud-card-w-abs) / (var(--hud-card-ratio)), var(--hud-dock-room));
   --hud-landscape-side: 160px;
@@ -134,6 +153,9 @@
 
 /* ---- Hero cards: backing, portrait, frame, name; the frame swaps to its amber twin when the special is ready. ---- */
 /* The card's box is the vines, so the stage gap is the visible gap between frames. */
+:root.loft-art[data-rumble-demo] body > main {
+  padding-bottom: max(var(--hud-dock-clearance), env(safe-area-inset-bottom));
+}
 .loft-art[data-rumble-demo] .roster { gap: var(--stage-gap); }
 .loft-art[data-rumble-demo] .roster .card {
   --hud-back: var(--hud-back-custom);
@@ -180,20 +202,21 @@
   border-width: calc(var(--hud-u) * var(--hud-slice-top)) calc(var(--hud-u) * var(--hud-slice-right))
     calc(var(--hud-u) * var(--hud-slice-bottom)) calc(var(--hud-u) * var(--hud-slice-left));
   border-radius: 0;
-  border-image: var(--art-lm-hero-frame-normal) var(--hud-slice-top) var(--hud-slice-right) var(--hud-slice-bottom) var(--hud-slice-left) fill / 1 / 0 stretch;
+  border-image: var(--art-lm-hero-frame-normal-v2) var(--hud-slice-top) var(--hud-slice-right) var(--hud-slice-bottom) var(--hud-slice-left) fill / 1 / 0 stretch;
+  filter: var(--hud-frame-rest-finish);
   background: none;
   animation: none;
 }
 .loft-art[data-rumble-demo] .roster .card.ready::after {
-  border-image-source: var(--art-lm-hero-frame-ready);
-  filter: drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready));
+  border-image-source: var(--art-lm-hero-frame-ready-v2);
+  filter: var(--hud-charge-finish) drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready));
   animation: hud-ignite var(--hud-ignite) ease-out 1;
 }
 .loft-art[data-rumble-demo] .roster .card.danger::before { background: var(--hud-back-danger); }
-.loft-art[data-rumble-demo] .roster .card.danger::after { filter: drop-shadow(0 0 var(--hud-danger-glow) var(--danger)); }
+.loft-art[data-rumble-demo] .roster .card.danger::after { filter: var(--hud-frame-rest-finish) drop-shadow(0 0 var(--hud-danger-glow) var(--danger)); }
 .loft-art[data-rumble-demo] .roster .card[data-grabbed]::before { box-shadow: inset 0 0 0 var(--stage-border) var(--hud-cream); }
 @keyframes hud-ignite {
-  from { filter: drop-shadow(0 0 calc(var(--hud-ready-glow) * 3) var(--hud-ready)); }
+  from { filter: var(--hud-charge-finish) drop-shadow(0 0 calc(var(--hud-ready-glow) * 3) var(--hud-ready)); }
 }
 .loft-art[data-rumble-demo] .roster .portrait,
 .loft-art[data-rumble-demo] .roster .card.rumble-special-ready .portrait {
@@ -258,36 +281,52 @@
 /* No state words on the card: ready, moving, stunned and danger show by frame, glow, grey and ring. The words stay in the
    card's aria-label and the cue rail's live region. */
 .loft-art[data-rumble-demo] .roster .card:is(*, .ready, .danger, .stunned) :is(em, small, .badge, .dock-charge, .dock-danger) { display: none; }
-/* The special charge: the spiral seed in the frame's socket fills from the bottom as it charges, amber when ready. */
-.loft-art[data-rumble-demo] .roster .dock-meter {
-  position: absolute;
-  left: 50%;
-  bottom: var(--hud-socket-y);
-  z-index: 3;
-  width: var(--hud-seed);
-  aspect-ratio: 1;
-  height: auto;
-  translate: -50% 50%;
-  border-radius: 50%;
-  background: none;
-  overflow: visible;
+/* The special charge: the ready frame over the normal one, lit clockwise from the socket up to --sweep. The layer is the
+   frame's own box (the same inset and nine-slice as the card's ::after), so the lit vines sit exactly on the dark ones.
+   The conic's centre is the vines' centre, the rectangle chargeSweep walks. */
+@property --sweep {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
 }
-.loft-art[data-rumble-demo] .roster .dock-meter::before,
-.loft-art[data-rumble-demo] .roster .dock-meter::after {
-  content: '';
+.loft-art[data-rumble-demo] .roster .dock-meter {
+  --hud-sweep-x: calc(var(--hud-u) * (var(--hud-frame-margin-left) + var(--hud-frame-vines) / 2));
+  --hud-sweep-y: calc(var(--hud-u) * var(--hud-frame-margin-top) + var(--hud-card-height) / 2);
   position: absolute;
-  inset: 0;
+  inset: calc(var(--hud-u) * -1 * var(--hud-frame-margin-top)) calc(var(--hud-u) * -1 * var(--hud-frame-margin-right))
+    calc(var(--hud-u) * -1 * var(--hud-frame-margin-bottom)) calc(var(--hud-u) * -1 * var(--hud-frame-margin-left));
+  z-index: 3;
   width: auto;
   height: auto;
-  background: var(--art-lm-hud-spiral-seed) center / contain no-repeat;
+  pointer-events: none;
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: transparent;
+  border-width: calc(var(--hud-u) * var(--hud-slice-top)) calc(var(--hud-u) * var(--hud-slice-right))
+    calc(var(--hud-u) * var(--hud-slice-bottom)) calc(var(--hud-u) * var(--hud-slice-left));
+  border-radius: 0;
+  border-image: var(--art-lm-hero-frame-ready-v2) var(--hud-slice-top) var(--hud-slice-right) var(--hud-slice-bottom) var(--hud-slice-left) fill / 1 / 0 stretch;
+  filter: var(--hud-charge-finish);
+  background: none;
+  overflow: visible;
+  mask-image:
+    radial-gradient(circle at 50% calc(100% - var(--hud-socket-from-bottom)), transparent var(--hud-socket-dark), var(--hud-ink) var(--hud-socket-dark)),
+    radial-gradient(circle at calc(100% - var(--hud-spiral-from-right)) var(--hud-spiral-from-top), transparent var(--hud-spiral-dark), var(--hud-ink) var(--hud-spiral-dark)),
+    conic-gradient(from 180deg at var(--hud-sweep-x) var(--hud-sweep-y), var(--hud-ink) max(0deg, calc(var(--sweep) - var(--hud-energy-feather))), transparent var(--sweep));
+  mask-composite: intersect;
+  transition: --sweep var(--hud-sweep-ease);
+  animation: hud-energy-breathe var(--hud-energy-period) ease-in-out infinite;
 }
-.loft-art[data-rumble-demo] .roster .dock-meter::before { opacity: var(--hud-seed-dim); filter: var(--hud-seed-unlit); }
-.loft-art[data-rumble-demo] .roster .dock-meter::after {
-  clip-path: inset(calc((1 - var(--charge, 0)) * 100%) 0 0 0);
-  filter: var(--hud-seed-lit-shadow);
+@keyframes hud-energy-breathe {
+  0%, 100% { filter: var(--hud-charge-finish) var(--hud-energy-state) brightness(1); }
+  50% { filter: var(--hud-charge-finish) var(--hud-energy-state) brightness(var(--hud-energy-crest)); }
 }
-/* The glow sits on the meter, not the clipped fill: a filter on a clip-path layer is cut to a square. */
-.loft-art[data-rumble-demo] .roster .card.ready .dock-meter { filter: drop-shadow(0 0 var(--hud-ready-glow) var(--hud-ready)); }
+.loft-art[data-rumble-demo] .roster .dock-meter::before,
+.loft-art[data-rumble-demo] .roster .dock-meter::after { display: none; }
+/* Ready: the whole frame, socket and spiral included (the card's ::after has swapped to the ready art and its glow). */
+.loft-art[data-rumble-demo] .roster .card.ready .dock-meter { mask-image: none; }
+/* Movement dims the portrait, not its charge. Stun retains the perimeter amount in grey. */
+.loft-art[data-rumble-demo] .roster .card.stunned .dock-meter { --hud-energy-state: var(--hud-stun-finish); filter: var(--hud-charge-finish) var(--hud-stun-finish); }
 /* Stunned: the portrait greys (camera-stun.css) and the cue rail's ring drains in the opening's top-right corner, where
    no portrait draws its face (every portrait's face sits at --hud-hero-focus, centred, 35% down). Centred on the
    portrait, it covered Chomper's mouth (LOFT-RUMBLE-UI-AUDIT.md, finding 10). */
@@ -305,6 +344,7 @@
 @media (prefers-reduced-motion: reduce) {
   .loft-art[data-rumble-demo] .roster .card.ready::after { animation: none; }
   .loft-art[data-rumble-demo] .roster .card .portrait img { transition: none; }
+  .loft-art[data-rumble-demo] .roster .dock-meter { transition: none; animation: none; }
 }
 
 /* ---- The top-bar menu button is the pause stone (pause opens the menu in the live fight). ---- */

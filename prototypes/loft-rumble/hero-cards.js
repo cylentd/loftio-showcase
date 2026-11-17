@@ -66,6 +66,11 @@
     card.querySelector('.dock-charge').textContent = percent === data.dock.percent
       ? data.dock.special : data.dock.special + ' ' + percent + '%';
     meter.title = percent === data.dock.percent ? data.dock.ready : data.dock.special + ' ' + percent + '%';
+    // The border lights clockwise from the rune socket as the special charges (owner direction, 2026-11-15): the ready
+    // frame shows through a conic mask up to this angle, placed so the lit front moves at one speed round the card.
+    const aspect = card.clientHeight > 0 ? card.clientWidth / card.clientHeight : data.dock.cardAspect;
+    const sweep = window.LoftRumbleHudModel?.chargeSweep(view.specialCharge, aspect);
+    if (sweep !== undefined) meter.style.setProperty('--sweep', sweep + 'deg');
     if (view.motion === 'stunned') status.textContent = data.dock.stunned + ' ' + view.stunRemaining.toFixed(1) + data.dock.seconds;
   }
 
