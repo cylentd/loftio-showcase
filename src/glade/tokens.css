@@ -13,7 +13,9 @@
   --glade-gap: 1rem;
   --glade-inset: 1rem;
   --glade-padding: 1.25rem;
-  --glade-width: 36rem;
+  --glade-width: 55rem;
+  --glade-card-min: 20rem;
+  --glade-art-ratio: 16 / 10;
   --glade-radius: 1.5rem;
   --glade-sign-radius: 0.5rem 1rem 1rem 0.5rem;
   --glade-logo-width: 8rem;

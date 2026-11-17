@@ -12,10 +12,12 @@ html[data-rumble-leaving] { background: var(--glade-transition-surface); }
 .glade-panel::backdrop { background: var(--glade-scrim); }
 .glade-close { position: absolute; top: var(--glade-gap); right: var(--glade-gap); z-index: var(--glade-close-layer); display: grid; place-items: center; width: var(--glade-target); height: var(--glade-target); padding: 0; border: var(--glade-border) solid var(--glade-rumble-edge); border-radius: 50%; background: var(--glade-rumble-close); color: var(--glade-rumble-ink); cursor: pointer; }
 .glade-close svg { width: var(--glade-body-size); height: var(--glade-body-size); }
-.glade-title { position: absolute; width: var(--glade-border); height: var(--glade-border); overflow: hidden; clip-path: inset(50%); }
-.glade-activity { overflow: hidden; }
-.glade-art { display: block; width: 100%; height: auto; }
-.glade-activity-body { display: grid; gap: var(--glade-padding); padding: var(--glade-padding); }
+.glade-title { margin: 0; padding: var(--glade-padding); padding-right: calc(var(--glade-target) + var(--glade-padding) + var(--glade-gap)); font-size: var(--glade-title-size); }
+.glade-activities { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--glade-card-min)), 1fr)); gap: var(--glade-gap); padding: 0 var(--glade-padding) var(--glade-padding); }
+.glade-activity { overflow: hidden; display: flex; flex-direction: column; border: var(--glade-border) solid var(--glade-rumble-edge); border-radius: var(--glade-radius); }
+.glade-art { display: block; width: 100%; height: auto; aspect-ratio: var(--glade-art-ratio); object-fit: cover; }
+.glade-heading { margin: 0; font-size: var(--glade-heading-size); text-align: center; }
+.glade-activity-body { display: flex; flex: 1; flex-direction: column; gap: var(--glade-gap); padding: var(--glade-padding); }
 .glade-description { margin: 0; color: var(--glade-rumble-muted); text-align: center; }
-.glade-play { display: block; padding: var(--glade-gap); border: var(--glade-border) solid var(--glade-rumble-edge); border-radius: var(--glade-sign-radius); background: var(--glade-rumble-accent); color: var(--glade-rumble-accent-ink); text-align: center; text-decoration: none; font-weight: 800; }
+.glade-play { display: block; margin-top: auto; padding: var(--glade-gap); border: var(--glade-border) solid var(--glade-rumble-edge); border-radius: var(--glade-sign-radius); background: var(--glade-rumble-accent); color: var(--glade-rumble-accent-ink); text-align: center; text-decoration: none; font-weight: 800; }
 .glade-sign:focus-visible, .glade-close:focus-visible, .glade-play:focus-visible { outline: var(--glade-focus-width) solid var(--glade-rumble-accent); outline-offset: var(--glade-focus-gap); }
