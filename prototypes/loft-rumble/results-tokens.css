@@ -1,5 +1,9 @@
 /* Results kit geometry and motion tokens; colour, radius and type read rumble-tokens.css. */
 #demo-results{
+  --font-body:Nunito,sans-serif;
+  --lm-scroll-celebration:0;
+  /* Defeat reserves the captured boss header above a centered, content-sized surface. */
+  --lm-defeat-width:560px;--lm-defeat-clearance:112px;--lm-defeat-pad:16px;
   --lm-focus:3px;--lm-title-shadow:var(--rumble-text-stroke),0 3px 0 var(--lm-amber-deep),0 4px 12px var(--lm-shadow);
   /* Colour */
   --lm-cream:var(--rumble-cream);--lm-muted:var(--rumble-muted);--lm-amber:var(--rumble-amber);--lm-amber-deep:var(--rumble-amber-deep);
@@ -30,4 +34,7 @@
   /* Motion */
   --lm-in:280ms;--lm-turn:160ms;--lm-stagger:90ms;--lm-rise:12px;
 }
+@media(min-width:1000px){#demo-results{--lm-defeat-pad:24px}}
+/* Short landscape cannot reserve the full celebration above readable roster rows. */
+@media(max-height:600px) and (orientation:landscape){#demo-results{--lm-scroll-celebration:1}}
 /* One portrait composition at every browser width; outer geometry belongs to rumble-stage.css. */

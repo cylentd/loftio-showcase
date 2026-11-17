@@ -35,7 +35,15 @@
     }),
     // The fill: the top share that catches the upper-left light and how strongly; hud-health-fill's luminous strand spans
     // 35 of the texture's 77 rows (alpha bbox), so it is drawn that much taller than the channel to fill it.
-    fill:Object.freeze({sheen:.45,sheenAlpha:.22,strandBand:35/77}),
+    // Keep hit washes translucent: an opaque white bar erases both its health colour and moving strand.
+    fill:Object.freeze({sheen:.45,sheenAlpha:.22,strandBand:35/77,strandAlpha:.45,flashMax:.55}),
+    // LOOK: two tapered sap filaments, with a soft shoulder; lengths relative to the full channel.
+    // Slow travel stays on presentation time. Each repeat wraps wholly outside the channel.
+    energy:Object.freeze({period:16000,phase:.25,count:2,length:.32,segments:32,
+      amplitude:.22,ripple:.07,waves:.65,phaseGap:1.7,drift:.35,
+      coreWidth:.18,haloWidth:.42,coreAlpha:.82,haloAlpha:.16,feather:.35}),
+    // Ready-frame nine-slice source edges, matching ui-v1's 480 x 400 texture.
+    energySlices:Object.freeze({x:Object.freeze([0,100,380,480]),y:Object.freeze([0,110,300,400])}),
     inset:8,            // the frames' distance from the arena's side edges
     type:Object.freeze({body:15,helper:13,weight:600}), // UI standards L11, in CSS pixels; weight is the bundled Nunito's top (rumble-tokens.css)
     pixels:Object.freeze({channels:4,alpha:3}), // Canvas ImageData RGBA byte layout
@@ -53,6 +61,7 @@
     scrimAlpha:.55,      // top-of-arena shade behind the boss header, fading out by the strip's bottom
     tokens:Object.freeze({
       cream:'--hud-cream',ink:'--hud-ink',boss:'--hud-boss-fill',team:'--hud-team-fill',pending:'--hud-pending',
+      bossEnergy:'--hud-boss-energy',teamEnergy:'--hud-team-energy',
       scrim:'--hud-scrim',flash:'--hud-flash',low:'--danger',
     }),
     // Canonical portraits for the three dock slots. The third slot is the demo's resident (rumble-demo-data.js, Puff); a

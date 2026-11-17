@@ -24,6 +24,9 @@
   --rumble-pending: #7b8b9b;
   --rumble-boss-fill: #9b4fd8;    /* the pack's violet boss bar */
   --rumble-team-fill: #2fbfa3;    /* the pack's teal team bar; also a switch that is on */
+  --rumble-boss-energy: #e7c8ff;
+  --rumble-team-energy: #b6fff0;
+  --rumble-charge-light: rgb(255 235 190 / .45);
   --rumble-scrim: #1b0f1e;        /* the canvas's top-of-arena shade */
   --rumble-flash: #ffffff;
   --rumble-shadow: #000000;       /* every drop shadow, mixed down with color-mix */

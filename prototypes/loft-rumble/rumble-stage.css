@@ -331,7 +331,7 @@
 }
 [data-rumble-demo] #throw-style button:hover { background-color: var(--stage-sheet-hover); }
 [data-rumble-demo] #throw-style button[aria-pressed=true] { border-color: var(--stage-sheet-edge); background: var(--stage-sheet-accent); color: var(--stage-sheet-accent-ink); font-weight: var(--rumble-name-weight); }
-[data-rumble-demo] #menu :is(#reset, #replay-tutorial) { border: 0; border-image: none; font-size: var(--stage-name-size); font-weight: var(--rumble-helper-weight); color: var(--stage-sheet-muted); text-shadow: none; padding-inline: 0; }
+[data-rumble-demo] #menu :is(#reset, #replay-tutorial) { border: 0; border-image: none; font-size: var(--stage-sheet-copy); font-weight: var(--rumble-helper-weight); color: var(--stage-sheet-muted); text-shadow: none; padding-inline: 0; }
 [data-rumble-demo] #menu:not(:has(#replay-tutorial)) #reset { grid-column: 1 / -1; } /* Replay is removed without ?training; New battle takes the whole row */
 [data-rumble-demo] #menu > button:hover { background-color: var(--stage-sheet-hover); }
 [data-rumble-demo] :is(#menu #pause, .help-resume):hover { background-color: transparent; filter: brightness(1.08); }

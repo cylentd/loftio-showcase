@@ -42,6 +42,31 @@
     ctx.fillStyle=fill??P.cream;ctx.fillText(text,x,y);
   }
 
+  // Tapered, curved filaments advect through the painted sap. The offscreen wrap never resets visible pixels.
+  function energyStrands(ctx,rect,filled,tint){
+    const E=D.energy,{x,y,w,h}=rect,time=(root.performance?.now()??0)/E.period;
+    const P=colours(),lightTint=tint===P.boss?P.bossEnergy:P.teamEnergy;
+    const length=w*E.length,route=w+length*2;
+    ctx.save();ctx.beginPath();ctx.rect(x,y,filled,h);ctx.clip();
+    ctx.globalCompositeOperation='screen';ctx.lineCap='round';ctx.lineJoin='round';
+    for(let index=0;index<E.count;index++){
+      const phase=(time+E.phase+index/E.count)%1,start=x+phase*route-length*2;
+      const light=ctx.createLinearGradient(start,y,start+length,y);
+      light.addColorStop(0,'transparent');light.addColorStop(E.feather,lightTint);
+      light.addColorStop(1-E.feather,lightTint);light.addColorStop(1,'transparent');
+      ctx.beginPath();
+      for(let step=0;step<=E.segments;step++){
+        const u=step/E.segments,angle=u*Math.PI*2*E.waves+index*E.phaseGap;
+        const py=y+h*(HALF+E.amplitude*Math.sin(angle+time*E.drift)
+          +E.ripple*Math.sin(angle*2-time*E.drift));
+        if(step===0)ctx.moveTo(start+u*length,py);else ctx.lineTo(start+u*length,py);
+      }
+      ctx.strokeStyle=light;ctx.lineWidth=h*E.haloWidth;ctx.globalAlpha=E.haloAlpha;ctx.stroke();
+      ctx.lineWidth=h*E.coreWidth;ctx.globalAlpha=E.coreAlpha;ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // The channel: pending damage in pale cream, then the tinted body cropped to the health share with the luminous strand
   // over it, then any hit or low-health wash. Everything stays clipped inside the rounded channel.
   function channel(ctx,rect,bar,tint,fillImage){
@@ -53,10 +78,13 @@
       ctx.save();ctx.beginPath();ctx.rect(x,y,filled,h);ctx.clip();
       ctx.fillStyle=tint;ctx.fillRect(x,y,filled,h);
       ctx.globalAlpha=SHEEN_ALPHA;ctx.fillStyle=P.flash;ctx.fillRect(x,y,filled,h*SHEEN);ctx.globalAlpha=1;
-      if(fillImage){const band=h/STRAND_BAND;ctx.globalCompositeOperation='lighter';ctx.drawImage(strand(fillImage,tint),x,y+h*HALF-band*HALF,w,band)}
+      if(fillImage){const band=h/STRAND_BAND;ctx.globalAlpha=D.fill.strandAlpha;ctx.globalCompositeOperation='lighter';ctx.drawImage(strand(fillImage,tint),x,y+h*HALF-band*HALF,w,band)}
       ctx.restore();
     }
-    if(bar.flash>0){ctx.globalAlpha=Math.min(1,bar.flash);ctx.fillStyle=bar.wash;ctx.fillRect(x,y,w,h)}
+    if(bar.flash>0){ctx.globalAlpha=Math.min(D.fill.flashMax,bar.flash);ctx.fillStyle=bar.wash;ctx.fillRect(x,y,w,h)}
+    if(filled>0&&!root.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+      energyStrands(ctx,rect,filled,tint);
+    }
     ctx.restore();
     return filled;
   }
@@ -176,7 +204,32 @@
     while(el.scrollWidth>el.clientWidth&&size>D.nameFit.min){size=Math.max(D.nameFit.min,size-D.nameFit.step);el.style.fontSize=size+'px'}
     fitted.set(el,el.textContent+'|'+el.clientWidth);
   }
-  function fitNames(){for(const el of document.querySelectorAll('.roster .card b'))fitName(el)}
+  const energyPaints=new WeakMap();
+  // Rasterise the same nine-slice once per size, so light changes RGB beneath one fixed alpha mask.
+  // Compositing a second painted border would brighten translucent edge pixels and move its apparent frontier.
+  function energyPaint(card){
+    const image=root.LoftRumbleArt?.available('lm-hero-frame-ready-v2'),meter=card.querySelector('.dock-meter');
+    if(!image||!meter)return;
+    const rect=meter.getBoundingClientRect(),style=getComputedStyle(meter),ratio=root.devicePixelRatio||1;
+    if(!rect.width||!rect.height)return;
+    const key=[rect.width,rect.height,ratio].join('|');
+    if(energyPaints.get(meter)===key)return;
+    const canvas=document.createElement('canvas');canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(rect.height*ratio);
+    const ctx=canvas.getContext('2d');ctx.scale(ratio,ratio);
+    const x=[0,parseFloat(style.borderLeftWidth),rect.width-parseFloat(style.borderRightWidth),rect.width];
+    const y=[0,parseFloat(style.borderTopWidth),rect.height-parseFloat(style.borderBottomWidth),rect.height];
+    const source=D.energySlices;
+    for(let row=0;row<y.length-1;row++)for(let col=0;col<x.length-1;col++){
+      ctx.drawImage(image,source.x[col],source.y[row],source.x[col+1]-source.x[col],source.y[row+1]-source.y[row],
+        x[col],y[row],x[col+1]-x[col],y[row+1]-y[row]);
+    }
+    meter.style.setProperty('--hud-energy-paint','url("'+canvas.toDataURL('image/png')+'")');
+    meter.dataset.energyPaint='';energyPaints.set(meter,key);
+  }
+  function fitNames(){
+    for(const el of document.querySelectorAll('.roster .card b'))fitName(el);
+    for(const card of document.querySelectorAll('.roster .card'))energyPaint(card);
+  }
   function portraits(art){
     for(const [id,name] of Object.entries(D.portraits)){
       const card=document.querySelector('.roster [data-resident="'+id+'"]'),image=art.available(name);
@@ -198,6 +251,7 @@
       if(!art.available(D.art.bossFrame))return;
       portraits(art);
       document.documentElement.classList.add('lm-hud-art');
+      fitNames();
     });
   }
   if(typeof document!=='undefined'){

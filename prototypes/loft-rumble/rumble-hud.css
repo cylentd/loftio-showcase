@@ -13,6 +13,8 @@
   --hud-ink: var(--rumble-ink);
   --hud-boss-fill: var(--rumble-boss-fill);
   --hud-team-fill: var(--rumble-team-fill);
+  --hud-boss-energy: var(--rumble-boss-energy);
+  --hud-team-energy: var(--rumble-team-energy);
   --hud-pending: var(--rumble-cream);
   --hud-scrim: var(--rumble-scrim);
   --hud-flash: var(--rumble-flash);
@@ -23,6 +25,11 @@
   --hud-energy-feather: 8deg;
   --hud-energy-period: 4s;
   --hud-energy-crest: 1.08;
+  --hud-energy-turns: 360deg;
+  --hud-energy-repeat: 180deg;
+  --hud-energy-band: 70deg;
+  --hud-energy-light: var(--rumble-charge-light);
+  --hud-energy-base: var(--rumble-shadow);
   --hud-energy-state: brightness(1);
   /* Glows are a share of the card (cqi: the card is the size container), so they scale with it: 6 px and 5 px were
      tuned on the 136 px card at 390 x 844 (LM6d, 2026-11-15). */
@@ -289,6 +296,11 @@
   inherits: false;
   initial-value: 0deg;
 }
+@property --hud-travel {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
 .loft-art[data-rumble-demo] .roster .dock-meter {
   --hud-sweep-x: calc(var(--hud-u) * (var(--hud-frame-margin-left) + var(--hud-frame-vines) / 2));
   --hud-sweep-y: calc(var(--hud-u) * var(--hud-frame-margin-top) + var(--hud-card-height) / 2);
@@ -315,16 +327,32 @@
     conic-gradient(from 180deg at var(--hud-sweep-x) var(--hud-sweep-y), var(--hud-ink) max(0deg, calc(var(--sweep) - var(--hud-energy-feather))), transparent var(--sweep));
   mask-composite: intersect;
   transition: --sweep var(--hud-sweep-ease);
-  animation: hud-energy-breathe var(--hud-energy-period) ease-in-out infinite;
+  animation: hud-energy-travel var(--hud-energy-period) linear infinite;
 }
-@keyframes hud-energy-breathe {
-  0%, 100% { filter: var(--hud-charge-finish) var(--hud-energy-state) brightness(1); }
-  50% { filter: var(--hud-charge-finish) var(--hud-energy-state) brightness(var(--hud-energy-crest)); }
+@keyframes hud-energy-travel {
+  0%, 100% { filter: var(--hud-charge-finish) var(--hud-energy-state); }
+  50% { filter: var(--hud-charge-finish) brightness(var(--hud-energy-crest)) var(--hud-energy-state); }
+  to { --hud-travel: var(--hud-energy-turns); }
 }
 .loft-art[data-rumble-demo] .roster .dock-meter::before,
 .loft-art[data-rumble-demo] .roster .dock-meter::after { display: none; }
+/* Light is composited under the paint's fixed alpha, then clipped by charge and readiness. */
+.loft-art[data-rumble-demo] .roster .dock-meter[data-energy-paint] {
+  border-image: none;
+  background: repeating-conic-gradient(from calc(180deg + var(--hud-travel)) at var(--hud-sweep-x) var(--hud-sweep-y),
+    transparent, var(--hud-energy-light) calc(var(--hud-energy-band) / 2), transparent var(--hud-energy-band), transparent var(--hud-energy-repeat)),
+    var(--hud-energy-paint), var(--hud-energy-base);
+  background-origin: border-box; background-clip: border-box; background-size: 100% 100%;
+  background-blend-mode: screen, normal;
+  mask-image: var(--hud-energy-paint),
+    radial-gradient(circle at 50% calc(100% - var(--hud-socket-from-bottom)), transparent var(--hud-socket-dark), var(--hud-ink) var(--hud-socket-dark)),
+    radial-gradient(circle at calc(100% - var(--hud-spiral-from-right)) var(--hud-spiral-from-top), transparent var(--hud-spiral-dark), var(--hud-ink) var(--hud-spiral-dark)),
+    conic-gradient(from 180deg at var(--hud-sweep-x) var(--hud-sweep-y), var(--hud-ink) max(0deg, calc(var(--sweep) - var(--hud-energy-feather))), transparent var(--sweep));
+  mask-size: 100% 100%;
+}
 /* Ready: the whole frame, socket and spiral included (the card's ::after has swapped to the ready art and its glow). */
 .loft-art[data-rumble-demo] .roster .card.ready .dock-meter { mask-image: none; }
+.loft-art[data-rumble-demo] .roster .card.ready .dock-meter[data-energy-paint] { mask-image: var(--hud-energy-paint); }
 /* Movement dims the portrait, not its charge. Stun retains the perimeter amount in grey. */
 .loft-art[data-rumble-demo] .roster .card.stunned .dock-meter { --hud-energy-state: var(--hud-stun-finish); filter: var(--hud-charge-finish) var(--hud-stun-finish); }
 /* Stunned: the portrait greys (camera-stun.css) and the cue rail's ring drains in the opening's top-right corner, where
@@ -345,6 +373,8 @@
   .loft-art[data-rumble-demo] .roster .card.ready::after { animation: none; }
   .loft-art[data-rumble-demo] .roster .card .portrait img { transition: none; }
   .loft-art[data-rumble-demo] .roster .dock-meter { transition: none; animation: none; }
+  .loft-art[data-rumble-demo] .roster .dock-meter::after { display: none; animation: none; }
+  .loft-art[data-rumble-demo] .roster .dock-meter[data-energy-paint] { background-image: var(--hud-energy-paint); }
 }
 
 /* ---- The top-bar menu button is the pause stone (pause opens the menu in the live fight). ---- */

@@ -9,6 +9,10 @@
    damage scrolls. L4's footer guarantee applies; the modal's outer clearance does not. Escape never dismisses it. */
 #demo-results{
   position:fixed;z-index:2;inset:0;width:100%;height:100%;
+  display:grid;place-items:center;color:var(--lm-cream);font-family:var(--font-body);text-align:center;
+}
+.results-surface{
+  position:relative;width:100%;height:100%;min-height:0;
   box-sizing:border-box;padding:calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-top)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-right)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-bottom)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-left));
   display:grid;grid-template-rows:auto minmax(0,1fr) auto;isolation:isolate;background:var(--lm-plum);
   color:var(--lm-cream);font-family:var(--font-body);text-align:center;overflow-wrap:anywhere;
@@ -16,11 +20,11 @@
 }
 #demo-results[hidden]{display:none}
 [data-rumble-demo]:has(#demo-results:not([hidden])) :is(.top,.roster){visibility:hidden}
-#demo-results > :is(.results-celebration,.results-body,.results-actions){width:min(100%,var(--lm-content-width));justify-self:center;min-width:0}
+.results-surface > :is(.results-celebration,.results-body,.results-actions){width:min(100%,var(--lm-content-width));justify-self:center;min-width:0}
 .results-celebration{display:flex;flex-direction:column;gap:var(--lm-tight);min-height:0}
-#demo-results::before{content:'';position:absolute;inset:var(--lm-material-inset);z-index:-2;border-radius:var(--lm-material-radius);
+.results-surface::before{content:'';position:absolute;inset:var(--lm-material-inset);z-index:-2;border-radius:var(--lm-material-radius);
   background:var(--lm-plum) url('art/results-panel-surface.webp') repeat 0 0/var(--lm-material-tile);box-shadow:var(--lm-drop)}
-#demo-results::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border:var(--lm-frame-slice) solid transparent;
+.results-surface::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border:var(--lm-frame-slice) solid transparent;
   border-image:url('art/results-frame.webp') var(--lm-frame-inset)/var(--lm-frame-slice) stretch}
 /* A scrim over the arena while the results show: the fight behind is over, and the panel reads as the only thing to act on. */
 [data-rumble-demo] #arena:has(> #demo-results:not([hidden]))::after{content:'';position:absolute;inset:0;z-index:1;background:var(--stage-sheet-backdrop)}
@@ -43,8 +47,20 @@
   margin-top:0;
   background:url('art/results-victory-stage.webp') center/contain no-repeat}
 #demo-results[data-outcome="defeat"] .results-stage{display:none}
-#demo-results[data-outcome="defeat"]:not([hidden]){bottom:auto;height:auto;max-height:100%;display:flex;flex-direction:column;align-items:center}
+#demo-results[data-outcome="defeat"] .results-surface{height:auto;max-height:calc(100% - var(--lm-defeat-clearance));width:min(100%,var(--lm-defeat-width));padding:calc(var(--lm-frame-slice) + var(--lm-defeat-pad));grid-template-rows:auto minmax(0,1fr) auto}
+.results-boss{display:none}
+#demo-results[data-outcome="defeat"] .results-boss{display:flex;position:absolute;bottom:calc(50% + var(--lm-defeat-height) / 2 + var(--lm-tight));flex-direction:column;align-items:center;color:var(--lm-cream);font-size:var(--lm-body);font-weight:var(--lm-strong);text-shadow:var(--rumble-text-stroke);white-space:nowrap}
+#demo-results[data-outcome="defeat"] .results-surface{height:var(--lm-defeat-height);display:flex;flex-direction:column;align-items:center}
+#demo-results[data-outcome="defeat"] .results-body{flex:1 1 auto;min-height:0}
+#demo-results[data-outcome="defeat"] .results-body{scroll-snap-type:y proximity}
+#demo-results[data-outcome="defeat"] .damage-row{scroll-snap-align:start}
+:root[data-rumble-demo] body > main:has(#demo-results[data-outcome="defeat"]:not([hidden])){height:min(var(--stage-frame-height),100dvh)}
 #demo-results[data-outcome="defeat"] .results-celebration{flex-shrink:0}
+/* Keep the complete victory scene in the reading body when landscape is shallow. */
+:root[data-rumble-demo] body > main:has(#demo-results[data-compact-victory]:not([hidden])){height:min(var(--stage-frame-height),100dvh)}
+#demo-results[data-compact-victory] .results-surface{display:flex;flex-direction:column;align-items:center}
+#demo-results[data-compact-victory] .results-body{flex:1 1 auto;min-height:0}
+#demo-results[data-compact-victory] .results-celebration{flex-shrink:0}
 /* Each resident stands on the stage floor (--ground of the stage height) with its own slot: x, size, tilt and a small step
    back. The portrait's transparent foot rows (--foot) are pulled under the floor line so the feet touch it. */
 .results-figure{position:absolute;z-index:var(--layer);left:calc(var(--x) * 100%);bottom:calc((1 - var(--ground) + var(--back)) * 100%);height:calc(var(--size) * 100%);
@@ -60,7 +76,8 @@
    clipped by the list, so a wrapped row never starts with a stray divider. */
 .results-summary{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--lm-gap) 0;margin:0;overflow:hidden}
 .results-summary > div{flex:1 1 var(--lm-fact-min);display:flex;flex-direction:column;justify-content:space-between;padding:0 var(--lm-tight);
-  margin-inline-start:calc(var(--lm-line-weight) * -1);border-inline-start:var(--lm-line-weight) solid var(--lm-line)}
+  margin-inline-start:0;border-inline-start:var(--lm-line-weight) solid var(--lm-line)}
+.results-summary > div:first-child{border-inline-start:0}
 .results-summary dt{font-size:var(--lm-body);color:var(--lm-muted)}
 .results-summary dd{margin:0;font-size:var(--lm-value);font-weight:var(--lm-strong);font-variant-numeric:tabular-nums}
 .results-divider{height:var(--lm-divider-crest);background:url('art/results-spiral-crest.webp') center/contain no-repeat,

@@ -11,6 +11,9 @@
 <link rel="stylesheet" href="rumble-cinematic.css">
 <link rel="stylesheet" href="battle-restart.css">
 <script src="battle-end-model.js"></script>
+<script src="finish-presentation-constants.js"></script>
+<script src="finish-presentation-model.js"></script>
+<script src="finish-presentation-renderer.js"></script>
 <script src="battle-restart.js"></script>
 <script src="rumble-cinematic-data.js"></script>
 <script src="rumble-cinematic.js"></script>
@@ -647,7 +650,9 @@ function drawShield(){const sh=s.shield;if(bossShieldLook('front'))return;if(sh.
   const k=still()?.5:(s.clock*FEEL.shieldSheenSpeed)%1,c=a0+(a1-a0)*k,half=FEEL.shieldArc*FEEL.shieldSheen/2;ctx.strokeStyle=colors.card;ctx.lineWidth=FEEL.shieldWidth*.4;ctx.beginPath();ctx.arc(e.x,e.y,r-1,Math.max(a0,c-half),Math.min(a1,c+half));ctx.stroke();
   ctx.strokeStyle=colors.card;ctx.lineWidth=1.5;for(let i=0;i<sh.cracks;i++){const a=a0+(a1-a0)*(i+1)/(FEEL.shieldCracks+1);ctx.beginPath();ctx.moveTo(e.x+Math.cos(a)*(r-FEEL.shieldWidth/2),e.y+Math.sin(a)*(r-FEEL.shieldWidth/2));ctx.lineTo(e.x+Math.cos(a+.06)*(r+FEEL.shieldWidth/2),e.y+Math.sin(a+.06)*(r+FEEL.shieldWidth/2));ctx.stroke()}
   ctx.restore()}
-function finishBattle(won){if(s.phase==='over')return;s.battleEnd=window.LoftRumbleBattleEnd.terminal(s.battleEnd,performance.now(),{won,hp:s.hp,maxHP:RT.hp});if(s.demo)s.banners=[];if(s.tutor&&!s.demo)tutorDone();s.phase='over';s.won=won;cancelHold();s.bolts=[];for(const id of ids)stop(s.bodies[id]);
+function finishBattle(won){if(s.phase==='over')return;
+  const presentation=window.LoftRumbleFinishModel.capture({s,C,FEEL,RT,ids,camera,contactPose,artSize,splashScale,enemy,bumperSpots,colors,artwork,skin:document.documentElement.dataset.arenaSkin});
+  s.battleEnd=window.LoftRumbleBattleEnd.terminal(s.battleEnd,performance.now(),{won,hp:s.hp,maxHP:RT.hp,presentation});if(s.demo)s.banners=[];if(s.tutor&&!s.demo)tutorDone();s.phase='over';s.won=won;cancelHold();s.bolts=[];for(const id of ids)stop(s.bodies[id]);
   message(won?phrase(COPY.won,{time:clockText(s.time)})+'!':phrase(COPY.lost,{time:clockText(s.time)})+'. '+COPY.again+'.');status();roster()}
 function status(){if(camera?.predicting)return;document.getElementById('turn-label').textContent=phrase(COPY.battle,{time:clockText(s.time)});
   document.getElementById('attack-count').textContent=s.phase==='over'?COPY.battleOver:phrase(COPY.attackIn,{attack:nextAttack().name,seconds:Math.max(0,Math.ceil(s.enemyT))})}
@@ -718,7 +723,7 @@ function bumperCheck(b){bumperSpots().forEach((p,i)=>{if(!b.moving)return;const 
   s.rings.push({x:p.x,y:p.y,life:FEEL.bumperPing,max:FEEL.bumperPing,colour:'primary',big:FEEL.bumperRadius+FEEL.bumperPingGrow});
   burst(p.x+nx*FEEL.bumperRadius,p.y+ny*FEEL.bumperRadius,FEEL.wallSparks,FEEL.wallSparkSpeed,'chip',FEEL.wallSparkSpread,Math.atan2(ny,nx),2);vibrate(FEEL.bumperVibrate)})}
 function drawBumpers(){const calm=still();bumperSpots().forEach((p,i)=>{const k=s.bumperHits[i]/FEEL.bumperFlash,r=FEEL.bumperRadius*(calm?1:1+FEEL.bumperSquash*k);
-  if(artwork?.bumper(ctx,artwork.bumperSkin(i),p,r,k,camera?.uprightScale??1))return;
+  if(artwork?.bumper(ctx,artwork.bumperSkin(),p,r,k,camera?.uprightScale??1))return;
   circle(p.x,p.y,r,k?colors.flash:colors.card);ctx.strokeStyle=colors.primary;ctx.lineWidth=FEEL.bumperLine;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.stroke();circle(p.x,p.y,r*FEEL.bumperCore,k?colors.warning:colors.primary)})}
 // Two moving residents meeting: each fires its ability exactly as a bump does (round 18: no named Synergy), once per pair per flight; then an equal-mass bounce along the contact normal.
 function bumpBodies(){const moving=ids.map(id=>s.bodies[id]).filter(b=>b.moving&&!stunned(b));
@@ -919,7 +924,11 @@ function drawParticles(){
 function draw(){
  const font=getComputedStyle(arena).fontFamily,quake=still()?0:s.shake;
  ctx.clearRect(0,0,s.w,s.h);if((camera&&window.LoftRumbleStorybook.background(camera))||artPaint('bg-arena',s.w/2,s.h/2,s.w,s.h,true)){if(lmBars()){/* LM6b: the arena shows behind the slim frames */}else if(window.LoftRumbleBattleMaterials)window.LoftRumbleBattleMaterials.hud(ctx,s.w,s.h,C.hudTop,C.hudBottom);else{ctx.fillStyle=colors.card;ctx.fillRect(0,0,s.w,C.hudTop);ctx.fillRect(0,s.h-C.hudBottom,s.w,C.hudBottom)}}ctx.save();
- ctx.beginPath();ctx.rect(0,C.hudTop,s.w,s.h-C.hudTop-C.hudBottom);ctx.clip(); // the play area: zones and effects never spill into the HUD strips
+  ctx.beginPath();ctx.rect(0,C.hudTop,s.w,s.h-C.hudTop-C.hudBottom);ctx.clip(); // the play area: zones and effects never spill into the HUD strips
+  if(window.LoftRumbleBattleEnd.presenting(s.battleEnd)){
+    window.LoftRumbleFinishRenderer.draw(ctx,s.battleEnd.presentation,s.battleEnd.elapsed,still(),{images,artwork});
+    ctx.restore();drawBars(font);drawPaused(font);return;
+  }
  if(s.finale&&!still()){const boss=enemy(),e=camera?camera.projection.project(boss):boss,k=1+FEEL.finaleZoom*flyEase(Math.min(1,s.finale.t/FEEL.finaleZoomIn));ctx.translate(e.x,e.y);ctx.scale(k,k);ctx.translate(-e.x,-e.y)} // finale zoom, play area only
  if(quake)ctx.translate((Math.random()*2-1)*quake,(Math.random()*2-1)*quake);
  const attackKick=camera?window.LoftRumbleAttackImpact.offset(s,still()):null;if(attackKick)ctx.translate(attackKick.x,attackKick.y);
@@ -1031,6 +1040,7 @@ function drawHits(font){const hud=window.LoftRumbleHud;if(hud){const calm=still(
     if(L.shatter){ctx.font=FEEL.textWeight+' '+FEEL.hudFont+'px '+font;text(COPY.comboLost,x,y+FEEL.comboPopGap*.7,colors.danger)}}
   ctx.restore()}
 function drawBars(font){
+  if(s.demo&&drawEndReady())return;
   // Team bar, bottom strip: a heart, "Your team", a thick bar, HP. It shakes and flashes when hit, flashes green on a heal, pulses red when low.
   const t=teamBar(),share=s.teamShown/TURN.hp,fill=healthFill(share),hit=s.teamBarHit/FEEL.barFlash,heal=s.teamFlash==='heal',mid=t.y+t.h/2;
   const ox=hit&&!heal&&!still()?Math.sin(s.clock*FEEL.lowPulse*12)*FEEL.barShake*hit:0;

@@ -5,7 +5,7 @@
     defaultId: 'colosseum', label: 'Arena', storageKey: 'loft-rumble-arena-skin',
     changeEvent: 'loft-rumble-arena-skin-change',
     options: Object.freeze([
-      Object.freeze({ id: 'colosseum', label: 'Overgrown Colosseum', scenery: 'colosseum',
+      Object.freeze({ id: 'colosseum', label: 'Overgrown Colosseum', scenery: 'colosseum', bumper: 'bumper-lm-bloom',
         background: Object.freeze({ asset: 'bg-colosseum-depth-v1', crop: Object.freeze([0.064, 0.048, 0.872, 0.89]) }),
         masonry: Object.freeze({
         ...base, vine: '#405638', leaf: '#63804a', leafLight: '#82945a',
@@ -33,7 +33,7 @@
         }),
         leafScales: [0.65, 1, 0.8, 0.6, 0.9, 0.7, 0.55], leafShade: '#4b633d',
       }) }),
-      Object.freeze({ id: 'cloudpeak', label: 'Cloudpeak Courtyard', scenery: 'cloudpeak',
+      Object.freeze({ id: 'cloudpeak', label: 'Cloudpeak Courtyard', scenery: 'cloudpeak', bumper: 'bumper-lm-rune-stone',
         background: Object.freeze({ asset: 'bg-cloudpeak-depth-v2', crop: Object.freeze([0.045, 0.045, 0.91, 0.835]) }),
         masonry: Object.freeze({
         ...base, floor: '#9c9d92', slabs: ['#b9b6a7', '#c0bdad', '#b3b3a5', '#bcbbaa', '#b7b7a7'],
@@ -47,7 +47,7 @@
         pillarPositions: [0.22, 0.75], pillarWidth: 12, pillarHeight: 24,
         pennantPosition: 0.16, poleHeight: 36, pennantWidth: 12, pennantHeight: 17, poleWidth: 2,
       }) }),
-      Object.freeze({ id: 'moonroot', label: 'Moonroot Cavern', scenery: 'moonroot',
+      Object.freeze({ id: 'moonroot', label: 'Moonroot Cavern', scenery: 'moonroot', bumper: 'bumper-lm-mushroom',
         background: Object.freeze({ asset: 'bg-moonroot-depth-v2', crop: Object.freeze([0.045, 0, 0.91, 0.955]) }),
         masonry: Object.freeze({
         ...base, surface: 'rock', columns: 3, rows: 9, rockCut: 4,

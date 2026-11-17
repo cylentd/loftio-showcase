@@ -82,7 +82,13 @@
     return art;
   }
   function renderSummary(state){
-    const list=document.getElementById('demo-summary'),items=facts(state,state.battleEnd.result.won?look.summary:[...look.summary,'bossHP']);
+    const list=document.getElementById('demo-summary'),items=facts(state,look.summary);
+    const boss=document.querySelector('#demo-results .results-boss');
+    if(state.battleEnd.result.won)boss.replaceChildren();
+    else{
+      if(!boss.children.length)boss.append(make('span',{textContent:copy.boss}),make('span',{id:'demo-bossHP'}));
+      document.getElementById('demo-bossHP').textContent=factValue.bossHP(state);
+    }
     if(list.children.length===items.length){
       for(const item of items)document.getElementById('demo-'+item.key).textContent=item.value;
       return;
@@ -177,7 +183,10 @@
     const celebration=make('div',{className:'results-celebration'});
     celebration.append(head,document.getElementById('demo-result-hint'),summary,divider);
     const crest=make('span',{className:'results-crest'});crest.setAttribute('aria-hidden','true');
-    panel.replaceChildren(crest,celebration,body,buildActions(replay));
+    const surface=make('div',{className:'results-surface'});
+    surface.append(crest,celebration,body,buildActions(replay));
+    const boss=make('div',{className:'results-boss'});
+    panel.replaceChildren(boss,surface);
   }
   function present(state,ready){
     if(!active(state))return;
@@ -191,8 +200,21 @@
     document.getElementById('demo-result-title').textContent=result.won?copy.victory:copy.defeat;
     document.getElementById('demo-result-hint').textContent=result.won?copy.winHint:copy.lossHint;
     renderSummary(state);
+    if(wasHidden)renderDamage(state,renderStage(state));
+    const surface=panel.querySelector('.results-surface'),body=panel.querySelector('.results-body');
+    const celebration=panel.querySelector('.results-celebration');
+    const compactVictory=result.won&&getComputedStyle(panel).getPropertyValue('--lm-scroll-celebration').trim()==='1';
+    panel.toggleAttribute('data-compact-victory',compactVictory);
+    if((!result.won||compactVictory)&&celebration.parentElement!==body)body.prepend(celebration);
+    if(result.won&&!compactVictory&&celebration.parentElement!==surface)surface.insertBefore(celebration,body);
+    if(!result.won){
+      const style=getComputedStyle(surface);
+      const natural=[...surface.children].filter(child=>!child.classList.contains('results-crest'))
+        .reduce((height,child)=>height+child.scrollHeight,0)+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
+      const available=Math.min(panel.clientHeight,innerHeight)-parseFloat(getComputedStyle(panel).getPropertyValue('--lm-defeat-clearance'));
+      panel.style.setProperty('--lm-defeat-height',Math.min(natural,available)+'px');
+    }
     if(!wasHidden)return;
-    renderDamage(state,renderStage(state));
     panel.querySelector('.results-body').scrollTop=0;
     document.getElementById('demo-replay').focus({preventScroll:true});
   }

@@ -247,7 +247,12 @@
     return true;
   }
 
-  const bumperSkin = index => config.bumperSkins[index % config.bumperSkins.length];
+  const bumperSkin = () => {
+    const skins = window.LoftRumbleArenaSkins;
+    const theme = document.documentElement.dataset.arenaSkin;
+    return (skins?.options.find(option => option.id === theme)
+      ?? skins?.options.find(option => option.id === skins.defaultId))?.bumper ?? 'bumper-lm-bloom';
+  };
 
   // Painted bumper art centred on the collider. `upright` undoes the camera's floor squash, as for the boss and residents,
   // because the art is already drawn in perspective. Before the image loads, the stone drawing below stands in.
