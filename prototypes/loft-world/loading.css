@@ -1,0 +1,19 @@
+:root {
+  --loading-surface: #16251f;
+  --loading-ink: #fff1d9;
+  --loading-muted: #d0ddcc;
+  --loading-accent: #ffc565;
+  --loading-gap: 1rem;
+  --loading-inset: 1.5rem;
+  --loading-title: 2rem;
+  --loading-target: 2.75rem;
+  --loading-border: 2px;
+  --loading-radius: 1rem;
+  --loading-layer: 100;
+}
+.world-loading { position: fixed; inset: 0; z-index: var(--loading-layer); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--loading-gap); padding: var(--loading-inset); background: var(--loading-surface); color: var(--loading-ink); text-align: center; }
+.world-loading h1 { margin: 0; font-size: var(--loading-title); }
+.world-loading p { margin: 0; color: var(--loading-muted); }
+.world-loading a, .world-loading button { box-sizing: border-box; display: grid; place-items: center; min-height: var(--loading-target); padding: var(--loading-gap); border: var(--loading-border) solid var(--loading-accent); border-radius: var(--loading-radius); background: var(--loading-surface); color: var(--loading-ink); font: inherit; cursor: pointer; }
+.world-loading [hidden] { display: none; }
+.world-loading :focus-visible { outline: var(--loading-border) solid var(--loading-ink); outline-offset: var(--loading-border); }

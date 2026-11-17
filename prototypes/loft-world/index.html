@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loftio: Plush Valley</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="loading.css">
+<script type="importmap">
+{ "imports": { "three": "../loft-outside/node_modules/three/build/three.module.js", "three/addons/": "../loft-outside/node_modules/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<section class="world-loading" data-world-loading aria-label="Loading Plush Valley">
+  <h1>Plush Valley</h1>
+  <p role="status" aria-live="polite">Finding a path through the grove…</p>
+  <button type="button" data-loading-retry hidden>Try again</button>
+  <a data-loading-back hidden>Back to Loft</a>
+</section>
+<noscript>Plush Valley needs JavaScript to play.</noscript>
+<!-- One icon set, drawn once and reused by id. 24 px grid, line icons that take the text colour. -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <defs>
+    <g id="i-valley"><path d="M2 19 9 8l4 6 3-4 6 9z"/><circle cx="17" cy="5" r="1.6"/></g>
+    <g id="i-loft"><path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></g>
+    <g id="i-cafe"><path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/><path d="M16 10h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 3v3M12 3v3"/></g>
+    <g id="i-camp"><path d="M12 5 3 19h18z"/><path d="M12 5v14"/><path d="M12 13l-3 6M12 13l3 6"/></g>
+    <g id="i-glade"><circle cx="12" cy="12" r="8.5"/><path d="M12 12a3 3 0 1 1 3 3 5 5 0 1 1-5-5"/></g>
+    <g id="i-play"><path d="M8 5v14l11-7z"/></g>
+    <g id="i-wisp"><circle cx="12" cy="12" r="3.4"/><ellipse cx="12" cy="12" rx="9.5" ry="3.6" transform="rotate(-24 12 12)"/></g>
+    <g id="i-help"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.5a2.8 2.8 0 1 1 4.2 2.4c-.9.6-1.5 1.1-1.5 2.3"/><circle cx="12" cy="17.2" r=".6"/></g>
+    <g id="i-sound"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="waves" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.6 7.6 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></g>
+    <g id="i-tune"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></g>
+    <g id="i-exit"><path d="M10 5H5v14h5"/><path d="M14 8l4 4-4 4M18 12H9"/></g>
+    <g id="i-jump"><path d="M6 13l6-6 6 6"/><path d="M6 19l6-6 6 6"/></g>
+    <g id="i-pop"><ellipse cx="12" cy="17" rx="9" ry="4"/><path d="m12 3-3 6h2v5h2V9h2l-3-6ZM4 8l-2 4M20 8l2 4M6 15c1.5-2 10.5-2 12 0"/></g>
+    <g id="i-mouse"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 3v6"/></g>
+    <g id="i-click"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 3v6M7 9h5" /><path d="M7.4 6.5A5 5 0 0 1 12 3v6H7z" fill="currentColor" stroke="none"/></g>
+    <g id="i-drag"><circle cx="9" cy="14" r="3"/><path d="M12 11l7-7M15 4h4v4"/></g>
+    <g id="i-look"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></g>
+    <g id="i-two"><circle cx="8" cy="13" r="2.6"/><circle cx="16" cy="9" r="2.6"/></g>
+    <g id="i-chomper"><circle cx="12" cy="13" r="7"/><path d="M8 12.5h8a4 4 0 0 1-8 0z"/><path d="M7 7 5.5 4M17 7l1.5-3"/></g>
+  </defs>
+</svg>
+
+<canvas aria-label="Plush Valley at dusk"></canvas>
+<p class="intro-skip">Click or press any key to skip</p>
+<header>
+  <h1>Plush Valley</h1>
+</header>
+
+<!-- Places: shown outside Explore. Labels drop away on a phone; the icons stay. -->
+<nav class="places" aria-label="Places">
+  <button data-view="all" aria-pressed="true" aria-label="Valley"><svg class="icon"><use href="#i-valley"/></svg><span>Valley</span></button>
+  <button data-view="loft" aria-pressed="false" aria-label="Loft"><svg class="icon"><use href="#i-loft"/></svg><span>Loft</span></button>
+  <button data-view="cafe" aria-pressed="false" aria-label="Café"><svg class="icon"><use href="#i-cafe"/></svg><span>Café</span></button>
+  <button data-view="camp" aria-pressed="false" aria-label="Camp"><svg class="icon"><use href="#i-camp"/></svg><span>Camp</span></button>
+  <button data-view="glade" aria-pressed="false" aria-label="Rumble glade"><svg class="icon"><use href="#i-glade"/></svg><span>Glade</span></button>
+  <button data-view="play" aria-pressed="false" class="go" aria-label="Explore"><svg class="icon solid"><use href="#i-play"/></svg><span>Explore</span></button>
+</nav>
+
+<!-- Corner tools: always available. -->
+<div class="tools">
+  <button class="tool" data-exit aria-label="Leave Explore" title="Leave Explore"><svg class="icon"><use href="#i-exit"/></svg></button>
+  <button class="tool" data-help aria-pressed="true" aria-label="Tutorial" title="Tutorial"><svg class="icon"><use href="#i-help"/></svg></button>
+  <button class="tool" data-sound aria-pressed="true" aria-label="Sound" title="Sound"><svg class="icon"><use href="#i-sound"/></svg></button>
+  <details class="tune">
+    <summary class="tool" aria-label="Settings" title="Settings"><svg class="icon"><use href="#i-tune"/></svg></summary>
+    <div class="panel">
+      <label class="check"><input type="checkbox" data-aim-ring checked><span>Capture the mouse, so it cannot leave the game. Off: drag from your resident with the normal cursor.</span></label>
+      <p data-controls></p>
+      <label>Monster pace <input type="range" data-creature="speed" min="0.5" max="3" step="0.1" value="2"></label>
+      <label>Hop height <input type="range" data-creature="hopHeight" min="0.2" max="1" step="0.05" value="0.65"></label>
+      <label><span></span><input type="range" data-team="delay" min="0.1" max="0.5" step="0.01"></label>
+      <label><span></span><input type="range" data-team="boost" min="14" max="28" step="1"></label>
+      <label>Glow <input type="range" data-tune="glow" min="0" max="1.5" step="0.01"></label>
+      <label>Mist <input type="range" data-tune="mist" min="0.2" max="2.5" step="0.01"></label>
+      <label>Light shafts <input type="range" data-tune="shafts" min="0" max="1.5" step="0.01"></label>
+      <label>Wind <input type="range" data-tune="wind" min="0" max="2.5" step="0.01"></label>
+      <label>Fireflies <input type="range" data-tune="motes" min="0" max="1" step="0.01"></label>
+    </div>
+  </details>
+</div>
+
+<section class="play-hud" hidden>
+  <p class="chip wisps" aria-label="Wisps collected"><svg class="icon"><use href="#i-wisp"/></svg><strong data-count>0 / 0</strong></p>
+  <div class="boss" hidden><span>Grumble</span><div><i></i></div></div>
+  <p class="flash" aria-hidden="true"></p>
+  <div class="aim-ring" hidden aria-hidden="true"></div>
+  <p class="pips" data-fling-charge role="status" hidden></p>
+
+  <!-- Tutorial: off by default after the first visit. One short list for a mouse, one for touch. -->
+  <aside class="tutorial" aria-label="How to play">
+    <p class="hint"></p>
+    <ul class="for-mouse">
+      <li><svg class="icon"><use href="#i-mouse"/></svg><span data-lock-note>Click the game to capture the mouse</span></li>
+      <li><svg class="icon"><use href="#i-look"/></svg><span>Move the mouse to look</span></li>
+      <li><svg class="icon"><use href="#i-click"/></svg><span>Hold and drag the ring to aim; release to fling</span></li>
+      <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Walk</span></li>
+      <li><kbd>Space</kbd><span>Hold to charge a jump</span></li>
+      <li><kbd>Space</kbd><svg class="icon"><use href="#i-chomper"/></svg><span>In the air: Chomper bumps you higher</span></li>
+      <li><kbd>Shift</kbd><span>Sprint, or dive in the air</span></li>
+      <li><kbd>F</kbd><svg class="icon"><use href="#i-pop"/></svg><span>Pop: a shockwave</span></li>
+    </ul>
+    <ul class="for-touch">
+      <li><svg class="icon"><use href="#i-drag"/></svg><span>Drag from your resident to fling</span></li>
+      <li><svg class="icon"><use href="#i-look"/></svg><span>Drag anywhere else to look</span></li>
+      <li><svg class="icon"><use href="#i-two"/></svg><span>A second finger looks while you aim</span></li>
+      <li><svg class="icon"><use href="#i-jump"/></svg><span>Hold to charge a jump</span></li>
+      <li><svg class="icon"><use href="#i-jump"/></svg><svg class="icon"><use href="#i-chomper"/></svg><span>In the air: Chomper bumps you higher</span></li>
+      <li><svg class="icon"><use href="#i-pop"/></svg><span>Pop: a shockwave</span></li>
+    </ul>
+  </aside>
+
+  <button class="action jump" data-jump aria-label="Jump"><svg class="icon"><use href="#i-jump"/></svg><kbd>Space</kbd></button>
+  <button class="action pop" data-special aria-label="Pop"><svg class="icon"><use href="#i-pop"/></svg><kbd>F</kbd></button>
+</section>
+<script type="module" src="src/bootstrap.js"></script>
+</body>
+</html>

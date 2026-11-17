@@ -36,8 +36,25 @@ export function playGlade(): { ready(): void } {
   const play = element('a', 'glade-play', GLADE.play);
   play.href = new URL(GLADE.route, document.baseURI).href;
   installGladeDeparture(play);
-  body.append(element('p', 'glade-description', GLADE.description), play);
-  activity.append(visual, body); panel.append(title, close, activity);
+  body.append(element('h3', 'glade-heading', GLADE.rumble),
+    element('p', 'glade-description', GLADE.rumbleLabel),
+    element('p', 'glade-description', GLADE.description), play);
+  activity.append(visual, body);
+  const valley = element('article', 'glade-activity');
+  const valleyArt = element('img', 'glade-art');
+  valleyArt.src = new URL(GLADE.valleyArt, document.baseURI).href;
+  valleyArt.alt = GLADE.valleyImageAlt; valleyArt.loading = 'lazy';
+  const valleyBody = element('div', 'glade-activity-body');
+  const valleyPlay = element('a', 'glade-play', GLADE.valleyPlay);
+  valleyPlay.href = new URL(GLADE.valleyRoute, document.baseURI).href;
+  installGladeDeparture(valleyPlay);
+  valleyBody.append(element('h3', 'glade-heading', GLADE.valley),
+    element('p', 'glade-description', GLADE.valleyLabel),
+    element('p', 'glade-description', GLADE.valleyDescription), valleyPlay);
+  valley.append(valleyArt, valleyBody);
+  const activities = element('div', 'glade-activities');
+  activities.append(activity, valley);
+  panel.append(title, close, activities);
   dismissOnBackdrop(panel);
   trigger.addEventListener('click', () => panel.showModal());
   close.addEventListener('click', () => panel.close());
