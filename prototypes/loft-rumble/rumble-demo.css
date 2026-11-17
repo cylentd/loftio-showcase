@@ -12,7 +12,7 @@
   box-sizing:border-box;padding:calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-top)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-right)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-bottom)) calc(var(--lm-rim) + var(--lm-pad) + env(safe-area-inset-left));
   display:grid;grid-template-rows:auto minmax(0,1fr) auto;isolation:isolate;background:var(--lm-plum);
   color:var(--lm-cream);font-family:var(--font-body);text-align:center;overflow-wrap:anywhere;
-  animation:lm-results-in var(--lm-in) ease-out both;
+  /* The hold owns the reading interval: results are fully visible on its final frame. */
 }
 #demo-results[hidden]{display:none}
 [data-rumble-demo]:has(#demo-results:not([hidden])) :is(.top,.roster){visibility:hidden}
@@ -42,7 +42,9 @@
   width:min(100%,calc(var(--lm-stage-max) * var(--lm-stage-w) / var(--lm-stage-h)));
   margin-top:0;
   background:url('art/results-victory-stage.webp') center/contain no-repeat}
-#demo-results[data-outcome="defeat"] .results-stage{filter:var(--lm-defeat-stage)}
+#demo-results[data-outcome="defeat"] .results-stage{display:none}
+#demo-results[data-outcome="defeat"]:not([hidden]){bottom:auto;height:auto;max-height:100%;display:flex;flex-direction:column;align-items:center}
+#demo-results[data-outcome="defeat"] .results-celebration{flex-shrink:0}
 /* Each resident stands on the stage floor (--ground of the stage height) with its own slot: x, size, tilt and a small step
    back. The portrait's transparent foot rows (--foot) are pulled under the floor line so the feet touch it. */
 .results-figure{position:absolute;z-index:var(--layer);left:calc(var(--x) * 100%);bottom:calc((1 - var(--ground) + var(--back)) * 100%);height:calc(var(--size) * 100%);
@@ -115,8 +117,8 @@
 /* The label reads on the painted button through the HUD's ink outline, not a dark plate (audit finding 4). */
 .results-action-label{text-shadow:var(--rumble-text-stroke)}
 #demo-results button:focus-visible{outline:var(--lm-focus) solid var(--lm-amber);outline-offset:calc(-1 * var(--lm-focus))}
+#demo-results .results-actions button:focus-visible{outline-offset:var(--lm-focus)}
 
-@keyframes lm-results-in{from{opacity:0;translate:0 var(--lm-rise)}}
 @keyframes lm-figure-in{from{opacity:0;translate:0 var(--lm-rise)}}
 @media (prefers-reduced-motion:reduce){
   #demo-results,.results-figure{animation:none}

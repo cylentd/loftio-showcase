@@ -7,6 +7,8 @@ import { RESIDENT_COPY, WIZARD_COPY } from './copy';
 import { createAction } from './create-action';
 import { pickTile, type PickTile } from './pick-tile';
 import { SUMMARY_STEP, WIZARD_FIELDS, createWizard } from './wizard';
+import type { HoldKind } from './create-form-model';
+import { createLifecycle } from './create-lifecycle';
 import { questionPicker } from './question-picker';
 import { creationProgress } from './creation-progress';
 import './wizard.css';
@@ -59,9 +61,9 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const wizard = createWizard(builder, Math.random);
   const form = document.createElement('form'); form.className = 'resident-form resident-wizard';
   const cards: { button: HTMLButtonElement; field: SelectionField; value: string | null }[] = [];
-  let pending = false;
-  let arrivalNotice = false;
   const hold = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : PICK_HOLD_MS;
+  // The panel's lifecycle (create-form-model.ts): a hold or arm timer lives only as long as the state that started it.
+  const life = createLifecycle({ holdMs: hold, armMs: CONFIRM_ARM_MS, onArmed: () => update() });
 
   const steps = WIZARD_FIELDS.map((field, index) => {
     const { section, heading } = stepSection(WIZARD_COPY.steps[index]!, index, uid);
@@ -87,15 +89,11 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const confirm = document.createElement('div'); confirm.className = 'wizard-confirm'; confirm.setAttribute('role', 'group');
   const question = document.createElement('p'); question.id = `${uid}-confirm`; question.tabIndex = -1;
   confirm.setAttribute('aria-labelledby', question.id);
-  const yes = worldButton(RESIDENT_COPY.confirmYes, () => { if (!armed) return; stopConfirm(); void wizard.make(); });
+  const yes = worldButton(RESIDENT_COPY.confirmYes, () => { if (life.send({ type: 'yes' })) void wizard.make(); });
   yes.classList.add('world-primary');
-  const no = worldButton(RESIDENT_COPY.confirmNo, () => { stopConfirm(); update(); submit.focus(); });
+  const no = worldButton(RESIDENT_COPY.confirmNo, () => { life.send({ type: 'no' }); update(); submit.focus(); });
   const choices = document.createElement('div'); choices.className = 'wizard-confirm-choices'; choices.append(no, yes);
   confirm.append(question, choices);
-  let confirming = false, armed = false;
-  let armTimer: ReturnType<typeof setTimeout> | undefined; // the open question's window; only one may run
-  // Closes the open question and cancels its window, so a stale window cannot arm a later question.
-  function stopConfirm() { clearTimeout(armTimer); armTimer = undefined; confirming = false; }
   let lastStatus = builder.state().status;
   // No tickets: this panel takes Bring to life's place, so there is no dead button to press.
   const out = document.createElement('div'); out.className = 'wizard-out'; out.setAttribute('role', 'status');
@@ -118,26 +116,21 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   bar.append(back, dice, actions);
   form.append(...steps.map(step => step.section), summary.section, progress.root, bar);
 
+  // A pick, the dice and Pick for me share one hold: the hop plays, then the answer applies. `life` refuses a second
+  // tap during it and cancels it (releasing the class) if a build starts, the wizard moves or the form is disposed.
+  function held(kind: HoldKind, mark: HTMLButtonElement, mode: string, apply: () => void) {
+    if (!life.hold(kind, () => { apply(); show(true); }, () => mark.classList.remove(mode))) return false;
+    mark.classList.add(mode); return true;
+  }
   function pick(field: SelectionField, value: string | null, button: HTMLButtonElement) {
-    if (pending || button.disabled) return;
-    pending = true;
+    if (button.disabled || !held('pick', button, 'is-picked', () => wizard.choose(value))) return;
     for (const item of cards) if (item.field === field) item.button.setAttribute('aria-pressed', String(item.button === button));
-    button.classList.add('is-picked');
-    setTimeout(() => { button.classList.remove('is-picked'); pending = false; wizard.choose(value); show(true); }, hold());
   }
-  function roll() {
-    if (pending || dice.disabled) return;
-    pending = true; dice.classList.add('is-rolling');
-    setTimeout(() => { dice.classList.remove('is-rolling'); pending = false; wizard.surprise(); show(true); }, hold());
-  }
-  function pickForMe(button: HTMLButtonElement) {
-    if (pending || button.disabled) return;
-    pending = true; button.classList.add('is-picked');
-    setTimeout(() => { button.classList.remove('is-picked'); pending = false; wizard.pickForMe(); show(true); }, hold());
-  }
+  function roll() { if (!dice.disabled) held('roll', dice, 'is-rolling', () => wizard.surprise()); }
+  function pickForMe(button: HTMLButtonElement) { if (!button.disabled) held('forMe', button, 'is-picked', () => wizard.pickForMe()); }
   function show(focus: boolean) {
     const current = wizard.step;
-    stopConfirm(); // leaving the summary drops an open question; the picks may change
+    life.send({ type: 'show' }); // leaving the summary drops an open question; the picks may change
     steps.forEach((step, index) => { step.section.hidden = index !== current; });
     summary.section.hidden = current !== SUMMARY_STEP;
     dice.hidden = current === SUMMARY_STEP;
@@ -150,18 +143,20 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   form.addEventListener('submit', event => {
     event.preventDefault();
     if (!action(builder.state()).confirmBeforeCreate) { void wizard.make(); return; }
-    if (confirming) return;
-    confirming = true; armed = false; update(); question.focus({ preventScroll: true });
-    armTimer = setTimeout(() => { armTimer = undefined; armed = true; update(); }, CONFIRM_ARM_MS);
+    if (!life.send({ type: 'submit' })) return;
+    update(); question.focus({ preventScroll: true });
   });
 
   function update() {
     const state = builder.state(); const busy = state.status === 'generating' || state.saving;
+    if (busy) life.send({ type: 'busy', generating: state.status === 'generating' });
     if (busy && wizard.step !== SUMMARY_STEP) { wizard.goTo(SUMMARY_STEP); show(false); return; }
     const finished = lastStatus === 'generating' && state.status === 'ready'; lastStatus = state.status;
-    if (finished) { arrivalNotice = !!form.closest('dialog')?.open; wizard.restart(); show(false); return; }
+    if (finished) { life.send({ type: 'finish', notice: !!form.closest('dialog')?.open }); wizard.restart(); show(false); return; }
+    if (!busy) life.send({ type: 'idle' });
+    const phase = life.state.kind;
     // A card shows as picked only after the user picked on that step, though the builder always holds a value.
-    if (!pending) for (const { button, field, value } of cards) button.setAttribute('aria-pressed', String(wizard.chosen(field) && state.selections[field] === value));
+    if (phase !== 'holding') for (const { button, field, value } of cards) button.setAttribute('aria-pressed', String(wizard.chosen(field) && state.selections[field] === value));
     for (const { button } of cards) button.disabled = busy;
     steps[wizard.step]?.picker.update(wizard.options, busy);
     WIZARD_FIELDS.forEach((field, index) => {
@@ -171,9 +166,10 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
       button.setAttribute('aria-label', WIZARD_COPY.change(WIZARD_COPY.parts[index]!, tile.label));
     });
     const generating = state.status === 'generating';
-    const progressVisible = generating || arrivalNotice;
+    const arrived = phase === 'arrived';
+    const progressVisible = generating || arrived;
     form.dataset.phase = progressVisible ? 'creating' : 'design';
-    progress.update(state.stage, progressVisible, arrivalNotice);
+    progress.update(state.stage, progressVisible, arrived);
     const active = wizard.step;
     steps.forEach((step, index) => { step.section.hidden = progressVisible || index !== active; });
     summary.section.hidden = progressVisible || active !== SUMMARY_STEP;
@@ -184,12 +180,13 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     submit.disabled = busy; notice.hidden = generating;
     const shown = action(state); submit.textContent = shown.label;
     if (failure.textContent !== shown.failure) failure.textContent = shown.failure;
-    const asking = confirming && shown.confirmBeforeCreate;
+    const asking = (phase === 'unarmed' || phase === 'armed') && shown.confirmBeforeCreate;
     if (state.tickets) question.textContent = RESIDENT_COPY.confirmBuild(state.tickets);
-    confirm.hidden = !asking; yes.disabled = busy || !armed; no.disabled = busy;
+    confirm.hidden = !asking; yes.disabled = busy || phase !== 'armed'; no.disabled = busy;
     submit.hidden = generating || shown.outOfTickets || asking; out.hidden = !shown.outOfTickets;
     if (grantButton) grantButton.disabled = busy;
     ticketNote.textContent = shown.ticketNote; ticketNote.hidden = generating || asking || !shown.ticketNote; // the question already says it
   }
-  show(false); return { form, update, dismissProgress() { arrivalNotice = false; update(); } };
+  show(false);
+  return { form, update, dismissProgress() { life.send({ type: 'dismiss' }); update(); }, dispose() { life.dispose(); } };
 }

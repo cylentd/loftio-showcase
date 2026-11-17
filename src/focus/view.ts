@@ -3,12 +3,13 @@ import { dismissOnBackdrop, worldButton, worldDrawer } from '../world-ui';
 import { controlText } from '../settings-components';
 import { FOCUS_CARD_IDS, MAX_FOCUS_CARDS, focusCards, type FocusCards } from './cards';
 import { FOCUS_COPY as COPY } from './copy';
+import { IDLE, next, type AskEvent, type AskState } from './ask-model';
 
 // "Arrive. The room is already playing. Nothing asks for input." (LOFTIO-COMPANION.md, First 60 seconds):
 // the picker waits this long after the title, and waits again while another panel is open.
 const FIRST_ASK_DELAY_MS = 3000;
 
-function picker(cards: FocusCards) {
+function picker(cards: FocusCards, onClosed: () => void) {
   const drawer = worldDrawer(COPY.title, COPY.close); drawer.dialog.classList.add('focus-drawer', 'world-modal');
   dismissOnBackdrop(drawer.dialog);
   const intro = document.createElement('p'); intro.className = 'focus-intro'; intro.textContent = COPY.intro;
@@ -37,10 +38,15 @@ function picker(cards: FocusCards) {
     finish.textContent = chosen.length ? COPY.done : COPY.skip;
   }
   // Done, Skip, the close button and Escape all answer the question: the first-run picker never comes back by itself.
-  drawer.dialog.addEventListener('close', () => cards.finish());
+  drawer.dialog.addEventListener('close', () => { cards.finish(); onClosed(); });
   // Another tab changed the picks: show them here too.
-  addEventListener('storage', () => { if (drawer.dialog.open) render(); });
-  return { open(from: HTMLElement) { render(); drawer.open(from); } };
+  const stop = new AbortController();
+  addEventListener('storage', () => { if (drawer.dialog.open) render(); }, { signal: stop.signal });
+  return {
+    open(from: HTMLElement) { render(); drawer.open(from); },
+    /** Removes the global `storage` listener; the dialog itself stays in the page. */
+    dispose() { stop.abort(); },
+  };
 }
 
 /** The focus-card picker: asked once after the title on a first visit, and always reachable from Settings › Room. */
@@ -48,8 +54,9 @@ export function installFocusCards(settingsRoom: HTMLElement | null, shell: HTMLE
   let cards: FocusCards;
   try {
     cards = focusCards({ getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) });
-  } catch { return { askOnce() {} }; }
-  const view = picker(cards);
+  } catch { return { askOnce() {}, dispose() {} }; }
+  // `send` is declared below; the picker only calls this when it closes, after install has finished.
+  const view = picker(cards, () => send({ type: 'answered' }));
   if (settingsRoom) {
     const opener = worldButton(COPY.open, () => {
       const menu = opener.closest<HTMLDetailsElement>('details');
@@ -62,15 +69,25 @@ export function installFocusCards(settingsRoom: HTMLElement | null, shell: HTMLE
     settingsRoom.insertBefore(opener, settingsRoom.querySelector(':scope > .room-about'));
   }
   const busy = () => !!document.querySelector('dialog[open], details.scene-settings[open]');
-  const ask = () => {
-    if (cards.answered()) return;
-    if (busy()) { window.setTimeout(ask, FIRST_ASK_DELAY_MS); return; }
-    // Closing returns focus to the room, so the room must be able to take it.
-    if (!shell.hasAttribute('tabindex')) shell.tabIndex = -1;
-    view.open(shell);
+  // ask-model.ts decides; this keeps the one timer. The handle is held exactly while the state is `waiting`.
+  let ask: AskState = IDLE;
+  let handle: ReturnType<typeof setTimeout> | undefined;
+  const send = (event: AskEvent) => {
+    const before = ask;
+    ask = next(ask, event);
+    if (ask.kind === 'waiting' && handle === undefined) handle = setTimeout(tick, FIRST_ASK_DELAY_MS);
+    else if (ask.kind !== 'waiting' && handle !== undefined) { clearTimeout(handle); handle = undefined; }
+    if (ask.kind === 'asking' && before.kind !== 'asking') {
+      // Closing returns focus to the room, so the room must be able to take it.
+      if (!shell.hasAttribute('tabindex')) shell.tabIndex = -1;
+      view.open(shell);
+    }
   };
+  const tick = () => { handle = undefined; send({ type: 'tick', answered: cards.answered(), busy: busy() }); };
   return {
-    /** Call once the person has passed the title. Does nothing on a return visit. */
-    askOnce() { if (!cards.answered()) window.setTimeout(ask, FIRST_ASK_DELAY_MS); },
+    /** Call once the person has passed the title. Does nothing on a return visit or a second call. */
+    askOnce() { send({ type: 'askOnce', answered: cards.answered() }); },
+    /** Cancels the pending ask and removes the picker's `storage` listener; the picker never opens by itself afterwards. */
+    dispose() { send({ type: 'dispose' }); view.dispose(); },
   };
 }

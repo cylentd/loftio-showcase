@@ -298,12 +298,17 @@
       this.controls?.sync();
     }
 
+    resultsGame() {
+      const {s}=this.game;
+      return s.battleEnd?.result?{...this.game,s:{...s,won:s.battleEnd.result.won}}:this.game;
+    }
+
     publicAPI() {
       return {
         art:value=>{if(!['ORIGINAL','STORYBOOK'].includes(value))throw new RangeError('Unknown art pack');this.artPack=value;this.game.draw();this.controls?.sync();},
         mode:value=>this.mode(value),scene:name=>this.scene(name),
         fire:value=>{root.LoftRumbleHeat.fire(value);this.controls?.sync();},combo:value=>this.combo(value),
-        stats:()=>root.LoftRumbleStats.summary(this.game.s),
+        stats:()=>root.LoftRumbleStats.summary(this.resultsGame().s),
         seek:value=>{root.LoftRumbleSeek.cap(value);this.forecast=null;this.controls?.sync();},
         timeout:value=>this.timeout(value),bossHp:value=>this.bossHp(value),payoff:value=>{root.LoftRumblePayoff.peak(value);this.controls?.sync();},
         tilt:value=>{this.projection.setTilt(Number(value));this.game.draw();this.controls?.sync();},
@@ -324,7 +329,7 @@
   root.LoftRumbleCameraExperiment={create(game){
     const session=new CameraSession(game);
     // The Camera lab panel and its tuning API are for development: only ?lab=1 gets them.
-    if(new URLSearchParams(location.search).get('lab')!=='1')return session;
+    if(!root.LoftRumbleLabPolicy.allowed(location,document.documentElement))return session;
     root.rumbleCamera=session.publicAPI();
     session.controls=root.LoftRumbleCameraControls.mount(root.rumbleCamera);
     return session;

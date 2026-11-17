@@ -12,6 +12,7 @@ import { requestJournal } from './journal.ts';
 import { builderMode } from './local-mode.ts';
 import { onlineApi } from './online-api.ts';
 import { turnstileTokens } from './turnstile-client.ts';
+import { onPageExit, teardownAll } from '../teardown.ts';
 
 const mode = builderMode(location.search, location.hostname, { workerHost: import.meta.env.VITE_LOCAL_WORKER_HOST, mode: import.meta.env.VITE_BUILDER_MODE });
 const local = mode === 'local';
@@ -39,5 +40,8 @@ element('keep').addEventListener('click', () => { void builder.keep(); });
 element('another').addEventListener('click', () => { void builder.tryAnother(); });
 render(builder.state(), copy);
 void builder.load().then(() => builder.resume());
-addEventListener('online', () => { void builder.reconnect(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) void builder.reconnect(); });
+// Leaving the page ends the live run (its request stays journaled for the next visit's resume()) and the two global listeners.
+const stop = new AbortController();
+addEventListener('online', () => { void builder.reconnect(); }, { signal: stop.signal });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void builder.reconnect(); }, { signal: stop.signal });
+onPageExit(teardownAll([() => stop.abort(), () => builder.dispose()]));

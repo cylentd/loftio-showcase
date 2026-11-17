@@ -31,6 +31,8 @@ import { originalLineup } from './original-lineup';
 import { originalResidents } from './original-scene';
 import { arrivalPreview } from './arrival-preview-mode';
 import { previewBackend } from './arrival-preview';
+import { bindSessionEvents } from './session-events';
+import { teardownAll } from '../teardown';
 
 const NAMES = {
   local: { registry: 'loftio-residents-v1', tickets: 'loftio-build-tickets-v1', journal: 'loftio-builder-local-pending-v1' },
@@ -66,8 +68,6 @@ function session(mode: BuilderMode, preview: ReturnType<typeof previewBackend> |
 
 function restore(current: ReturnType<typeof session>, adapter: ReturnType<typeof sceneResidents>, failure: (error: unknown) => void, loaded?: () => void) {
   const { builder, registry } = current;
-  addEventListener('online', () => { void builder.reconnect(); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) void builder.reconnect(); });
   // Restore the room from saved records first; a pending job reattaches alongside, never ahead of it.
   void builder.load().then(async () => {
     void builder.resume().catch(failure);
@@ -84,17 +84,14 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   const chrome = residentChrome();
   let current: ReturnType<typeof session>;
   const preview = arrivalPreview(location.search, mode) ? previewBackend() : null;
-  try { current = session(mode, preview); } catch { chrome.error.textContent = COPY.loadFailure; return () => {}; }
+  try { current = session(mode, preview); } catch { chrome.error.textContent = COPY.loadFailure; return { update: () => {}, dispose: () => {} }; }
   const { registry, builder, tickets, ticketKey } = current;
   const originals = originalResidents(scene, runtime, overlay, controls, current.originals);
   // Test tickets only where images are free placeholders; real builds (local, online) never get them.
   const form = residentForm(builder, mode, mode === 'mock' ? () => tickets.grant(1) : undefined, () => chrome.drawer.dialog.close()); chrome.panels[2]!.append(form.form, challenge);
   const indicator = creationIndicator(chrome.openCreate);
   chrome.drawer.dialog.addEventListener('close', form.dismissProgress);
-  // Online the image arrives through this page and the ticket is already spent, so leaving mid-build asks first.
-  if (mode === 'online') addEventListener('beforeunload', event => { if (builder.state().status === 'generating') event.preventDefault(); });
-  // Another tab spent or added a ticket: show the new count here too.
-  addEventListener('storage', event => { if (event.key === ticketKey) render(); });
+  const events = bindSessionEvents({ builder, mode, ticketKey, onTicketChange: () => render() });
   const failure = (error: unknown) => { chrome.error.textContent = error instanceof Error ? error.message : COPY.actionFailure; overlay.announce(chrome.error.textContent); };
   const adapter = sceneResidents(scene, runtime, overlay, controls, registry, () => render());
   const showArrival = arrivalReveal(chrome, {
@@ -121,5 +118,8 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   }
   const openPreview = preview ? () => { const waiting = registry.list().find(entry => entry.arrival === 'waiting'); if (waiting) reveal(waiting); } : undefined;
   builder.subscribe(render); render(); restore(current, adapter, failure, openPreview);
-  return (elapsed: number) => deliveries.update(elapsed);
+  // Teardown, newest first: stop listening, end the form's timers, then stop the builder's live run. Its request
+  // stays journaled, so the next visit's resume() collects it.
+  const dispose = teardownAll([events, () => form.dispose(), () => builder.dispose()]);
+  return { update: (elapsed: number) => deliveries.update(elapsed), dispose };
 }

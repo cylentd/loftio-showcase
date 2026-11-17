@@ -47,7 +47,9 @@ export function makeSongWave(music: Soundtrack, element: HTMLMediaElement, froze
   music.subscribe(() => { wake(); draw(); });
   slider.addEventListener("input", () => { music.seek(slider.valueAsNumber); draw(); });
   slider.addEventListener("pointerdown", () => { dragging = true; });
+  slider.addEventListener("pointerup", () => { dragging = false; draw(); });
   slider.addEventListener("change", () => { dragging = false; });
+  slider.addEventListener("pointercancel", () => { dragging = false; draw(); }); // a cancelled drag fires no change
   slider.addEventListener("keydown", (event) => {
     const direction = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[event.key];
     if (direction === undefined) return;

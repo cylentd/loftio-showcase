@@ -95,7 +95,7 @@ export class Overlay {
 
   removeResident(id: string): void {
     this.buttons.get(id)?.remove(); this.buttons.delete(id); this.labels.delete(id);
-    if (this.bubbleFor === id) { this.bubble.hidden = true; this.bubbleFor = null; }
+    if (this.bubbleFor === id) { window.clearTimeout(this.bubbleTimer); this.bubble.hidden = true; this.bubbleFor = null; }
   }
 
   announce(message: string): void { this.live.textContent = message; }
@@ -121,6 +121,7 @@ export class Overlay {
   }
 
   open(trigger: HTMLElement = this.cue): void {
+    if (this.panel.open) return; // a repeat press on the cue must not call showModal on an open dialog
     this.returnFocus = trigger;
     this.panel.showModal();
   }

@@ -18,7 +18,8 @@
   --lm-row-slice:20px 24px;--lm-row-inset:40 48;--lm-button-slice:20px 28px;--lm-button-inset:40 56;
   --lm-button:52px;--lm-button-pad:36px;--lm-action-min:180px;--lm-gap:12px;--lm-tight:6px;
   /* Keep phone rows unchanged; use the taller frame's spare space within the rows, not a footer void. */
-  --lm-row-pad:clamp(14px, calc(14px + (var(--stage-frame-height) - 844px) / 9.5), 22px) 12px;
+  /* The extra quarter-pixel per desktop row edge closes the measured 48.84375px footer gap (L5), without changing phone rows. */
+  --lm-row-pad:clamp(14px, calc(14px + (var(--stage-frame-height) - 844px) / 9.2), 22.25px) 12px;
   --lm-face:40px;--lm-chevron:16px;--lm-bar:10px;--lm-bar-core:4px;--lm-fact-min:120px;--lm-count-col:3.5ch;--lm-radius:var(--rumble-radius-control);
   --lm-stage-w:360;--lm-stage-h:210;--lm-stage-max:240px;--lm-material-tile:128px 128px;
   /* Type: the rumble-tokens.css scale. The two action sizes and the summary value are the kit's own: Play again reads at

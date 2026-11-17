@@ -58,7 +58,8 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','t
       partNotes:Object.freeze({ability:'from teammate bumps'}),
       // Results screen labels for keys with no label above: time, combo, replay and back keep their own keys. The screen
       // shows only what `results.summary` and `results.actions` name; these are ready for those lists.
-      summary:Object.freeze({teamDamage:'Team damage',throws:'Throws'}),
+      restart:Object.freeze({title:'New battle?',body:'Leave this battle and start again?',confirm:'New battle',cancel:'Cancel'}),
+      summary:Object.freeze({bossHP:'Boss HP',teamDamage:'Team damage',throws:'Throws'}),
       actions:Object.freeze({tutorial:'Replay training'}),
       // How to play and the danger hint, keyed by throw style (one style at a time, owner 2026-11-15). The page writes the set
       // for the style in use and rewrites it when the setting changes.

@@ -3,8 +3,8 @@ import { frameBox } from './reveal-flight-geometry';
 import { REVEAL_FLIGHT as TUNE } from './reveal-flight-constants';
 import './reveal-flight.css';
 
-export function revealFlight(dialog: HTMLDialogElement, origin: HTMLButtonElement, video: HTMLVideoElement) {
-  const portrait = deliveryPortrait();
+/** `landed` runs once when the box reaches its resting frame; never after `dispose`. */
+export function revealFlight(dialog: HTMLDialogElement, origin: HTMLButtonElement, video: HTMLVideoElement, landed: () => void, portrait = deliveryPortrait()) {
   if (!portrait || !origin.classList.contains('arrival-box')) return;
   const source = origin.getBoundingClientRect();
   if (!source.width || !source.height) return;
@@ -54,7 +54,7 @@ export function revealFlight(dialog: HTMLDialogElement, origin: HTMLButtonElemen
     await Promise.all(animations.map(animation => animation.finished));
     if (disposed) return;
     background.style.maskImage = 'none'; carton.style.visibility = 'hidden';
-    layer.dataset.phase = 'landed'; dialog.dataset.framed = 'true'; complete();
+    layer.dataset.phase = 'landed'; landed(); complete();
   };
   void start().catch(dispose);
   return { ready, dispose, finish: dispose };

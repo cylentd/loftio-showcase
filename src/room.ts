@@ -26,6 +26,7 @@ import { makeNowPlaying } from "./now-playing";
 import { installIntro } from "./intro";
 import { activeRoom, roomLayoutFor, setRoomLayout } from "./room-layout";
 import { installRoomResize } from "./room-resize";
+import { onPageExit, roomTeardown } from "./teardown";
 import './world-ui.css';
 import './world-skins.css';
 import './world-tray.css';
@@ -43,8 +44,11 @@ export interface RoomContext {
   audio: { readonly playing: boolean };
 }
 
-/** Installed once the room is built; `ready` runs after the intro hands over. */
-export type RoomFeature = (room: RoomContext) => { ready?: () => void } | void;
+/**
+ * Installed once the room is built; `ready` runs after the intro hands over. `teardown` is optional: the room calls it
+ * once when the page leaves for good (`teardown.ts`), for a timer to cancel or a global listener to remove.
+ */
+export type RoomFeature = (room: RoomContext) => { ready?: () => void; teardown?: () => void } | void;
 
 async function start(intro: ReturnType<typeof installIntro>, features: readonly RoomFeature[]): Promise<void> {
   const shell = document.querySelector<HTMLElement>("#grove")!;
@@ -88,13 +92,14 @@ async function start(intro: ReturnType<typeof installIntro>, features: readonly 
   const favorites = new FavoriteSpots(worldEl, look, settings, overlay, scene.favoriteScenery);
   const syncRoom = installRoomResize({ app, scene, runtime, settings, favorites, shell, scroller, applySettings });
   installPostcard(app);
-  const updateResidents = installResidents(scene, runtime, overlay, residentControls, roomAudio);
+  const residents = installResidents(scene, runtime, overlay, residentControls, roomAudio);
   const tray = mountSceneActions(makeNowPlaying(roomAudio, () => look.frozen), document.querySelector<HTMLElement>(".postcard-action")!, settings,
     document.querySelector<HTMLElement>('.residents-trigger')!);
   const installed = features.map((feature) => feature({ shell, app, scene, runtime, look, overlay, settings, audio: roomAudio }));
+  onPageExit(roomTeardown(installed, residents.dispose));
   if (params.has("debug")) installDebug(shell, app, scene, runtime, look);
   runtime.update(0);
-  app.ticker.add((ticker) => { runtime.update(ticker.deltaMS); favorites.update(); updateResidents(ticker.deltaMS); });
+  app.ticker.add((ticker) => { runtime.update(ticker.deltaMS); favorites.update(); residents.update(ticker.deltaMS); });
   if (document.hidden) app.stop();
   app.render();
   shell.dataset.ready = "true";

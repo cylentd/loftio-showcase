@@ -43,7 +43,7 @@
   const clock=seconds=>Math.floor(seconds/data.secondsPerMinute)+':'+String(Math.floor(seconds%data.secondsPerMinute)).padStart(2,'0');
   const sum=(ledger,read)=>Object.values(ledger).reduce((total,entry)=>total+read(entry),0);
   const factValue={
-    time:state=>clock(state.time),combo:state=>String(state.hitsPeak),
+    time:state=>clock(state.time),combo:state=>String(state.hitsPeak),bossHP:state=>state.battleEnd.result.hp+'/'+state.battleEnd.result.maxHP,
     teamDamage:state=>String(sum(state.fightStats,root.LoftRumbleStats.total)),throws:state=>String(sum(state.fightStats,entry=>entry.throws)),
   };
   // Time, combo, replay and back keep the labels they had before this screen; newer keys live under copy.summary/actions.
@@ -82,7 +82,7 @@
     return art;
   }
   function renderSummary(state){
-    const list=document.getElementById('demo-summary'),items=facts(state,look.summary);
+    const list=document.getElementById('demo-summary'),items=facts(state,state.battleEnd.result.won?look.summary:[...look.summary,'bossHP']);
     if(list.children.length===items.length){
       for(const item of items)document.getElementById('demo-'+item.key).textContent=item.value;
       return;
@@ -186,9 +186,10 @@
     for(const chrome of document.querySelectorAll('.top,.roster'))chrome.inert=ready;
     document.getElementById('stage-label').textContent=state.demo.enraged?copy.enragedBoss:copy.boss;
     if(!ready)return;
-    panel.dataset.outcome=state.won?'victory':'defeat';
-    document.getElementById('demo-result-title').textContent=state.won?copy.victory:copy.defeat;
-    document.getElementById('demo-result-hint').textContent=state.won?copy.winHint:copy.lossHint;
+    const result=state.battleEnd.result;
+    panel.dataset.outcome=result.won?'victory':'defeat';
+    document.getElementById('demo-result-title').textContent=result.won?copy.victory:copy.defeat;
+    document.getElementById('demo-result-hint').textContent=result.won?copy.winHint:copy.lossHint;
     renderSummary(state);
     if(!wasHidden)return;
     renderDamage(state,renderStage(state));
@@ -222,7 +223,7 @@
       });
   }
   function install({s,names,reset:restart,again,draw,ready}){
-    if(new URLSearchParams(location.search).get('lab')==='1')return;
+    if(root.LoftRumbleLabPolicy.allowed(location,document.documentElement))return;
     rememberRoster();
     s.demo={enraged:false};document.documentElement.dataset.rumbleDemo='';
     if(document.documentElement.hasAttribute('data-published-rumble')){

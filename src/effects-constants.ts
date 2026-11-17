@@ -1,7 +1,8 @@
 // Traced against the installed 1920 × 1081 room painting, inset from timber and plants.
 import { roomData } from "./room-layout.ts";
 import { PORTRAIT_GLASS, PORTRAIT_FOLIAGE, PORTRAIT_COUCH, PORTRAIT_TABLE } from "./portrait-scenery-data.ts";
-export const GLASS = roomData([
+/** The desktop trace on its own, so `?windowfx` can add panes without changing what the sprite rain masks. */
+export const DESKTOP_GLASS: readonly (readonly number[])[] = [
   [1220,112,1268,88,1268,175,1218,183],
   [1288,69,1332,55,1332,163,1288,172],
   [1350,47,1438,27,1438,145,1350,160],
@@ -20,7 +21,8 @@ export const GLASS = roomData([
   [1460,546,1580,549,1580,593,1547,583,1517,635,1460,632],
   [1644,552,1805,556,1805,650,1644,640],
   [1829,557,1860,558,1860,610,1829,650],
-], PORTRAIT_GLASS);
+];
+export const GLASS = roomData(DESKTOP_GLASS.map((polygon) => [...polygon]), PORTRAIT_GLASS);
 // Small leaf clusters only; boundary vertices never move, stem-side flex is attenuated.
 export const FOLIAGE = roomData([
   { x: 324, y: 9, w: 83, h: 99, phase: 0.2, strength: 10 },

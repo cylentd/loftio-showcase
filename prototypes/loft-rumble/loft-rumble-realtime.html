@@ -1,5 +1,6 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Loft Rumble · Real-time</title>
-<script>if(!['lab','camera'].some((key)=>new URLSearchParams(location.search).get(key)===(key==='lab'?'1':'0')))document.documentElement.dataset.rumblePending='';</script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="rumble-runtime" content="local-dev"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Loft Rumble · Real-time</title>
+<script src="rumble-lab-policy.js"></script>
+<script>if(!LoftRumbleLabPolicy.allowed(location,document.documentElement)&&new URLSearchParams(location.search).get('camera')!=='0')document.documentElement.dataset.rumblePending='';</script>
 <style>:root{--stage-transition-surface:#16251f}html[data-rumble-pending],html[data-rumble-demo]{background:var(--stage-transition-surface)}html[data-rumble-pending] body,html[data-rumble-demo] body{background:transparent}html[data-rumble-pending] main{opacity:0}</style>
 <link rel="stylesheet" href="rumble-tokens.css">
 <link rel="stylesheet" href="art-theme.css">
@@ -8,6 +9,9 @@
 <link rel="stylesheet" href="camera-stun.css">
 <link rel="stylesheet" href="rumble-demo.css">
 <link rel="stylesheet" href="rumble-cinematic.css">
+<link rel="stylesheet" href="battle-restart.css">
+<script src="battle-end-model.js"></script>
+<script src="battle-restart.js"></script>
 <script src="rumble-cinematic-data.js"></script>
 <script src="rumble-cinematic.js"></script>
 <link rel="stylesheet" href="rumble-stage.css">
@@ -261,7 +265,7 @@ const A={radius:18,burstDamage:8,burstCount:3,boltSpeed:540,shockDamage:36,shock
 const specialBonus={springy:0,heavy:A.heavySpecial,piercing:A.pierceSpecial}; // first-contact bonus each special adds, for the cue rail
 const clockText=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
 function newBody(id){const [x,y]=START[id];return{id,x:s.w*x,y:s.h*y,vx:0,vy:0,angle:0,moving:false,glide:null,walls:0,cool:0,inside:false,used:[],charge:1,boost:null,special:null,specialTriggered:false,squash:null,counter:0,pulse:0,ping:0,stun:0}}
-function reset(){camera?.resetScene();cues.reset();s.fightStats=window.LoftRumbleStats.fresh(ids);window.LoftRumbleDemo?.reset(s);music.setPaused(false);cancelHold();for(const id in cardState)delete cardState[id];
+function reset(){s.battleEnd=window.LoftRumbleBattleEnd.initial();camera?.resetScene();cues.reset();s.fightStats=window.LoftRumbleStats.fresh(ids);window.LoftRumbleDemo?.reset(s);music.setPaused(false);cancelHold();for(const id in cardState)delete cardState[id];
  const stageLayout=tutorial.layout(s.demo?window.LoftRumbleStageLayoutData.options.find(layout=>layout.id===window.LoftRumbleStageLayoutData.defaultId):window.LoftRumbleStageLayouts?.current());if(stageLayout)FEEL.bumpers=stageLayout.bumpers.map(point=>[...point]);
 
  s.bodies=Object.fromEntries(ids.map(id=>[id,newBody(id)]));s.positions=s.bodies;
@@ -272,7 +276,7 @@ function reset(){camera?.resetScene();cues.reset();s.fightStats=window.LoftRumbl
  tutorial.reset();describe();health();teamText();status();roster();message(throwWords().start);window.LoftRumbleDemo?.present(s,false)}
 function describe(){if(camera?.predicting)return;for(const id of ids){const card=document.querySelector('[data-resident="'+id+'"]');card.querySelector('b').textContent=names[id];card.querySelector('em').textContent=traits[kind(id)].name}document.getElementById('reroll').hidden=!!s.demo;document.getElementById('reroll').disabled=s.flings>0}
 /* A new fight is the only moment the music changes track; trait, layout and tutorial resets keep it. */
-function playAgain(){reset();music.startFight()}
+function playAgain(){music.startFight();reset()}
 function reroll(){if(s.flings>0)return;const options=Object.keys(traits).filter(k=>k!==s.custom);s.custom=options[Math.floor(Math.random()*options.length)];reset();message(phrase(COPY.newTrait,{name:traits[s.custom].name}))}
 // Fit the fixed logical arena into the stage, keeping its aspect; the canvas backing store follows devicePixelRatio.
 // Fit by the stage's height and main's full width (not the column, which follows the arena), then size the column to the arena.
@@ -295,7 +299,7 @@ function point(e){const r=board.getBoundingClientRect(),p={x:(e.clientX-r.left)*
 // a moving or recharging one is never taken from empty space. A charged resident's next fling is its special.
 function pick(p){const dist=b=>Math.hypot(p.x-b.x,p.y-b.y),all=ids.map(id=>s.bodies[id]).sort((a,b)=>dist(a)-dist(b)),ready=b=>!b.moving&&b.charge>=1&&!stunned(b);
   const near=all.filter(b=>dist(b)<FEEL.grabRadius);if(near.length)return near.find(ready)??near[0];return all.find(b=>ready(b)&&dist(b)<FEEL.grabReach)??null}
-board.addEventListener('pointerdown',e=>{if(s.finale){e.preventDefault();endFinale();return}if(s.userPaused){e.preventDefault();setPaused(false);return}if(s.cutin){e.preventDefault();skipCutin();return}if(s.phase==='over'&&drawEndReady()){if(!s.demo)playAgain();return} /* the live fight's results close only through their own buttons */if(s.held||e.button>0||s.phase!=='play')return;const p=point(e),b=pick(p);if(!b){message(COPY.miss);return}
+board.addEventListener('pointerdown',e=>{if(s.phase==='over'){if(!drawEndReady())return;if(!s.demo)playAgain();return}if(s.finale){e.preventDefault();endFinale();return}if(s.userPaused){e.preventDefault();setPaused(false);return}if(s.cutin){e.preventDefault();skipCutin();return}/* the live fight's results close only through their own buttons */if(s.held||e.button>0||s.phase!=='play')return;const p=point(e),b=pick(p);if(!b){message(COPY.miss);return}
  if(stunned(b)){message(names[b.id]+window.LoftRumbleCameraCopy.stunWait);return}
  if(b.moving||b.charge<1){message(phrase(COPY.recharging,{name:names[b.id]}));return}e.preventDefault();board.setPointerCapture(e.pointerId);Object.assign(s,{held:b.id,pointer:e.pointerId,ax:p.x,ay:p.y,px:p.x,py:p.y,aimAt:{x:e.clientX,y:e.clientY},aimX:p.x,aimY:p.y,pulled:false,gaugeT:0,swipeGaugeT:0,gesture:dragFling.track(p.x,p.y,e.timeStamp)});board.classList.add('held');dragFeel.grab(b.id);document.querySelector('[data-resident="'+b.id+'"]')?.setAttribute('data-grabbed','true');tutorial.onGrab(b.id)});
 // The gauge restarts each time the pull crosses the cancel radius, so it starts with the armed aim, never with the recharge.
@@ -598,7 +602,7 @@ function startFinale(){if(s.finale||s.phase!=='play'||s.finaleCount)return;s.fin
   burst(e.x,e.y,FEEL.finaleSparks,FEEL.finaleSparkSpeed,'warning');burst(e.x,e.y,FEEL.finaleShards,FEEL.finaleShardSpeed,'track',Math.PI*2,0,FEEL.finaleShardSize);
   s.rings.push({x:e.x,y:e.y,life:FEEL.shockLife*2,max:FEEL.shockLife*2,colour:'warning',big:FEEL.shockRadius*2});vibrate(FEEL.finaleVibrate);if(!calm)s.shake=Math.max(s.shake,FEEL.finaleShake);
   s.hitStop=0;cancelHold();if(s.tally&&s.tally.total)showPayoff()} // the slow-mo replaces the hit-stop, which would otherwise stretch 1/finaleSlow times
-function endFinale(){if(!s.finale)return;s.finale=null;if(s.tally&&s.tally.total)showPayoff();if(s.phase==='play')finishBattle(true)}
+function endFinale(){if(s.phase!=='play'||!s.finale)return;s.finale=null;if(s.tally&&s.tally.total)showPayoff();if(s.phase==='play')finishBattle(true)}
 // Horns: a contact hit at a horn's angle also damages that horn; at 0 it breaks.
 const hornMax=()=>RT.hp*FEEL.hornHP,hornTip=def=>{const e=enemy(),r=C.enemyRadius+FEEL.hornLength;return{x:e.x+Math.cos(def.angle)*r,y:e.y+Math.sin(def.angle)*r}};
 function hornHit(angle,amount){for(const def of FEEL.horns){const h=s.horns[def.id];if(h.broken||!(amount>0))continue;
@@ -643,7 +647,7 @@ function drawShield(){const sh=s.shield;if(bossShieldLook('front'))return;if(sh.
   const k=still()?.5:(s.clock*FEEL.shieldSheenSpeed)%1,c=a0+(a1-a0)*k,half=FEEL.shieldArc*FEEL.shieldSheen/2;ctx.strokeStyle=colors.card;ctx.lineWidth=FEEL.shieldWidth*.4;ctx.beginPath();ctx.arc(e.x,e.y,r-1,Math.max(a0,c-half),Math.min(a1,c+half));ctx.stroke();
   ctx.strokeStyle=colors.card;ctx.lineWidth=1.5;for(let i=0;i<sh.cracks;i++){const a=a0+(a1-a0)*(i+1)/(FEEL.shieldCracks+1);ctx.beginPath();ctx.moveTo(e.x+Math.cos(a)*(r-FEEL.shieldWidth/2),e.y+Math.sin(a)*(r-FEEL.shieldWidth/2));ctx.lineTo(e.x+Math.cos(a+.06)*(r+FEEL.shieldWidth/2),e.y+Math.sin(a+.06)*(r+FEEL.shieldWidth/2));ctx.stroke()}
   ctx.restore()}
-function finishBattle(won){if(s.demo)s.banners=[];if(s.tutor&&!s.demo)tutorDone();s.phase='over';s.won=won;cancelHold();s.bolts=[];for(const id of ids)stop(s.bodies[id]);
+function finishBattle(won){if(s.phase==='over')return;s.battleEnd=window.LoftRumbleBattleEnd.terminal(s.battleEnd,performance.now(),{won,hp:s.hp,maxHP:RT.hp});if(s.demo)s.banners=[];if(s.tutor&&!s.demo)tutorDone();s.phase='over';s.won=won;cancelHold();s.bolts=[];for(const id of ids)stop(s.bodies[id]);
   message(won?phrase(COPY.won,{time:clockText(s.time)})+'!':phrase(COPY.lost,{time:clockText(s.time)})+'. '+COPY.again+'.');status();roster()}
 function status(){if(camera?.predicting)return;document.getElementById('turn-label').textContent=phrase(COPY.battle,{time:clockText(s.time)});
   document.getElementById('attack-count').textContent=s.phase==='over'?COPY.battleOver:phrase(COPY.attackIn,{attack:nextAttack().name,seconds:Math.max(0,Math.ceil(s.enemyT))})}
@@ -723,7 +727,7 @@ function bumpBodies(){const moving=ids.map(id=>s.bodies[id]).filter(b=>b.moving&
     a.vx-=rel*nx;a.vy-=rel*ny;b.vx+=rel*nx;b.vy+=rel*ny;const push=(min-d)/2;a.x-=nx*push;a.y-=ny*push;b.x+=nx*push;b.y+=ny*push;
     a.pulse=b.pulse=CONTACT.squash;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
     collisionEffect(mx,my,true);burst(mx,my,RT.bumpSparks,FEEL.hitSparkSpeed,'chip');s.shake=Math.max(s.shake,RT.bumpShake)}}
-function stepFx(dt){
+function stepFx(dt){if(s.phase==='over')return;
   if(camera)window.LoftRumbleAttackImpact.tick(s,dt);
   s.flash=Math.max(0,(s.flash||0)-dt);for(const f of s.flashes)f.life-=dt;s.flashes=s.flashes.filter(f=>f.life>0);if(s.kick&&(s.kick.life-=dt)<=0)s.kick=null;
   for(const id of ids){const b=s.bodies[id];if(!b.moving&&b.angle){const up=Math.round(b.angle/(2*Math.PI))*2*Math.PI,d=b.angle-up;b.angle-=Math.sign(d)*Math.min(Math.abs(d),FEEL.settleSpin*dt);if(b.angle===up)b.angle=0}
@@ -735,10 +739,10 @@ function stepFx(dt){
   if(s.enemyHit&&(s.enemyHit.life-=dt)<=0)s.enemyHit=null;
   const fx=s.attackFx;
   if(fx){fx.t+=dt;if(!fx.rumbled&&fx.t>=0){fx.rumbled=true;tone(FEEL.rumbleFreq,'triangle',FEEL.windup,FEEL.rumbleGain,FEEL.rumbleFreq/2)}
-    if(!fx.hit&&fx.t>=FEEL.windup+FEEL.travel)attackImpact();if(fx.t>=FEEL.attackResponse+FEEL.vignetteLife)s.attackFx=null}
+    if(!fx.hit&&fx.t>=FEEL.windup+FEEL.travel)attackImpact();if(s.phase==='over')return;if(fx.t>=FEEL.attackResponse+FEEL.vignetteLife)s.attackFx=null}
   if(s.payoff&&(s.payoff.life-=dt)<=0)s.payoff=null;
   // Combo window: it runs in real time (hit-stop included), so the total lands a steady beat after the last hit.
-  if(s.tally&&s.tally.total&&(s.comboT-=dt)<=0)showPayoff();
+  if(s.tally&&s.tally.total&&(s.comboT-=dt)<=0)showPayoff();if(s.phase==='over')return;
   for(const h of s.heals)h.left-=dt;
   if(s.heals.some(h=>h.left<=0)){s.heals=s.heals.filter(h=>h.left>0);s.teamFlash='heal';s.teamBarHit=FEEL.barFlash}
   if(s.teamFly>0&&(s.teamFly-=dt)<=0){s.teamFly=0;if(s.teamFlyFlash){s.teamFlash=s.teamFlyFlash;s.teamBarHit=FEEL.barFlash}}
@@ -749,10 +753,10 @@ function stepFx(dt){
   s.enemyChip=Math.max(s.enemyChip,s.hp);
 }
 function stepShield(sh,dt){sh.angle+=dt*2*Math.PI/FEEL.shieldTurn;if(sh.down>0){sh.down=Math.max(0,sh.down-dt);if(!sh.down)sh.up=0}else sh.up=Math.min(1,sh.up+dt/FEEL.shieldFade);}
-function step(dt){const stopped=s.hitStop>0;stepContact(dt);stepFx(dt);if(s.finale&&(s.finale.t+=dt/finaleRate())>=FEEL.finaleTime)endFinale();if(stopped)return;camera?.beforeStep(dt);
+function step(dt){if(s.phase==='over')return;const stopped=s.hitStop>0;stepContact(dt);stepFx(dt);if(s.phase==='over')return;if(s.finale&&(s.finale.t+=dt/finaleRate())>=FEEL.finaleTime)endFinale();if(stopped||s.phase==='over')return;camera?.beforeStep(dt);
   if(s.phase==='play'&&!s.finale&&(!s.demo||s.flings>0)){s.time+=dt;
     if(s.demo&&!camera?.predicting&&!camera?.fixture&&window.LoftRumbleDemo.advance(s,RT)){message(window.LoftRumbleDemoData.copy.enrage)}if(!camera?.fixture)stepShield(s.shield,dt);if(s.stagger>0)s.stagger=Math.max(0,s.stagger-dt);else s.enemyT-=dt;if(s.hits&&(s.hitsIdle+=dt)>=FEEL.comboTimeout)breakCombo('timeout');if(s.enemyT<=0&&!s.attackFx){fireAttack();s.enemyT+=s.demo?window.LoftRumbleDemo.interval(s,RT):RT.attackEvery}
-    camera?.punish(dt);
+    camera?.punish(dt);if(s.phase==='over')return;
     for(const id of ids){const b=s.bodies[id],was=b.charge;if(stunned(b)){if(window.LoftRumbleStun.tick(b,dt))readyPing(id);continue}b.charge=FEEL.recharge?Math.min(1,b.charge+dt/RT.recharge[kind(id)]):b.moving?0:1;if(was<1&&b.charge>=1)readyPing(id)}}
   for(const id of ids)moveBody(s.bodies[id],dt);bumpBodies();stepTeam(dt);camera?.afterStep();
   for(const p of s.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt}s.particles=s.particles.filter(p=>p.life>0);for(const ring of s.rings)ring.life-=dt;s.rings=s.rings.filter(r=>r.life>0);
@@ -895,11 +899,11 @@ function drawCounter(b,font){if(s.popups.some(p=>String(p.text).startsWith(COPY.
 function drawHeart(){if(!s.heart)return;const{x,y}=s.heart;if(artPaint('pickup-heart',x,y,FEEL.bumperRadius*2))return;ctx.fillStyle=colors.good;ctx.beginPath();ctx.moveTo(x,y+12);ctx.bezierCurveTo(x-28,y-5,x-10,y-24,x,y-10);ctx.bezierCurveTo(x+10,y-24,x+28,y-5,x,y+12);ctx.fill();ctx.font='11px '+getComputedStyle(arena).fontFamily;ctx.textAlign='center';ctx.fillStyle=colors.foreground;ctx.fillText(COPY.heal,x,y+29)}
 // End screen: waits for the last total, or the knockout attack, to land; shows the battle time.
 // The end screen shows once the last total (or the knockout attack) has landed; only then does a tap start a new battle.
-const drawEndReady=()=>s.phase==='over'&&!(s.payoff&&FEEL.payoffLife-s.payoff.life<FEEL.bannerDelay)&&!(s.attackFx&&!s.attackFx.hit);
+const drawEndReady=()=>s.phase==='over'&&!!s.battleEnd&&window.LoftRumbleBattleEnd.ready(s.battleEnd);
 function drawEnd(font){
   if(s.demo){window.LoftRumbleDemo.present(s,drawEndReady());return}
   if(!drawEndReady())return;
-  const won=s.won,backgroundArt=artPaint('bg-title',s.w/2,s.h/2,s.w,s.h,true);
+  const won=s.battleEnd.result.won,backgroundArt=artPaint('bg-title',s.w/2,s.h/2,s.w,s.h,true);
   ctx.save();ctx.globalAlpha=backgroundArt?artwork.metrics.endScrim:FEEL.scrim;ctx.fillStyle=backgroundArt?colors.track:colors.card;ctx.fillRect(0,0,s.w,s.h);ctx.globalAlpha=1;ctx.textAlign='center';ctx.lineJoin='round';
   const baseline=s.h*.45,title=won?phrase(COPY.won,{time:clockText(s.time)}):COPY.ko;
   const resultPanel=artwork?.panel(ctx,s.w/2,baseline+FEEL.bannerSize*artwork.metrics.resultPanelOffset,Math.min(s.w-FEEL.barInset*2,artwork.metrics.panelSize),artwork.metrics.panelHeight,colors.card);
@@ -927,7 +931,7 @@ function draw(){
  ctx.restore();
  if(camera)window.LoftRumbleHeat.glow(camera.game);
  if(s.flash>0&&!still()){ctx.globalAlpha=FEEL.flashAlpha*s.flash/FEEL.perfectFlash;ctx.fillStyle=colors.perfect;ctx.fillRect(0,0,s.w,s.h);ctx.globalAlpha=1}
- drawVignette();drawSlow();drawBars(font);drawFocus(font);drawPayoff(font);drawPopups(font);drawEnemyName(font);drawBanners(font);drawToasts(font);drawTutor(font);drawEnd(font);if(camera&&!s.demo&&drawEndReady())window.LoftRumbleStats.draw(camera.game,font,window.LoftRumbleCameraCopy.stats);drawCutin(font);drawPaused(font);installCues();cues.render();
+ drawVignette();drawSlow();drawBars(font);drawFocus(font);drawPayoff(font);drawPopups(font);drawEnemyName(font);drawBanners(font);drawToasts(font);drawTutor(font);drawEnd(font);if(camera&&!s.demo&&drawEndReady())window.LoftRumbleStats.draw(camera.resultsGame(),font,window.LoftRumbleCameraCopy.stats);drawCutin(font);drawPaused(font);installCues();cues.render();
 }
 // Bullet time: while a pulled aim is held and Focus remains, the world runs at RT.slowFactor. Focus counts real seconds.
 const slowed=()=>FEEL.bulletTime&&!!s.held&&s.pulled&&s.focus>0&&s.phase==='play';
@@ -939,12 +943,12 @@ function stepZone(real){s.perfectPulse=Math.max(0,(s.perfectPulse||0)-real);cons
 function stepToasts(real){const shown=s.toasts.slice(0,FEEL.toastMax),w=FEEL.toastW,gap=FEEL.toastGap,row=shown.length*w+(shown.length-1)*gap;
   shown.forEach((t,i)=>{const x=(s.w-row)/2+i*(w+gap);t.x=t.x===undefined||still()?x:t.x+(x-t.x)*Math.min(1,real/FEEL.toastSlide);t.life-=real});
   s.toasts=s.toasts.filter(t=>t.life>0)}
-function advance(real){if(s.userPaused)return;dragFeel.tick(real);stepToasts(real);cues.tick(real);tutorial.tick(real);if(s.cutin){stepCutin(real);return}if(s.held&&s.pulled)s.gaugeT+=real;stepZone(real);const slow=slowed();if(slow!==s.slow){s.slow=slow;board.classList.toggle('slow',slow)}
+function advance(real){if(s.userPaused||s.phase==='over')return;dragFeel.tick(real);stepToasts(real);cues.tick(real);tutorial.tick(real);if(s.cutin){stepCutin(real);return}if(s.held&&s.pulled)s.gaugeT+=real;stepZone(real);const slow=slowed();if(slow!==s.slow){s.slow=slow;board.classList.toggle('slow',slow)}
   if(slow)s.focus=Math.max(0,s.focus-real*RT.focusDrain);else if(s.phase==='play'&&!(s.held&&s.pulled))s.focus=Math.min(RT.focusMax,s.focus+real*RT.focusMax/RT.focusRefill);
-  let world=real*(slow?RT.slowFactor:1)*(s.finale?finaleRate():1);const fin=!!s.finale;while(world>0&&!s.cutin){const dt=Math.min(C.step,world);step(dt);world-=dt}
+  let world=real*(slow?RT.slowFactor:1)*(s.finale?finaleRate():1);const fin=!!s.finale;while(world>0&&!s.cutin){const dt=Math.min(C.step,world);step(dt);if(s.phase==='over')return;world-=dt}
   if(fin&&finaleRate()<1)stepFx(real*(1-finaleRate())); // finale: bars, totals and pops keep real pace while the world crawls
   dangerDock()}
-function frame(now){const real=last?Math.min(C.maxFrame,(now-last)/1000):0;last=now;if(!s.paused&&!s.cinematic){advance(real);draw()}requestAnimationFrame(frame)}
+function frame(now){s.battleEnd=window.LoftRumbleBattleEnd.frame(s.battleEnd,now,!s.paused&&!s.userPaused&&!s.cinematic);const real=last?Math.min(C.maxFrame,(now-last)/1000):0;last=now;if(!s.paused&&!s.cinematic){advance(real);draw()}requestAnimationFrame(frame)}
 const menuToggle=document.getElementById('menu-toggle'),menu=document.getElementById('menu');
 function showMenu(open){
   if(open&&s.cinematic)return;
@@ -971,10 +975,10 @@ function dismissBattleDialog(panel,close){
 }
 dismissBattleDialog(menu,()=>showMenu(false));
 document.addEventListener('click',event=>{if(!s.demo&&!menu.hidden&&!event.composedPath().includes(menu))showMenu(false)});
-document.getElementById('reset').addEventListener('click',()=>showMenu(false));document.getElementById('reset').onclick=playAgain;document.getElementById('reroll').onclick=reroll;
+window.LoftRumbleRestart.install({trigger:document.getElementById('reset'),restart:playAgain,closeMenu:()=>showMenu(false),dismiss:dismissBattleDialog});document.getElementById('reroll').onclick=reroll;
 // Pause (round 16): the top-bar toggle, opening settings or help, and a hidden tab all freeze the enemy clock and physics. A tap on the arena resumes.
 const pauseButton=document.getElementById('pause');
-function setPaused(on){if(on&&s.phase!=='play')on=false;if(s.userPaused===on)return;s.userPaused=on;music.setPaused(on);pauseButton.setAttribute('aria-pressed',String(on));pauseButton.setAttribute('aria-label',on?COPY.resume:COPY.pause);if(on)cancelHold();message(on?COPY.paused:COPY.resume)}
+function setPaused(on){s.battleEnd=window.LoftRumbleBattleEnd.frame(s.battleEnd,performance.now(),!s.paused&&!s.userPaused&&!s.cinematic);if(s.userPaused===on)return;s.userPaused=on;music.setPaused(on);pauseButton.setAttribute('aria-pressed',String(on));pauseButton.setAttribute('aria-label',on?COPY.resume:COPY.pause);if(on)cancelHold();message(on?COPY.paused:COPY.resume)}
 pauseButton.onclick=e=>{e.stopPropagation();if(s.demo)showMenu(false);else setPaused(!s.userPaused)};document.addEventListener('visibilitychange',()=>{if(document.hidden){if(s.demo&&document.getElementById('help-panel').hidden)showMenu(true);else setPaused(true)}});
 document.getElementById('replay-tutorial').onclick=event=>{if(tutorial.installed()){tutorial.replay(event.currentTarget);return}try{localStorage.removeItem(s.demo?window.LoftRumbleDemoData.tutorialKey:TUTOR_KEY)}catch{}reset();showMenu(false)};
 function teamText(){if(camera?.predicting)return;document.getElementById('team-health').textContent=phrase(COPY.teamHealth,{now:s.teamShown,max:TURN.hp})}
@@ -1247,7 +1251,7 @@ function drawPaused(font){if(!s.userPaused||s.demo)return;ctx.globalAlpha=FEEL.p
 function drawSplash(a,font){const left=s.splash[a.id];if(!left)return;ctx.globalAlpha=Math.min(1,left/FEEL.bannerFade);ctx.font=FEEL.textWeight+' '+FEEL.splashFont+'px '+font;ctx.textAlign='center';ctx.lineJoin='round';ctx.strokeStyle=colors.card;ctx.lineWidth=4;ctx.fillStyle=colors.primary;
  const text=abilities[a.kind]+'!',x=clamp(a.x,ctx.measureText(text).width/2+FEEL.barInset,s.w-ctx.measureText(text).width/2-FEEL.barInset),y=a.y-artSize()/2-6;ctx.strokeText(text,x,y);ctx.fillText(text,x,y);ctx.globalAlpha=1}
 const splashScale=id=>{const left=s.splash[id];return left&&!still()?1+FEEL.splashGrow*Math.sin(Math.PI*(1-left/FEEL.splashTime)):1};
-document.addEventListener('visibilitychange',()=>{s.paused=document.hidden;music.setHidden(document.hidden);last=0;if(s.paused)cancelHold()});document.documentElement.style.setProperty('--aspect',C.arenaW/C.arenaH);
+document.addEventListener('visibilitychange',()=>{s.battleEnd=window.LoftRumbleBattleEnd.frame(s.battleEnd,performance.now(),!s.paused&&!s.userPaused&&!s.cinematic);s.paused=document.hidden;music.setHidden(document.hidden);last=0;if(s.paused)cancelHold()});document.documentElement.style.setProperty('--aspect',C.arenaW/C.arenaH);
 const timingButton=document.getElementById('timing');function showTiming(){timingButton.setAttribute('aria-pressed',String(s.timing));setLabel(timingButton,s.timing?PAGE.timingOn:PAGE.timingOff,[PAGE.timingOn,PAGE.timingOff])}
 timingButton.onclick=()=>{s.timing=!s.timing;showTiming()};showTiming();
 const rechargeButton=document.getElementById('recharge');function showRecharge(){rechargeButton.setAttribute('aria-pressed',String(FEEL.recharge));setLabel(rechargeButton,FEEL.recharge?COPY.rechargeOn:COPY.rechargeOff,[COPY.rechargeOn,COPY.rechargeOff]);roster()}

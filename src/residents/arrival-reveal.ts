@@ -8,6 +8,7 @@ import { arrivalNameField } from './name-field';
 import { unboxing } from './unboxing';
 import type { RevealAudioPreference } from './unboxing-sound';
 import { revealFlight } from './reveal-flight';
+import { attributesOf, clipLive, INITIAL, next, releasesAudio, releasesFlight, type DialogAttributes, type RevealEvent, type RevealState } from './arrival-reveal-model';
 
 type ArrivalCallbacks = {
   welcome(entry: ResidentEntry, saved: SavedCharacter, skip: boolean): Promise<void>;
@@ -48,32 +49,49 @@ function arrivalActions(entry: ResidentEntry, saved: SavedCharacter, callbacks: 
   return { form, body, input: naming.input };
 }
 
-export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbacks: ArrivalCallbacks, audio: RevealAudioPreference) {
+type Box = ReturnType<typeof unboxing>;
+type Flight = ReturnType<typeof revealFlight>;
+type Handles = { box: Box | null; flight: Flight; resume: (() => void) | undefined };
+
+function writeAttributes(dataset: DOMStringMap, attributes: DialogAttributes) {
+  for (const [key, value] of Object.entries(attributes)) { if (value === null) delete dataset[key]; else dataset[key] = value; }
+}
+
+/** Holds the lifecycle state and the three things it governs: the box, the flight layer and the audio resume. */
+function revealDriver(dialog: HTMLDialogElement) {
+  let state: RevealState = INITIAL;
+  const handles: Handles = { box: null, flight: undefined, resume: undefined };
+  // Sends an event; returns false when the model refused it. The model names each effect, this performs it.
+  const send = (event: RevealEvent): boolean => {
+    const before = state; state = next(before, event);
+    if (state === before) return false;
+    if (releasesFlight(before, state)) { handles.flight?.dispose(); handles.flight = undefined; }
+    if (releasesAudio(before, state)) { const resume = handles.resume; handles.resume = undefined; resume?.(); }
+    if (state.kind === 'idle' || state.kind === 'disposed') { handles.box?.dispose(); handles.box = null; }
+    writeAttributes(dialog.dataset, attributesOf(state));
+    return true;
+  };
+  return { handles, send, quiet: () => { if (clipLive(state)) handles.box?.mute(); } };
+}
+
+export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbacks: ArrivalCallbacks, audio: RevealAudioPreference, makeFlight: typeof revealFlight = revealFlight) {
   const arrival = worldDrawer(COPY.ready, COPY.close); arrival.dialog.classList.add('resident-reveal', 'world-modal');
   dismissOnBackdrop(arrival.dialog);
-  let active: ReturnType<typeof unboxing> | null = null;
-  let flight: ReturnType<typeof revealFlight>;
-  let resumeAudio: (() => void) | undefined;
-  const restoreAudio = () => { const resume = resumeAudio; resumeAudio = undefined; resume?.(); };
+  const { handles, send, quiet } = revealDriver(arrival.dialog);
   const audioEnabled = () => audio.enabled ?? audio.playing;
   arrival.dialog.addEventListener('close', () => {
-    flight?.dispose(); flight = undefined;
-    active?.dispose(); active = null; delete arrival.dialog.dataset.cinema; delete arrival.dialog.dataset.framed;
-    restoreAudio();
-    if (document.activeElement === document.body) chrome.trigger.focus();
+    if (send({ type: 'close' }) && document.activeElement === document.body) chrome.trigger.focus();
   });
-  audio.subscribe(() => { if (!audioEnabled()) active?.mute(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) active?.mute(); });
-  return (entry: ResidentEntry, saved: SavedCharacter, reduced: boolean, origin?: HTMLButtonElement) => {
+  audio.subscribe(() => { if (!audioEnabled()) quiet(); });
+  const onHidden = () => { if (document.hidden) quiet(); };
+  document.addEventListener('visibilitychange', onHidden);
+  const show = (entry: ResidentEntry, saved: SavedCharacter, reduced: boolean, origin?: HTMLButtonElement) => {
     if (document.querySelector('dialog[open]:not(.world-drawer)')) return;
     const focused = document.activeElement;
     const trigger = origin ?? (focused instanceof HTMLButtonElement && focused.classList.contains('arrival-box') ? focused : chrome.trigger);
-    arrival.dialog.dataset.handoff = 'false';
-    delete arrival.dialog.dataset.framed;
+    if (!send({ type: 'show' })) return;
     chrome.drawer.dialog.close();
-    active?.dispose();
-    flight?.dispose(); flight = undefined;
-    restoreAudio();
+    handles.box?.dispose();
     let skip = reduced;
     const actions = arrivalActions(entry, saved, callbacks, () => skip, () => arrival.dialog.close());
     const greeting = document.createElement('p'); greeting.textContent = COPY.greeting; greeting.hidden = true;
@@ -82,29 +100,30 @@ export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbac
       original.href = saved.image.originalUrl; original.download = 'loftio-resident.png'; original.textContent = COPY.original;
     }
     const box = unboxing(imageSource(saved.image), entry.name ?? saved.resolvedSelections.creature.label, reduced, immediate => {
-      if (!arrival.dialog.open) return;
-      flight?.dispose(); flight = undefined;
-      arrival.dialog.dataset.cinema = 'false';
-      restoreAudio();
+      if (!arrival.dialog.open || !send({ type: 'opened' })) return;
       skip = immediate; actions.form.hidden = greeting.hidden = false; original.hidden = saved.image.mime !== 'image/webp';
       actions.body.prepend(box.stage, greeting);
       actions.body.append(original);
       actions.input.focus({ preventScroll: true });
     }, audioEnabled, phase => {
-      if (phase === 'loading') arrival.dialog.dataset.handoff = 'pending';
-      if (phase === 'playing' || phase === 'retry') {
-        arrival.dialog.dataset.handoff = 'true';
-        if (phase === 'playing') flight?.finish(); else flight?.dispose();
-      }
-    }, () => flight?.ready ?? Promise.resolve());
-    active = box;
-    arrival.dialog.dataset.cinema = 'true';
+      if (phase === 'loading' || phase === 'playing' || phase === 'retry') send({ type: 'phase', phase });
+    }, () => handles.flight?.ready ?? Promise.resolve());
+    handles.box = box;
     arrival.content.replaceChildren(box.stage, box.skip, greeting, actions.form, original);
     arrival.open(trigger);
     if (!reduced && !matchMedia('(prefers-reduced-motion: reduce)').matches && entry.arrival === 'waiting') {
-      flight = revealFlight(arrival.dialog, trigger, box.stage.querySelector('video')!);
+      handles.flight = makeFlight(arrival.dialog, trigger, box.stage.querySelector('video')!, () => send({ type: 'landed' }));
+      if (handles.flight) send({ type: 'flew' });
+      handles.resume = audio.suspend?.();
+      if (handles.resume) send({ type: 'held' });
     }
-    if (!reduced && !matchMedia('(prefers-reduced-motion: reduce)').matches && entry.arrival === 'waiting') resumeAudio = audio.suspend?.();
     box.open(entry.arrival !== 'waiting');
   };
+  // Tears the reveal down for good: closes the dialog, gives the audio back once and stops listening to the page.
+  const dispose = () => {
+    if (!send({ type: 'dispose' })) return;
+    document.removeEventListener('visibilitychange', onHidden);
+    arrival.dialog.close(); arrival.dialog.remove();
+  };
+  return Object.assign(show, { dispose });
 }

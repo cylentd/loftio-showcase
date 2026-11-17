@@ -34,6 +34,9 @@ export class Ambience {
   private glows: { s: Sprite; phase: number }[] = [];
   private motes: { s: Sprite; x: number; y: number; phase: number }[] = [];
   private dustVisible = true;
+  private weather: { share: number; speed: number } | null = null;
+  private rainClock = 0;
+  private lastNow = 0;
 
   private readonly settings: SceneSettings;
 
@@ -96,13 +99,17 @@ export class Ambience {
     const lightGain = this.settings.get("lights") / EFFECT_RANGE.unit;
     const particleGain = this.settings.get("particles") / EFFECT_RANGE.unit;
     const count = Math.round(EFFECTS.moteCount * particleGain);
-    for (const d of this.drops) {
-      const p = rainPosition(d.seed, now, d.near);
+    const rainNow = this.rainTime(now);
+    const shown = this.weather?.share ?? 1;
+    for (const [index, d] of this.drops.entries()) {
+      const p = rainPosition(d.seed, rainNow, d.near);
       d.s.position.set(p.x, p.y);
+      d.s.visible = index < shown * this.drops.length;
     }
-    for (const d of this.trails) {
+    for (const [index, d] of this.trails.entries()) {
       d.s.position.set(EFFECTS.rainLeft + d.seed * EFFECTS.rainWidth,
-        (d.seed * EFFECTS.rainSpan + now * EFFECTS.trailSpeed) % EFFECTS.rainSpan);
+        (d.seed * EFFECTS.rainSpan + rainNow * EFFECTS.trailSpeed) % EFFECTS.rainSpan);
+      d.s.visible = index < shown * this.trails.length;
     }
     for (const [index, g] of this.glows.entries()) {
       const swell = Math.sin(now / EFFECTS.glowSlowMs + g.phase);
@@ -118,6 +125,27 @@ export class Ambience {
         m.y + EFFECTS.moteSpan / 2 - progress * EFFECTS.moteSpan);
       m.s.alpha = Math.min(1, EFFECTS.moteAlpha * Math.sqrt(particleGain)) * Math.sin(progress * Math.PI) * (1 - night / 2);
     }
+  }
+
+  /** `?windowfx` moves the streaks under its frosted glass, behind its own glass mask instead of main's. */
+  liftRain(mask: Container): Container {
+    const own = this.rain.mask as Container;
+    this.rain.mask = mask;
+    own.visible = false;
+    return this.rain;
+  }
+
+  /** `?windowfx` weather: share of the streaks shown (0..1) and their fall speed against main's (1). */
+  setRainWeather(share: number, speed: number): void {
+    this.weather = { share, speed };
+  }
+
+  /** Main's clock without `?windowfx` weather; with it, a clock that runs at the weather's speed without jumping. */
+  private rainTime(now: number): number {
+    const step = now - this.lastNow;
+    this.lastNow = now;
+    this.rainClock = this.weather ? this.rainClock + step * this.weather.speed : now;
+    return this.rainClock;
   }
 
   inspectRain(): void {
