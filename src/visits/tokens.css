@@ -1,0 +1,24 @@
+:root {
+  --visit-width: 1040px;
+  --visit-height: 760px;
+  --visit-stage: clamp(240px, 46dvh, 420px);
+  --visit-figure: 94%;
+  --visit-ground-width: 38%;
+  --visit-ground-height: 6%;
+  --visit-ground-blur: 12px;
+  --visit-ground: #35271d33;
+  --visit-font: 16px;
+  --visit-heading: 28px;
+  /* Hosted links (2026-11-18): the link field, the privacy note and the quieter file route */
+  --visit-helper: 14px; /* L11 helper text floor is 13 px */
+  --visit-link-width: 42rem; /* the link on one line and the privacy note in two balanced lines at desktop */
+  --visit-link-radius: 14px;
+  --visit-link-inset: inset 0 2px 3px #35271d26, inset 0 -1px 0 #ffffff99; /* pressed into the parchment */
+  --visit-status-weight: 600;
+  --visit-stage-compact: clamp(160px, 30dvh, 300px); /* owner, once a link or message shows: keeps the link and buttons in view */
+  --visit-stage-compact-phone: clamp(140px, 24dvh, 220px);
+  --visit-text-width: 36rem; /* about 65 characters a line at 16 px */
+  /* Stage hidden (loading, error): the message alone, with room to read */
+  --visit-solo-pad: var(--space-6);
+  --visit-solo-font: 18px;
+}

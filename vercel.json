@@ -1,11 +1,15 @@
 {
   "rewrites": [
-    { "source": "/loftio-builder-api/:path*", "destination": "/api/loftio-builder-api/:path*" }
+    { "source": "/loftio-builder-api/:path*", "destination": "/api/loftio-builder-api/:path*" },
+    { "source": "/loftio-visit-api/:path*", "destination": "/api/loftio-visit-api/:path*" }
   ],
   "functions": {
     "api/loftio-builder-api/generate.mjs": {
       "maxDuration": 300,
       "includeFiles": "api/_references/**"
+    },
+    "api/loftio-visit-api/invitations.mjs": {
+      "maxDuration": 10
     }
   }
 }

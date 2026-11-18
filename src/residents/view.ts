@@ -21,7 +21,7 @@ import { RESIDENT_COPY as COPY } from './copy';
 import { residentForm } from './create-form';
 import { createAction } from './create-action';
 import { sceneResidents } from './scene-adapter';
-import { residentChrome, renderResidents } from './view-parts';
+import { residentChrome, renderResidents, type PortraitAction } from './view-parts';
 import { arrivalReveal } from './arrival-reveal';
 import { roomDeliveries } from './delivery';
 import { creationIndicator } from './creation-progress';
@@ -42,11 +42,12 @@ const NAMES = {
 };
 
 /** What an entry may set through a room feature: the balance a missing ticket ledger starts with, the final Create label. */
-export type ResidentOptions = { initialTickets?: number; confirmLabel?: string };
+export type ResidentOptions = { initialTickets?: number; confirmLabel?: string; portrait?: PortraitAction };
 /** What a room feature may read. `fresh`: no saved residents, tickets or lineup before this load; `restored` settles once
  * the saved room is back (true) or failed to load (false). */
 export type ResidentHooks = {
   fresh: boolean; storageKey: string; preview: boolean; trigger: HTMLElement; openCreate: () => void; restored: Promise<boolean>;
+  extension?: HTMLElement;
 };
 
 // A visible Turnstile challenge shows here, in the Create panel: the drawer is a modal dialog, so the page behind it is inert.
@@ -130,12 +131,12 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
     chrome.trigger.setAttribute('aria-label', ready ? COPY.title + ' · ' + COPY.ready : COPY.title);
     chrome.trigger.title = ready ? COPY.ready : COPY.title;
     renderResidents(chrome.panels, state, entries, id => { try { adapter.remove(id); } catch (error) { failure(error); } }, reveal,
-      current.originals.list(), (id, inRoom) => { try { originals.setInRoom(id, inRoom); render(); } catch (error) { failure(error); } });
+      current.originals.list(), (id, inRoom) => { try { originals.setInRoom(id, inRoom); render(); } catch (error) { failure(error); } }, options.portrait);
   }
   const openPreview = preview ? () => { const waiting = registry.list().find(entry => entry.arrival === 'waiting'); if (waiting) reveal(waiting); } : undefined;
   builder.subscribe(render); render();
   const restored = restore(current, adapter, failure, openPreview);
-  const hooks: ResidentHooks = { fresh, storageKey: names.registry, preview: preview !== null, trigger: chrome.trigger, openCreate: chrome.openCreate, restored };
+  const hooks: ResidentHooks = { fresh, storageKey: names.registry, preview: preview !== null, trigger: chrome.trigger, openCreate: chrome.openCreate, restored, extension: chrome.drawer.content };
   // Teardown, newest first: stop listening, end the form's timers, then stop the builder's live run. Its request
   // stays journaled, so the next visit's resume() collects it.
   const dispose = teardownAll([events, () => form.dispose(), () => builder.dispose()]);

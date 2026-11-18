@@ -1,0 +1,66 @@
+.visit-viewer.world-modal {
+  position: fixed; inset: var(--world-inset); margin: auto;
+  width: min(var(--visit-width), calc(100vw - var(--space-7)));
+  max-width: calc(100vw - var(--space-7)); max-height: calc(100dvh - var(--space-7));
+  height: fit-content; padding: calc(var(--space-5) + var(--frame-tuck)); font-size: var(--visit-font);
+}
+.visit-viewer .world-content { display: flex; flex-direction: column; min-height: 0; overflow: hidden; gap: var(--space-4); }
+.visit-body { overflow: auto; min-height: 0; text-align: center; }
+.visit-body h3 { margin: 0; font: var(--visit-heading) var(--font-heading); }
+.visit-body h3, .visit-list button { overflow-wrap: anywhere; }
+.visit-body p { margin: var(--space-3) 0 0; line-height: var(--line-body); }
+.visit-body [role=status]:empty { display: none; }
+.visit-stage { position: relative; height: var(--visit-stage); }
+.visit-stage[hidden] { display: none; }
+.visit-stage::before { content: ''; position: absolute; left: 50%; translate: -50% 0; width: var(--visit-ground-width); height: var(--visit-ground-height);
+  bottom: calc((100% - var(--visit-figure)) / 2); background: var(--visit-ground); border-radius: 50%; filter: blur(var(--visit-ground-blur)); }
+.visit-stage img { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: block; height: var(--visit-figure); width: 100%; object-fit: contain; }
+.visit-body .visit-message, .visit-body .visit-status { max-width: var(--visit-text-width); margin-inline: auto; }
+.visit-body .visit-status { font-weight: var(--visit-status-weight); color: var(--world-ink); }
+/* Stage hidden (loading, ended link, network error): the message stands alone, centred with room around it */
+.visit-body:has(> .visit-stage[hidden]) { padding-block: var(--visit-solo-pad); }
+.visit-body:has(> .visit-stage[hidden]) .visit-message { margin-top: 0; font-size: var(--visit-solo-font); }
+/* Owner with links: once a link or a message shows, the portrait steps back so both stay in view without scrolling */
+.visit-viewer:has(.visit-files:not([hidden])):has(.visit-status:not(:empty)) .visit-stage,
+.visit-viewer:has(.visit-link:not([hidden])) .visit-stage { height: var(--visit-stage-compact); }
+/* The ready link: pressed into the parchment, selectable, one line */
+.visit-link { margin: var(--space-4) auto 0; max-width: var(--visit-link-width); }
+.visit-link[hidden] { display: none; }
+.visit-link-field {
+  box-sizing: border-box; width: 100%; min-height: var(--tap-min); padding: 0 var(--space-4); border: 0;
+  border-radius: var(--visit-link-radius); background: var(--world-paper-sunk); box-shadow: var(--visit-link-inset);
+  color: var(--world-ink); font: inherit; font-size: var(--visit-helper); text-align: center; text-overflow: ellipsis;
+}
+.visit-link-field:focus-visible { outline: var(--focus-width) solid var(--world-accent); outline-offset: var(--focus-offset); }
+.visit-body .visit-note { margin-top: var(--space-2); font-size: var(--visit-helper); color: var(--world-muted); }
+.visit-footer { display: flex; flex-direction: column; gap: var(--space-3); flex: none; }
+.visit-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); width: 100%; max-width: var(--visit-link-width); margin-inline: auto; }
+.visit-body p { text-wrap: balance; }
+.visit-actions .world-button { flex: 1; min-height: var(--tap-min); }
+/* The file route: a quiet second choice, text-weight buttons with no pill */
+.visit-files { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: var(--space-3); }
+.visit-files[hidden] { display: none; }
+.visit-files-label { margin: 0; font-size: var(--visit-helper); color: var(--world-muted); }
+.visit-files-row { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1); }
+.visit-viewer .visit-file-button.world-button {
+  min-height: var(--tap-min); padding-inline: var(--space-3); background: none; border-color: transparent; box-shadow: none;
+  color: var(--world-accent); font-weight: var(--visit-status-weight); text-decoration: underline; text-underline-offset: var(--space-1);
+}
+@media (hover: hover) { .visit-viewer .visit-file-button.world-button:hover { background: var(--world-paper-sunk); } }
+.visit-extension { display: grid; gap: var(--space-3); margin-block: var(--space-4); }
+.visit-extension h3, .visit-extension p { margin: 0; }
+.visit-list { display: grid; gap: var(--space-3); }
+.visit-list button { text-align: left; }
+.resident-portrait-card img { grid-row: span 3; }
+.visit-viewer button:focus-visible, .visit-extension button:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
+@media (max-width: 700px) {
+  .visit-viewer.world-modal { width: calc(100vw - var(--space-5)); max-width: calc(100vw - var(--space-5)); inset: var(--space-3); padding: calc(var(--space-4) + var(--frame-tuck)); }
+  :root[data-world-theme="treehouse"] .visit-viewer.world-frame {
+    border-bottom-width: calc(var(--window-frame-corner) * var(--window-frame-plank-y) - var(--frame-tuck));
+    border-image-width: var(--window-frame-corner); border-radius: var(--world-radius);
+  }
+  .visit-actions .world-button { flex: 1 0 auto; } /* two short labels share a row; a label that does not fit wraps to its own */
+  .visit-files-label { flex-basis: 100%; text-align: center; }
+  .visit-viewer:has(.visit-files:not([hidden])):has(.visit-status:not(:empty)) .visit-stage,
+  .visit-viewer:has(.visit-link:not([hidden])) .visit-stage { height: var(--visit-stage-compact-phone); }
+}

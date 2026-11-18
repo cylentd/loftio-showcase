@@ -10,6 +10,8 @@ import type { OriginalEntry } from './original-lineup';
 
 // In the loft: the house; Saved: a kept letter; Create: a new leaf. Same stroke family as Settings.
 const TAB_ICONS = ['room', 'letter', 'leaf'] as const;
+export type ResidentPortrait = { name: string; source: string; supported: boolean };
+export type PortraitAction = { label: string; open(portrait: ResidentPortrait, trigger: HTMLElement): void };
 
 export function residentChrome() {
   const drawer = worldDrawer(COPY.title, COPY.close); drawer.dialog.classList.add('residents-drawer', 'world-modal');
@@ -34,31 +36,36 @@ export function residentChrome() {
   return { drawer, trigger, status, error, panels, openCreate };
 }
 
-function rosterCard(id: string, name: string, source: string, inRoom: boolean, change: () => void) {
+function rosterCard(id: string, name: string, source: string, inRoom: boolean, change: () => void, portrait?: PortraitAction, supported = true) {
   const item = document.createElement('article'); item.className = 'resident-card'; item.dataset.residentId = id;
   item.setAttribute('aria-label', name);
   const image = document.createElement('img'); image.src = source; image.alt = ''; image.loading = 'lazy';
   const label = document.createElement('p'); label.textContent = name;
-  item.append(image, label, worldButton(inRoom ? COPY.remove : COPY.invite, change));
+  item.append(image, label);
+  if (portrait) {
+    const view = worldButton(portrait.label, () => portrait.open({ name, source, supported }, view));
+    item.classList.add('resident-portrait-card'); item.append(view);
+  }
+  item.append(worldButton(inRoom ? COPY.remove : COPY.invite, change));
   return item;
 }
 
 export function renderResidents(panels: HTMLElement[], state: BuilderState, entries: ResidentEntry[], remove: (id: string) => void,
-  reveal: (entry: ResidentEntry) => void, originals: OriginalEntry[], changeOriginal: (id: string, inRoom: boolean) => void) {
+  reveal: (entry: ResidentEntry) => void, originals: OriginalEntry[], changeOriginal: (id: string, inRoom: boolean) => void, portrait?: PortraitAction) {
   const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const focusedPanel = panels.slice(0, 2).find(panel => focused && panel.contains(focused));
   const focusedId = focused?.closest<HTMLElement>('[data-resident-id]')?.dataset.residentId;
   panels[0]!.replaceChildren(); panels[1]!.replaceChildren();
   for (const entry of originals) {
     const cast = CAST.find(member => member.id === entry.id)!;
-    const card = () => rosterCard(entry.id, NAMES[entry.id] ?? entry.id, cast.art, entry.inRoom, () => changeOriginal(entry.id, !entry.inRoom));
+    const card = () => rosterCard(entry.id, NAMES[entry.id] ?? entry.id, cast.art, entry.inRoom, () => changeOriginal(entry.id, !entry.inRoom), portrait);
     if (entry.inRoom) panels[0]!.append(card());
     panels[1]!.append(card());
   }
   for (const entry of entries) {
     const saved = state.kept.find(item => item.id === entry.savedId); if (!saved) continue;
     const card = () => rosterCard(entry.id, entry.name ?? saved.resolvedSelections.creature.label, imageSource(saved.image), entry.inRoom,
-      entry.inRoom ? () => remove(entry.id) : () => reveal(entry));
+      entry.inRoom ? () => remove(entry.id) : () => reveal(entry), portrait, !saved.generation.providerId.includes('mock'));
     if (entry.inRoom) panels[0]!.append(card());
     panels[1]!.append(card());
   }
