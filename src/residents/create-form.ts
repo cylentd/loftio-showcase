@@ -54,7 +54,7 @@ function stepSection(title: string, index: number, uid: string) {
 }
 
 /** grant adds a test ticket; passed in mock mode only, where images are free placeholders. */
-export function residentForm(builder: ReturnType<typeof createBuilder>, mode: BuilderMode, grant?: () => void, exit: () => void = () => {}) {
+export function residentForm(builder: ReturnType<typeof createBuilder>, mode: BuilderMode, grant?: () => void, exit: () => void = () => {}, confirmLabel = RESIDENT_COPY.confirmYes) {
   const uid = `resident-wizard-${formCount++}`;
   // Only an API with observe can reattach to a request; without it a failed build's button starts a new one.
   const action = (state: ReturnType<typeof builder.state>) => createAction({ ...state, resumable: state.resumable === true });
@@ -89,7 +89,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const confirm = document.createElement('div'); confirm.className = 'wizard-confirm'; confirm.setAttribute('role', 'group');
   const question = document.createElement('p'); question.id = `${uid}-confirm`; question.tabIndex = -1;
   confirm.setAttribute('aria-labelledby', question.id);
-  const yes = worldButton(RESIDENT_COPY.confirmYes, () => { if (life.send({ type: 'yes' })) void wizard.make(); });
+  const yes = worldButton(confirmLabel, () => { if (life.send({ type: 'yes' })) void wizard.make(); });
   yes.classList.add('world-primary');
   const no = worldButton(RESIDENT_COPY.confirmNo, () => { life.send({ type: 'no' }); update(); submit.focus(); });
   const choices = document.createElement('div'); choices.className = 'wizard-confirm-choices'; choices.append(no, yes);

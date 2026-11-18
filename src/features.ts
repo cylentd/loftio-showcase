@@ -11,5 +11,11 @@ export const focusCards: RoomFeature = ({ shell }) => {
   return { ready: () => cards.askOnce(), teardown: () => cards.dispose() };
 };
 
+// The game opens Focus from its control only: a first visit gets the welcome card instead (owner, 2026-11-17).
+export const focusCardsOnRequest: RoomFeature = ({ shell }) => {
+  const cards = installFocusCards(document.getElementById("letter-settings"), shell);
+  return { teardown: () => cards.dispose() };
+};
+
 // Tossing residents across the floor and piling them up to six high.
 export const lobbyPlay: RoomFeature = (room) => installLobbyPlay(room);

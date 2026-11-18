@@ -3,7 +3,7 @@ import "./style.css";
 import "./settings.css";
 import { applyWorldTheme } from './world-theme';
 import { applyWorldArt } from './world-art';
-import { installResidents } from './residents/view';
+import { installResidents, type ResidentHooks, type ResidentOptions } from './residents/view';
 import { Application } from "pixi.js";
 import { CAST } from "./cast";
 import { SCENE_LABEL } from "./copy";
@@ -42,13 +42,16 @@ export interface RoomContext {
   settings: SceneSettings;
   /** The room's music and rain; `playing` is false while they are muted, which sound effects follow. */
   audio: { readonly playing: boolean };
+  /** The residents panel's neutral hooks; absent when the panel failed to load. */
+  residents?: ResidentHooks;
 }
 
 /**
  * Installed once the room is built; `ready` runs after the intro hands over. `teardown` is optional: the room calls it
  * once when the page leaves for good (`teardown.ts`), for a timer to cancel or a global listener to remove.
+ * `residents`, also optional, is read before the room is built: how the residents panel starts.
  */
-export type RoomFeature = (room: RoomContext) => { ready?: () => void; teardown?: () => void } | void;
+export type RoomFeature = ((room: RoomContext) => { ready?: () => void; teardown?: () => void } | void) & { residents?: ResidentOptions };
 
 async function start(intro: ReturnType<typeof installIntro>, features: readonly RoomFeature[]): Promise<void> {
   const shell = document.querySelector<HTMLElement>("#grove")!;
@@ -92,10 +95,11 @@ async function start(intro: ReturnType<typeof installIntro>, features: readonly 
   const favorites = new FavoriteSpots(worldEl, look, settings, overlay, scene.favoriteScenery);
   const syncRoom = installRoomResize({ app, scene, runtime, settings, favorites, shell, scroller, applySettings });
   installPostcard(app);
-  const residents = installResidents(scene, runtime, overlay, residentControls, roomAudio);
+  const residents = installResidents(scene, runtime, overlay, residentControls, roomAudio,
+    Object.assign({}, ...features.map((feature) => feature.residents)));
   const tray = mountSceneActions(makeNowPlaying(roomAudio, () => look.frozen), document.querySelector<HTMLElement>(".postcard-action")!, settings,
     document.querySelector<HTMLElement>('.residents-trigger')!);
-  const installed = features.map((feature) => feature({ shell, app, scene, runtime, look, overlay, settings, audio: roomAudio }));
+  const installed = features.map((feature) => feature({ shell, app, scene, runtime, look, overlay, settings, audio: roomAudio, residents: residents.hooks }));
   onPageExit(roomTeardown(installed, residents.dispose));
   if (params.has("debug")) installDebug(shell, app, scene, runtime, look);
   runtime.update(0);

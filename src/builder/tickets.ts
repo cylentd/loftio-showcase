@@ -1,4 +1,4 @@
-/** One free build at first launch: LOFTIO-COMPANION.md, Residents ("one free build"). */
+/** Default starting allowance; a caller may supply another. */
 export const FREE_BUILDS = 1;
 const STORAGE_KEY = 'loftio-build-tickets-v1';
 type Storage = { getItem(key: string): string | null; setItem(key: string, value: string): void };
@@ -8,8 +8,8 @@ type Ledger = { version: 1; balance: number; open: string[]; day?: string };
 
 const count = (value: unknown) => Number.isInteger(value) && (value as number) >= 0;
 
-function restore(raw: string | null): Ledger {
-  if (raw === null) return { version: 1, balance: FREE_BUILDS, open: [] };
+function restore(raw: string | null, initial: number): Ledger {
+  if (raw === null) return { version: 1, balance: initial, open: [] };
   const value = JSON.parse(raw);
   if (value?.version !== 1 || !count(value.balance) || !Array.isArray(value.open)
     || value.open.some((id: unknown) => typeof id !== 'string')
@@ -18,9 +18,10 @@ function restore(raw: string | null): Ledger {
 }
 
 /** Build tickets: each new image costs one. Every call re-reads storage, so a second tab sees a spend at once. */
-export function buildTickets(storage: Storage, key = STORAGE_KEY) {
-  const read = () => restore(storage.getItem(key));
-  // The first launch writes the free build down, so a later launch reads it instead of granting another.
+export function buildTickets(storage: Storage, key = STORAGE_KEY, initial = FREE_BUILDS) {
+  if (!count(initial)) throw Error('Invalid initial ticket allowance');
+  const read = () => restore(storage.getItem(key), initial);
+  // Persist the initial allowance once; existing ledgers retain their balance and pending requests.
   const write = (ledger: Ledger) => storage.setItem(key, JSON.stringify(ledger));
   write(read());
   return {
