@@ -6,7 +6,7 @@ import { displayName } from './invite-contract';
 import type { Guest, Invitation } from './invite-contract';
 import { next, type VisitState } from './visit-model';
 import { invitationFile, shareFile, downloadFile } from './share';
-import { linkShareActions, type LinkPorts } from './link-actions';
+import { hostedLinks, linkShareActions, type LinkPorts } from './link-actions';
 import { loadLinkGuest } from './link-open';
 import { LinkError } from './link-client';
 import { removalActions as removeGuestActions, type Session } from './view-removal';
@@ -15,23 +15,27 @@ type Actions = { welcome(guest: Guest): Promise<boolean>; remove(id: string): Pr
 function shareActions(ui: ReturnType<typeof visitChrome>, item: Invitation, current: () => boolean, download: (file: File) => void, links?: LinkPorts) {
   let name: string;
   try { name = displayName(item.name); } catch { ui.status.textContent = COPY.inviteName; return; }
-  if (links) linkShareActions(ui, { ...item, name }, links, current);
+  // Without a human check (no Turnstile site key in the build) links are not offered and the file buttons stay the main route.
+  const hosted = hostedLinks(links);
+  if (hosted) linkShareActions(ui, { ...item, name }, hosted, current);
   const file = invitationFile({ ...item, name });
   // With links on, the file route is the quieter second choice under the link buttons.
-  const add = (label: string, action: () => void, primary = false) => links ? ui.fileButton(label, action) : ui.button(label, action, primary);
-  add(links ? COPY.shareFile : COPY.share, () => {
+  const add = (label: string, action: () => void, primary = false) => hosted ? ui.fileButton(label, action) : ui.button(label, action, primary);
+  add(hosted ? COPY.shareFile : COPY.share, () => {
     ui.busy(true);
     void shareFile(file, navigator, download).then(result => {
       if (current()) ui.status.textContent = result === 'failed' ? COPY.shareFailed : COPY[result];
     }).finally(() => { if (current()) ui.busy(false); });
   }, true);
-  add(links ? COPY.downloadFile : COPY.download, () => { download(file); ui.status.textContent = COPY.downloaded; });
+  add(hosted ? COPY.downloadFile : COPY.download, () => { download(file); ui.status.textContent = COPY.downloaded; });
 }
 // A link that failed for a passing reason (offline, busy server) can be tried again; an ended one cannot.
 const RETRYABLE: readonly string[] = ['offline', 'unavailable', 'rate-limited'];
 const retryable = (error: unknown) => error instanceof LinkError && RETRYABLE.includes(error.kind);
 export function visitViewer(actions: Actions, links?: LinkPorts) {
   const ui = visitChrome();
+  // A visible Turnstile challenge must sit inside this dialog: the dialog is modal, so the page behind it is inert.
+  if (links?.challenge) ui.body.append(links.challenge);
   const downloads = new Set<() => void>(); const download = (file: File) => { downloads.add(downloadFile(file)); }; let state: VisitState = 'closed', generation = 0;
   const close = () => { if (state !== 'welcoming') ui.dialog.close(); };
   ui.dialog.addEventListener('close', () => { generation++; state = next(state, 'close'); ui.image.removeAttribute('src'); });

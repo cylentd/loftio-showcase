@@ -37,6 +37,8 @@
 .visit-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); width: 100%; max-width: var(--visit-link-width); margin-inline: auto; }
 .visit-body p { text-wrap: balance; }
 .visit-actions .world-button { flex: 1; min-height: var(--tap-min); }
+/* Turnstile host: empty and invisible until Cloudflare needs a visible challenge, then centred under the message */
+.visit-challenge { display: flex; justify-content: center; }
 /* The file route: a quiet second choice, text-weight buttons with no pill */
 .visit-files { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: var(--space-3); }
 .visit-files[hidden] { display: none; }

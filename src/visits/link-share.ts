@@ -12,10 +12,10 @@ export function prepareUpload(item: Invitation): Promise<Invitation | null> {
 }
 
 /** The click-time step: upload the prepared invitation and return the link. No fit is a failure that points to the file. */
-export async function publishLink(prepared: Promise<Invitation | null>, fetchFn: LinkFetch, origin: string) {
+export async function publishLink(prepared: Promise<Invitation | null>, fetchFn: LinkFetch, origin: string, token?: string) {
   const upload = await prepared.catch(() => null);
   if (!upload) throw new LinkError('no-fit');
-  return createLink(upload, fetchFn, origin);
+  return createLink(upload, fetchFn, origin, token);
 }
 
 export async function copyLink(link: string, clipboard: ClipboardPort | undefined): Promise<'copied' | 'unavailable' | 'failed'> {

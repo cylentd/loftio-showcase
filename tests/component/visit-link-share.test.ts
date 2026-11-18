@@ -61,6 +61,6 @@ test('native share sends the link and name; unsupported, cancelled and failed ar
   assert.equal(await shareLinkNative('https://x', 'Puff', { share: async () => { throw new DOMException('x', 'NotAllowedError'); } }), 'failed');
 });
 
-test('the privacy line says anyone with the link can see the resident until the date, and lives in copy', () => {
-  assert.match(LINK_COPY.privacy, /Anyone with the link can see \{name\} until \{date\}/);
+test('the privacy line says anyone with the link can see the resident until the stop time, and lives in copy', () => {
+  assert.match(LINK_COPY.privacy, /Anyone with the link can see \{name\} for \{lifetime\}, until \{time\}/);
 });

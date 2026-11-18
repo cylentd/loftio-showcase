@@ -1,15 +1,22 @@
-// Hosted-link copy. {name} and {date} are filled by the caller; the failure keys equal LinkFailure in link-client.ts.
+import { LINK_TTL_SECONDS, SECONDS_PER_HOUR } from './constants';
+
+// Hosted-link copy. {name}, {lifetime} and {time} are filled by the caller; the failure keys equal LinkFailure in link-client.ts.
+// The lifetime is LINK_TTL_SECONDS, the same number the server expires links with, shown in whole hours ("1 hour").
+const HOURS = LINK_TTL_SECONDS / SECONDS_PER_HOUR;
+export const LINK_LIFETIME = `${HOURS} ${HOURS === 1 ? 'hour' : 'hours'}`;
 export const LINK_COPY = {
-  create: 'Create link', creating: 'Making your link…', ready: 'Your link is ready to send.',
+  create: 'Create link', creating: 'Making your link…', checking: 'Checking that you are a person…',
+  ready: `Your link is ready to send. It works for ${LINK_LIFETIME}.`,
   field: 'Invitation link',
   copy: 'Copy link', copied: 'Copied. Paste it to your friend.', copyUnavailable: 'Copying is not available here. The link is selected: copy it from the box.',
   copyFailed: 'The link could not be copied. It is selected: copy it from the box.',
   share: 'Share link', shared: 'Link handed to your share app.', cancelled: 'Sharing cancelled.',
   shareFailed: 'Sharing was unavailable. Copy the link instead.',
-  privacy: 'Anyone with the link can see {name} until {date}. Nothing else from your loft is shared.',
-  'not-found': 'This invitation is no longer available. Invitations last a week; ask your friend for a fresh link.',
+  privacy: 'Anyone with the link can see {name} for {lifetime}, until {time}. Nothing else from your loft is shared.',
+  'not-found': `This invitation is no longer available. Links last ${LINK_LIFETIME}; ask your friend to send a new one.`,
   offline: 'You seem to be offline. Your loft has not changed. Try the link again when you are back online.',
-  'rate-limited': 'Too many invitation links right now. Try again later, or use the file below.',
+  'rate-limited': 'Too many links were made just now. Try again shortly, or use the file below.',
+  'human-check': 'We could not confirm you are a person, so no link was made. Try again, or use the file below.',
   unavailable: 'Invitation links are unavailable right now. You can use the file below instead.',
   'too-large': 'This portrait is too large for a link. You can use the file below instead.',
   invalid: 'This resident cannot be shared as a link. You can use the file below instead.',

@@ -1,11 +1,11 @@
-import { LINK_ENDPOINT, LINK_PARAM, LINK_CODE } from './constants';
+import { LINK_ENDPOINT, LINK_PARAM, LINK_CODE, TURNSTILE_HEADER } from './constants';
 import { LINK_COPY } from './copy';
 import { parseInvitation, type Invitation } from './invite-contract';
 
 /** The slice of `fetch` the client uses, so tests and callers inject their own. */
 export type LinkFetch = (url: string, init?: RequestInit) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
-export type LinkFailure = 'not-found' | 'invalid' | 'too-large' | 'rate-limited' | 'unavailable' | 'offline' | 'no-fit';
-const SERVER_SLUGS: readonly string[] = ['not-found', 'invalid', 'too-large', 'rate-limited', 'unavailable'];
+export type LinkFailure = 'not-found' | 'invalid' | 'too-large' | 'rate-limited' | 'unavailable' | 'offline' | 'no-fit' | 'human-check';
+const SERVER_SLUGS: readonly string[] = ['not-found', 'invalid', 'too-large', 'rate-limited', 'unavailable', 'human-check'];
 
 /** A failure with a fixed, visible message. `kind` is what the caller branches on. */
 export class LinkError extends Error {
@@ -22,10 +22,12 @@ async function send(fetchFn: LinkFetch, url: string, init?: RequestInit) {
   throw new LinkError(typeof slug === 'string' && SERVER_SLUGS.includes(slug) ? slug as LinkFailure : 'unavailable');
 }
 
-/** POST the invitation; returns the link a sender shares and when it stops working. */
-export async function createLink(invitation: Invitation, fetchFn: LinkFetch, origin: string) {
+/** POST the invitation with a fresh Turnstile token; returns the link a sender shares and when the server says it stops working. */
+export async function createLink(invitation: Invitation, fetchFn: LinkFetch, origin: string, token?: string) {
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (token) headers[TURNSTILE_HEADER] = token;
   const body = await send(fetchFn, LINK_ENDPOINT, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(invitation),
+    method: 'POST', headers, body: JSON.stringify(invitation),
     credentials: 'omit', redirect: 'error',
   }) as { code?: unknown; expiresAt?: unknown } | undefined;
   const expiresAt = new Date(typeof body?.expiresAt === 'string' ? body.expiresAt : NaN);

@@ -15,6 +15,12 @@ export const FILE_NAME = 'loftio-invitation.loftio-visit';
 export const LINK_ENDPOINT = '/loftio-visit-api/invitations';
 export const LINK_PARAM = 'visit';
 export const LINK_FLAG = 'online';
+// A link lasts 1 hour (owner, 2026-11-18: 10 minutes was too short, 1 hour is the middle). The one place the number lives: the
+// server's Redis expiry is this, and the client's copy shows it as hours.
+export const SECONDS_PER_HOUR = 60 * 60;
+export const LINK_TTL_SECONDS = SECONDS_PER_HOUR;
+// Request header that carries the sender's Turnstile token on a create (docs/architecture/ICD.md).
+export const TURNSTILE_HEADER = 'x-loftio-turnstile';
 // The server issues 22 base64url characters (16 random bytes).
 export const LINK_CODE = /^[A-Za-z0-9_-]{22}$/;
 // Server cap: 160 KiB decoded PNG (server/constants.ts has the storage math; a test pins the two equal).

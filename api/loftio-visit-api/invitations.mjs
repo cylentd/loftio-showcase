@@ -1,5 +1,5 @@
 // game/src/builder/server/online-config.ts
-var CAP_KEY_TTL_SECONDS = 172800;
+var TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 var ENV = {
 	openaiKey: "OPENAI_API_KEY",
 	model: "LOFTIO_IMAGE_MODEL",
@@ -11,88 +11,6 @@ var ENV = {
 	turnstileSecret: "TURNSTILE_SECRET_KEY",
 	visitorSalt: "LOFTIO_VISITOR_SALT"
 };
-// game/src/builder/utc-day.ts
-var DAY_LENGTH = 10;
-/** The UTC calendar day a daily allowance or cap counts against, as "YYYY-MM-DD". */
-var utcDay = (date) => date.toISOString().slice(0, DAY_LENGTH);
-// game/src/builder/server/caps.ts
-var BUILDER_KEY_PREFIX = "loftio:caps";
-function createCaps({ store, now, globalCap = 25, visitorCap = 3, keyPrefix = BUILDER_KEY_PREFIX }) {
-	async function bump(key) {
-		const count = await store.incr(key, CAP_KEY_TTL_SECONDS);
-		if (!Number.isInteger(count) || count < 1) throw new Error(`Cap store returned an invalid count: ${count}`);
-		return count;
-	}
-	async function reserve(visitorKey) {
-		const day = utcDay(now());
-		const globalKey = `${keyPrefix}:${day}:global`;
-		const visitorCounter = `${keyPrefix}:${day}:visitor:${visitorKey}`;
-		if (await bump(visitorCounter) > visitorCap) {
-			await store.decr(visitorCounter);
-			return {
-				ok: false,
-				reason: "visitor"
-			};
-		}
-		if (await bump(globalKey) > globalCap) {
-			await store.decr(globalKey);
-			await store.decr(visitorCounter);
-			return {
-				ok: false,
-				reason: "global"
-			};
-		}
-		let released = false;
-		return {
-			ok: true,
-			async release() {
-				if (released) return;
-				released = true;
-				await store.decr(visitorCounter);
-				await store.decr(globalKey);
-			}
-		};
-	}
-	return { reserve };
-}
-function upstashPipeline({ url, token, fetcher = fetch }) {
-	const scrub = (text) => text.split(token).join("[redacted]");
-	return async (commands) => {
-		const response = await fetcher(`${url}/pipeline`, {
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${token}`,
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify(commands)
-		});
-		if (!response.ok) throw new Error(`Upstash request failed with status ${response.status}`);
-		const entries = await response.json();
-		const failed = entries.find((entry) => entry.error !== void 0);
-		if (failed) throw new Error(scrub(`Upstash command failed: ${failed.error}`));
-		return entries;
-	};
-}
-function upstashStore(options) {
-	const pipeline = upstashPipeline(options);
-	function count(entries) {
-		const result = entries[0]?.result;
-		if (typeof result !== "number" || !Number.isInteger(result)) throw new Error("Upstash returned no integer count");
-		return result;
-	}
-	return {
-		async incr(key, ttlSeconds) {
-			return count(await pipeline([["INCR", key], [
-				"EXPIRE",
-				key,
-				String(ttlSeconds)
-			]]));
-		},
-		async decr(key) {
-			return count(await pipeline([["DECR", key]]));
-		}
-	};
-}
 // game/src/builder/copy.ts
 var COPY$1 = {
 	title: "Meet a new resident",
@@ -161,7 +79,40 @@ async function visitorKeyFor(ip, salt) {
 	const digest = await crypto.subtle.digest("SHA-256", bytes);
 	return Array.from(new Uint8Array(digest), (byte) => byte.toString(HEX_RADIX).padStart(2, "0")).join("");
 }
-var INVITATION_TTL_SECONDS = 604800;
+// game/src/builder/server/turnstile-verify.ts
+var TURNSTILE_TOKEN_MAX_LENGTH = 2048;
+function turnstileVerifier(options) {
+	const { secret, fetcher = fetch, expectedHostname } = options;
+	return async (token, ip) => {
+		if (typeof token !== "string" || token === "" || token.length > TURNSTILE_TOKEN_MAX_LENGTH) return false;
+		try {
+			const body = {
+				secret,
+				response: token
+			};
+			if (ip !== null) body.remoteip = ip;
+			const res = await fetcher(TURNSTILE_VERIFY_URL, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body)
+			});
+			if (!res.ok) return false;
+			const verdict = await res.json();
+			if (verdict?.success !== true) return false;
+			return expectedHostname === void 0 || verdict.hostname === expectedHostname;
+		} catch {
+			return false;
+		}
+	};
+}
+// game/src/visits/constants.ts
+var BASE64_TEXT = /^[A-Za-z0-9+/]*={0,2}$/;
+var ANCILLARY_CHUNK_NAME = /^[a-z][A-Za-z]{3}$/;
+var KIND = "loftio-visit";
+var SECONDS_PER_HOUR = 3600;
+var LINK_TTL_SECONDS = SECONDS_PER_HOUR;
+var TURNSTILE_HEADER = "x-loftio-turnstile";
+var INVITATION_TTL_SECONDS = LINK_TTL_SECONDS;
 var MS_PER_SECOND = 1e3;
 var CODE_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 Math.ceil(163840 / 3) * 4;
@@ -175,31 +126,65 @@ var PNG_SIGNATURE = [
 	26,
 	10
 ];
+Math.ceil(INVITATION_TTL_SECONDS / 600) + 1;
+var WINDOW_KEY_TTL_SECONDS = 1200;
+var DAY_KEY_TTL_SECONDS = 172800;
 var CAP_KEY_PREFIX = "loftio:visit-links:caps";
 var INVITATION_KEY_PREFIX = "loftio:visit-links:invitation";
 var HTTP = {
 	ok: 200,
 	created: 201,
 	badRequest: 400,
+	forbidden: 403,
 	notFound: 404,
 	methodNotAllowed: 405,
 	tooLarge: 413,
 	tooMany: 429,
 	unavailable: 503
 };
+// game/src/visits/server/counters.ts
+function upstashCounters({ url, token, fetcher = fetch }) {
+	const scrub = (text) => text.split(token).join("[redacted]");
+	async function transact(key, command, ttlSeconds) {
+		const response = await fetcher(`${url}/multi-exec`, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify([[
+				"SET",
+				key,
+				"0",
+				"EX",
+				String(ttlSeconds),
+				"NX"
+			], [command, key]])
+		});
+		if (!response.ok) throw new Error(`Upstash request failed with status ${response.status}`);
+		const reply = await response.json();
+		if (!Array.isArray(reply)) throw new Error(scrub(`Upstash transaction failed: ${reply?.error}`));
+		const failed = reply.find((entry) => entry.error !== void 0);
+		if (failed) throw new Error(scrub(`Upstash command failed: ${failed.error}`));
+		const count = reply[1]?.result;
+		if (typeof count !== "number" || !Number.isInteger(count)) throw new Error("Upstash returned no integer count");
+		return count;
+	}
+	return {
+		incr: (key, ttlSeconds) => transact(key, "INCR", ttlSeconds),
+		decr: (key, ttlSeconds) => transact(key, "DECR", ttlSeconds)
+	};
+}
 // game/src/visits/server/copy.ts
 var ERROR = {
 	invalid: "invalid",
 	tooLarge: "too-large",
 	rateLimited: "rate-limited",
+	humanCheck: "human-check",
 	unavailable: "unavailable",
 	notFound: "not-found",
 	method: "method-not-allowed"
 };
-// game/src/visits/constants.ts
-var BASE64_TEXT = /^[A-Za-z0-9+/]*={0,2}$/;
-var ANCILLARY_CHUNK_NAME = /^[a-z][A-Za-z]{3}$/;
-var KIND = "loftio-visit";
 // game/src/builder/png.ts
 var SIGNATURE = [
 	137,
@@ -261,6 +246,9 @@ function crc32(bytes) {
 	return (crc ^ 4294967295) >>> 0;
 }
 // game/src/visits/copy.ts
+var HOURS = LINK_TTL_SECONDS / SECONDS_PER_HOUR;
+var LINK_LIFETIME = `${HOURS} ${HOURS === 1 ? "hour" : "hours"}`;
+`${LINK_LIFETIME}`, `${LINK_LIFETIME}`;
 var COPY = {
 	inviteName: "You can view this resident, but this name cannot be used on an invitation.",
 	partial: "Some guests could not appear in the room. You can still end their visits here.",
@@ -363,6 +351,73 @@ function cleanPng(bytes) {
 	}, 0);
 	return out;
 }
+// game/src/builder/utc-day.ts
+var DAY_LENGTH = 10;
+/** The UTC calendar day a daily allowance or cap counts against, as "YYYY-MM-DD". */
+var utcDay = (date) => date.toISOString().slice(0, DAY_LENGTH);
+// game/src/visits/server/visit-caps.ts
+/** The fixed window a moment falls in: whole windows since the Unix epoch. */
+var windowIndex = (at) => Math.floor(at.getTime() / MS_PER_SECOND / 600);
+function createVisitCaps(options) {
+	const { counters, now, visitorWindowCap = 5, visitorDailyCap = 20, globalWindowCap = 50 } = options;
+	const giveBack = (slots) => Promise.allSettled(slots.map((slot) => counters.decr(slot.key, slot.ttl)));
+	async function bump(slot) {
+		const count = await counters.incr(slot.key, slot.ttl);
+		if (!Number.isInteger(count) || count < 1) throw new Error(`Cap store returned an invalid count: ${count}`);
+		return count;
+	}
+	async function reserve(visitorKey) {
+		const at = now();
+		const window = windowIndex(at);
+		const slots = [
+			{
+				key: `${CAP_KEY_PREFIX}:window:${window}:visitor:${visitorKey}`,
+				ttl: WINDOW_KEY_TTL_SECONDS,
+				cap: visitorWindowCap,
+				reason: "visitor"
+			},
+			{
+				key: `${CAP_KEY_PREFIX}:day:${utcDay(at)}:visitor:${visitorKey}`,
+				ttl: DAY_KEY_TTL_SECONDS,
+				cap: visitorDailyCap,
+				reason: "visitor"
+			},
+			{
+				key: `${CAP_KEY_PREFIX}:window:${window}:global`,
+				ttl: WINDOW_KEY_TTL_SECONDS,
+				cap: globalWindowCap,
+				reason: "global"
+			}
+		];
+		const taken = [];
+		try {
+			for (const slot of slots) {
+				const count = await bump(slot);
+				taken.push(slot);
+				if (count > slot.cap) {
+					await giveBack(taken);
+					return {
+						ok: false,
+						reason: slot.reason
+					};
+				}
+			}
+		} catch (error) {
+			await giveBack(taken);
+			throw error;
+		}
+		let released = false;
+		return {
+			ok: true,
+			async release() {
+				if (released) return;
+				released = true;
+				await giveBack(taken);
+			}
+		};
+	}
+	return { reserve };
+}
 // game/src/visits/server/handler.ts
 var respond = (status, body) => Response.json(body, {
 	status,
@@ -416,17 +471,28 @@ function checkInvitation(text) {
 	return decodedLength(invitation.png) > 163840 ? tooLarge : { invitation };
 }
 function createVisitHandler(options) {
-	const { store, now, visitorKey, newCode = randomCode } = options;
-	const caps = createCaps({
-		store: options.counters,
+	const { store, now, visitorKey, verifyHuman, newCode = randomCode } = options;
+	const caps = createVisitCaps({
+		counters: options.counters,
 		now,
-		keyPrefix: CAP_KEY_PREFIX,
-		visitorCap: options.visitorCap ?? 5,
-		globalCap: options.globalCap ?? 60
+		visitorWindowCap: options.visitorWindowCap,
+		visitorDailyCap: options.visitorDailyCap,
+		globalWindowCap: options.globalWindowCap
 	});
+	async function isHuman(request) {
+		const token = request.headers.get(TURNSTILE_HEADER);
+		if (!token) return false;
+		try {
+			return Boolean(await verifyHuman(token, clientIp(request)));
+		} catch {
+			return false;
+		}
+	}
 	async function create(request) {
+		if (Number(request.headers.get("content-length")) > 219480) return fail(HTTP.tooLarge, ERROR.tooLarge);
 		const checked = checkInvitation(await request.text());
 		if ("error" in checked) return fail(checked.status, checked.error);
+		if (!await isHuman(request)) return fail(HTTP.forbidden, ERROR.humanCheck);
 		let reservation;
 		try {
 			reservation = await caps.reserve(await visitorKey(clientIp(request)));
@@ -469,6 +535,25 @@ function createVisitHandler(options) {
 		return fail(HTTP.methodNotAllowed, ERROR.method);
 	};
 }
+// game/src/builder/server/caps.ts
+function upstashPipeline({ url, token, fetcher = fetch }) {
+	const scrub = (text) => text.split(token).join("[redacted]");
+	return async (commands) => {
+		const response = await fetcher(`${url}/pipeline`, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(commands)
+		});
+		if (!response.ok) throw new Error(`Upstash request failed with status ${response.status}`);
+		const entries = await response.json();
+		const failed = entries.find((entry) => entry.error !== void 0);
+		if (failed) throw new Error(scrub(`Upstash command failed: ${failed.error}`));
+		return entries;
+	};
+}
 // game/src/visits/server/store.ts
 var keyFor = (code) => `${INVITATION_KEY_PREFIX}:${code}`;
 function upstashInvitationStore(options) {
@@ -496,7 +581,8 @@ var nodeProcess = globalThis.process;
 var REQUIRED_ENV = [
 	ENV.redisUrl,
 	ENV.redisToken,
-	ENV.visitorSalt
+	ENV.visitorSalt,
+	ENV.turnstileSecret
 ];
 var unconfigured = () => Response.json({ error: ERROR.unavailable }, {
 	status: HTTP.unavailable,
@@ -519,7 +605,11 @@ function createVisitVercelHandler(given) {
 	const salt = env[ENV.visitorSalt];
 	return createVisitHandler({
 		store: upstashInvitationStore(redis),
-		counters: upstashStore(redis),
+		counters: upstashCounters(redis),
+		verifyHuman: turnstileVerifier({
+			secret: env[ENV.turnstileSecret],
+			fetcher: liveFetch
+		}),
 		visitorKey: (ip) => visitorKeyFor(ip, salt),
 		now: () => /* @__PURE__ */ new Date()
 	});

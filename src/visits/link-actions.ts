@@ -1,16 +1,25 @@
 import type { visitChrome } from './view-parts';
-import { LINK_COPY } from './copy';
+import { turnstileTokens } from '../builder/turnstile-client';
+import { LINK_COPY, LINK_LIFETIME } from './copy';
 import type { Invitation } from './invite-contract';
-import type { LinkFetch } from './link-client';
+import { LinkError, type LinkFetch } from './link-client';
 import { prepareUpload, publishLink, copyLink, shareLinkNative, type ClipboardPort, type LinkSharePort } from './link-share';
 
 type Chrome = ReturnType<typeof visitChrome>;
-/** Everything the link flow needs from the browser, injected so the flow has no globals. */
-export type LinkPorts = { fetch: LinkFetch; origin: string; clipboard?: ClipboardPort; share: LinkSharePort };
+/** Everything the link flow needs from the browser, injected so the flow has no globals.
+ *  getToken: a fresh single-use Turnstile token per call; absent when the build has no site key, and then Create link is not offered.
+ *  challenge: where a visible Turnstile challenge shows; the viewer puts it inside its dialog, since the rest of the page is inert. */
+export type LinkPorts = { fetch: LinkFetch; origin: string; clipboard?: ClipboardPort; share: LinkSharePort;
+  getToken?: () => Promise<string>; challenge?: HTMLElement };
 
-export function linkPorts(): LinkPorts {
-  return { fetch: (url, init) => fetch(url, init), origin: location.origin, clipboard: navigator.clipboard, share: navigator };
+export function linkPorts(siteKey: string | undefined): LinkPorts {
+  const challenge = document.createElement('div'); challenge.className = 'visit-challenge';
+  return { fetch: (url, init) => fetch(url, init), origin: location.origin, clipboard: navigator.clipboard, share: navigator, challenge,
+    getToken: siteKey ? turnstileTokens({ siteKey, host: () => challenge }) : undefined };
 }
+
+/** The ports to make links with, or nothing when there is no human check: friends can still open a link, owners get the file flow only. */
+export const hostedLinks = (ports?: LinkPorts) => ports?.getToken ? ports : undefined;
 
 const fill = (text: string, values: Record<string, string>) => text.replace(/\{(\w+)\}/g, (_all, key: string) => values[key] ?? '');
 const failure = (error: unknown) => error instanceof Error ? error.message : LINK_COPY.unavailable;
@@ -34,16 +43,27 @@ function resultActions(ui: Chrome, link: string, name: string, ports: LinkPorts,
   });
 }
 
-/** Adds Create link. The portrait is downsized before the click; the upload happens on it. The file buttons stay. */
+/** Adds Create link. The portrait is downsized before the click; the check and the upload happen on it, each attempt with its own
+ *  fresh token (a used token is spent even when a cap then refuses). The file buttons stay. Does nothing without a human check. */
 export function linkShareActions(ui: Chrome, item: Invitation, ports: LinkPorts, current: () => boolean) {
+  const getToken = ports.getToken;
+  if (!getToken) return;
   const prepared = prepareUpload(item);
-  const create = ui.button(LINK_COPY.create, () => {
+  async function attempt() {
+    let token: string;
+    try { token = await getToken!(); } catch { throw new LinkError('human-check'); }
+    if (!current()) throw new Error('closed'); // the dialog went away during the check: send nothing
     ui.busy(true); ui.status.textContent = LINK_COPY.creating;
-    void publishLink(prepared, ports.fetch, ports.origin).then(made => {
+    return publishLink(prepared, ports.fetch, ports.origin, token);
+  }
+  const create = ui.button(LINK_COPY.create, () => {
+    create.disabled = true; ui.status.textContent = LINK_COPY.checking;
+    void attempt().then(made => {
       if (!current()) return;
       create.remove();
-      const date = made.expiresAt.toLocaleDateString(undefined, { dateStyle: 'medium' });
-      ui.showLink(made.link, fill(LINK_COPY.privacy, { name: item.name, date }));
+      // The stop time is the server's expiresAt, never the device clock plus a guess.
+      const time = made.expiresAt.toLocaleTimeString(undefined, { timeStyle: 'short' });
+      ui.showLink(made.link, fill(LINK_COPY.privacy, { name: item.name, lifetime: LINK_LIFETIME, time }));
       ui.status.textContent = LINK_COPY.ready;
       resultActions(ui, made.link, item.name, ports, current);
 

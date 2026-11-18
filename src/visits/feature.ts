@@ -20,7 +20,7 @@ function makeVisits({ hosted = false } = {}) {
   const install = (room: Room) => {
     const hooks = room.residents; if (!hooks?.extension || hooks.preview) return;
     // Hosted links exist only in a build with VITE_VISIT_LINKS=online or an installer made with `hosted`. The link in the address bar is read once, here.
-    const links = linksEnabled(import.meta.env.VITE_VISIT_LINKS, hosted) ? linkPorts() : undefined;
+    const links = linksEnabled(import.meta.env.VITE_VISIT_LINKS, hosted) ? linkPorts(import.meta.env.VITE_TURNSTILE_SITE_KEY) : undefined;
     const code = takeVisitCode(!!links, location, history);
     const store = guestStore();
     const scene = guestScene(room, (guest, trigger) => { void viewer?.guest(guest, trigger); });

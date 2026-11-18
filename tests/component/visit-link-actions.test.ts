@@ -36,7 +36,7 @@ function fakeDialog() {
 }
 
 const ports = (fetchFn: LinkFetch, writeText?: (text: string) => Promise<void>): LinkPorts =>
-  ({ fetch: fetchFn, origin: ORIGIN, clipboard: writeText ? { writeText } : undefined, share: {} });
+  ({ fetch: fetchFn, origin: ORIGIN, clipboard: writeText ? { writeText } : undefined, share: {}, getToken: async () => 'token' });
 const created: LinkFetch = async () => ({ ok: true, json: async () => ({ code: CODE, expiresAt: '2026-11-25T10:00:00.000Z' }) });
 const settle = () => new Promise(resolve => setImmediate(resolve)); // one macrotask lets the click handler's promises finish
 
@@ -45,7 +45,7 @@ test('a ready link fills the link field with the privacy note, and Copy link rep
   linkShareActions(d.ui as never, item, ports(created), () => true);
   d.press(LINK_COPY.create); await settle();
   assert.equal(d.shown.link, `${ORIGIN}/?visit=${CODE}`);
-  assert.match(d.shown.note, /^Anyone with the link can see Puff until .+2026\./);
+  assert.match(d.shown.note, /^Anyone with the link can see Puff for \d+ hours?, until .+\./);
   assert.deepEqual(d.live(), ['*' + LINK_COPY.copy]);
   assert.equal(d.ui.status.textContent, LINK_COPY.ready);
 });
