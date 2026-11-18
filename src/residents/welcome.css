@@ -1,0 +1,34 @@
+@import './welcome-tokens.css';
+
+.world-drawer.welcome-card {
+  inset: 0; margin: auto; box-sizing: border-box;
+  width: min(var(--welcome-width), calc(100vw - var(--space-5) * 2));
+  max-width: none; height: fit-content; max-height: calc(100dvh - var(--welcome-gap));
+  padding: var(--space-5); border-radius: var(--world-radius);
+  border-width: var(--world-lip); border-color: var(--paper-edge); overflow: auto;
+}
+.welcome-card::backdrop { background: var(--welcome-scrim); }
+.welcome-card > .world-header { padding: 0; display: block; text-align: center; }
+.welcome-card > .world-header h2 {
+  font-size: var(--welcome-title); font-weight: var(--welcome-title-weight);
+  line-height: var(--welcome-title-leading); text-wrap: balance;
+}
+.welcome-card > .world-header .world-close {
+  /* 12 px inside the content box, which starts at the card padding (standards L2, L3). The art does not move. */
+  position: absolute; top: calc(var(--space-5) + var(--space-3)); right: calc(var(--space-5) + var(--space-3));
+  color: var(--world-muted); background: transparent; border-color: transparent; box-shadow: none;
+}
+.welcome-card .world-content { flex: 1; }
+.welcome-card p { margin: 0; font-size: var(--text-base); line-height: var(--welcome-leading); text-align: center; }
+.welcome-tickets { position: relative; flex-shrink: 0; pointer-events: none; padding-top: var(--space-5); }
+.welcome-hero { display: block; width: 100%; height: auto; }
+.welcome-actions { display: grid; gap: var(--space-3); padding-top: var(--space-3); flex-shrink: 0; }
+.welcome-card .world-button { font-size: var(--text-base); }
+.welcome-actions .world-primary { border-radius: var(--welcome-button-radius); box-shadow: none; font-weight: var(--welcome-button-weight); }
+.welcome-actions .world-button:not(.world-primary) {
+  background: transparent; border-color: transparent; box-shadow: none;
+  color: var(--world-muted); text-decoration: underline; text-underline-offset: var(--space-1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-card .world-button { transition: none; }
+}

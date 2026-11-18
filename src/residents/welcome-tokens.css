@@ -1,0 +1,11 @@
+:root {
+  --welcome-width: 420px; /* Standard drawer width; a compact card leaves the loft visible. */
+  --welcome-gap: 48px; /* Standards L4, viewport clearance. */
+  --welcome-title: 1.75rem;
+  --welcome-leading: 1.5;
+  --welcome-title-weight: 400;
+  --welcome-title-leading: 1.2;
+  --welcome-button-radius: 12px;
+  --welcome-button-weight: 600;
+  --welcome-scrim: rgb(28 15 10 / 0.12);
+}
