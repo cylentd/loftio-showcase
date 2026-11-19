@@ -31,7 +31,7 @@ export function dressValley(o) {
   const clearOf = (x, z) => { const m = terrain.maskAt(x, z); return m.path < 0.05 && m.sand < 0.2 && m.wet < 0.05; };
 
   // ---- Lamps along every path: the valley's roads glow at dusk ----
-  const lamps = [];
+  const lamps = [], lampSpots = []; // lampSpots: ground positions, for the baked light map
   let side = 1;
   for (const line of LAND.paths) {
     for (let s = 0; s < line.length - 1; s++) {
@@ -41,6 +41,7 @@ export function dressValley(o) {
         const f = (k + 0.5) / n; side = -side;
         const x = ax + (bx - ax) * f + px * DRESS.lampOff * side, z = az + (bz - az) * f + pz * DRESS.lampOff * side, y = H(x, z);
         const yaw = Math.atan2(-px * side, -pz * side); // the arm reaches back over the path
+        lampSpots.push({ x, y, z });
         lamps.push(place(tint(cyl(0.07, 0.1, 3.3, 6), DARK), x, y + 1.65, z));
         lamps.push(place(tint(box(0.08, 0.08, 0.8), DARK), x + Math.sin(yaw) * 0.36, y + 3.25, z + Math.cos(yaw) * 0.36, 0, yaw));
         lamps.push(place(tint(new THREE.SphereGeometry(0.24, 10, 8), AMBER, 1), x + Math.sin(yaw) * 0.72, y + 2.92, z + Math.cos(yaw) * 0.72, 0, 0, 0, 1, 1.25, 1));
@@ -131,7 +132,7 @@ export function dressValley(o) {
   for (let k = 0; k < 3; k++) {
     bushParts.push(place(tint(blob(70 + k, 0.04, 1.6, 3), '#ffffff', 0, (c, _x, y) => c.set('#356954').lerp(new THREE.Color('#83a57c'), Math.min(Math.max(y * 0.6 + 0.5, 0), 1))), (k - 1) * 0.55, 0.5 + (k % 2) * 0.18, (k % 2) * 0.4 - 0.2, 0, k, 0, 0.72 - k * 0.08, 0.6, 0.7));
   }
-  scatter(instanced(scene, merge(bushParts), DRESS.bushes[tier], softMaterial({ sway: 0.4, leaf: .6, detailRange: 110 })), DRESS.bushes[tier], 175, (x, z) => woods(x, z) > 0.5 || R() < 0.18, () => 0.9 + R() * 1.2);
+  scatter(instanced(scene, merge(bushParts), DRESS.bushes[tier], softMaterial({ sway: 0.4, leaf: .6 }) /* no detailRange: bushes grew out of the ground 77 to 110 units ahead while walking (owner, 2026-11-17) */), DRESS.bushes[tier], 175, (x, z) => woods(x, z) > 0.5 || R() < 0.18, () => 0.9 + R() * 1.2);
 
   // (Ferns were removed 2026-11-17 with the other pointed plants.)
 
@@ -149,6 +150,7 @@ export function dressValley(o) {
 
   return {
     ramps,
+    lampSpots,
     /** The lake's lights drift slowly round and bob. */
     update(time) {
       floats.forEach((f, i) => {

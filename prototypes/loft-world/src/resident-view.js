@@ -5,6 +5,9 @@ import {RESIDENTS,POSES,ASSET_ROOT,RESIDENT_LOOK as LOOK,IDLE_FIT} from './resid
 import {TEAM} from './teamwork-constants.mjs';
 import {PLAY} from './play-constants.js';
 import {ANCHORS} from '../assets/residents/anchors.mjs';
+import {G} from './glsl.js';
+import {lightSprite,shadowMaterial} from './resident-light.js';
+import {shadowShape,shadowOffset} from './resident-light-model.mjs';
 
 const IDLE_ROOT=ASSET_ROOT;
 
@@ -12,19 +15,24 @@ export function createResidents(scene) {
   const loader=new THREE.TextureLoader();
   return RESIDENTS.map(name=>{
     const load=url=>{const tex=loader.load(url);tex.colorSpace=THREE.SRGBColorSpace;return tex;};
-    const textures=Object.fromEntries(POSES.map(pose=>[pose,load(`${ASSET_ROOT}${name}-${pose}.png`)]));
-    textures.idle=load(`${IDLE_ROOT}${name}-idle.png`);
+    const textures=Object.fromEntries(POSES.map(pose=>[pose,load(`${ASSET_ROOT}${name}-${pose}.webp`)]));
+    textures.idle=load(`${IDLE_ROOT}${name}-idle.webp`);
     // the fading-out copy needs its own picture settings, so it can face the old way while the new one faces the new way
     const ghostTextures=Object.fromEntries(Object.entries(textures).map(([pose,tex])=>[pose,tex.clone()]));
-    const mat=new THREE.SpriteMaterial({map:textures.idle,alphaTest:.35});
+    // both paintings take the scene's light; each one's feet height is a uniform the draw sets per frame
+    const mat=new THREE.SpriteMaterial({map:textures.idle});
+    const feet=lightSprite(mat);
     const sprite=new THREE.Sprite(mat);
     sprite.center.set(.5,1-TEAM.baseline/TEAM.frameSize);sprite.visible=false;scene.add(sprite);
     // the outgoing painting, drawn over the new one and faded away
-    const ghost=new THREE.Sprite(new THREE.SpriteMaterial({map:textures.idle,transparent:true,opacity:0,alphaTest:.02,depthWrite:false}));
+    const ghostMat=new THREE.SpriteMaterial({map:textures.idle,opacity:0,depthWrite:false});
+    const ghostFeet=lightSprite(ghostMat);ghostMat.alphaTest=.02;
+    const ghost=new THREE.Sprite(ghostMat);
     ghost.visible=false;ghost.renderOrder=3;scene.add(ghost);
-    const shadow=new THREE.Mesh(new THREE.CircleGeometry(1,24),new THREE.MeshBasicMaterial({color:'#160d2b',transparent:true,opacity:0,depthWrite:false}));
-    shadow.rotation.x=-Math.PI/2;shadow.visible=false;shadow.renderOrder=1;scene.add(shadow);
-    return {name,sprite,ghost,shadow,mat,textures,ghostTextures,shownFace:1,ghostFace:1,pose:'idle',pos:new THREE.Vector3(),vel:new THREE.Vector3(),walkVel:new THREE.Vector3(),
+    // drawn before every sprite so the painting blends over its own shadow; Euler order lets the pool turn about the ground's up
+    const shadow=new THREE.Mesh(new THREE.PlaneGeometry(2,2),shadowMaterial());
+    shadow.rotation.order='YXZ';shadow.rotation.x=-Math.PI/2;shadow.visible=false;shadow.renderOrder=-1;scene.add(shadow);
+    return {name,sprite,ghost,shadow,mat,feet,ghostFeet,textures,ghostTextures,shownFace:1,ghostFace:1,pose:'idle',pos:new THREE.Vector3(),vel:new THREE.Vector3(),walkVel:new THREE.Vector3(),
       walkSpeed:0,grounded:true,spin:0,squash:0,dive:0,isle:null,stride:0,face:1,offGround:9,hopped:false,dizzy:0,away:false,excited:0,turn:1,fade:0,swap:0};
   });
 }
@@ -101,26 +109,36 @@ export function drawResidents(bodies,camera,support,dt,reduced=false,flags={}) {
     }
     const width=reduced?1:LOOK.turnWidth+(1-LOOK.turnWidth)*Math.abs(b.turn),standing=b.grounded;
     lift+=standing&&!reduced?Math.sin(b.turnHop*Math.PI)*LOOK.turnHop:0;
-    const place=(sprite,poseName,face)=>{
+    const place=(sprite,poseName,face,feet)=>{
       const f=fit(b,poseName),size=PLAY.spriteSize*f.scale,map=sprite.material.map,mirrored=face<0;
+      feet.value=standing?f.anchor[1]:-1; // the grass closes round the feet only while it stands on them
       // Mirror by flipping the picture, not the sprite: a sprite ignores a negative width.
       map.repeat.x=mirrored?-1:1;map.offset.x=mirrored?1:0;
       sprite.material.rotation=b.spinShown;
       // spin about the middle of the body in the air, stand on the feet on the ground
       sprite.center.set(f.anchor[0],standing?f.anchor[1]:.5);
       sprite.scale.set(size/Math.sqrt(sq)*width,size*sq,1);
-      sprite.position.copy(b.pos).setY(b.pos.y+(standing?-PLAY.radius+lift:.15));
+      // on the ground the feet settle a little into the grass
+      sprite.position.copy(b.pos).setY(b.pos.y+(standing?-PLAY.radius+lift-LOOK.footSink*size:.15));
     };
-    place(b.sprite,b.pose,b.shownFace);
+    place(b.sprite,b.pose,b.shownFace,b.feet);
     b.ghost.visible=b.sprite.visible&&b.fade>0;
-    if(b.ghost.visible){b.ghost.material.opacity=b.fade*b.fade;place(b.ghost,b.ghostPose,b.ghostFace);}
-
-    // a soft round shadow on whatever is underneath: it shrinks and fades as the resident climbs
-    const floor=flags.floorAt?flags.floorAt(b.pos.x,b.pos.z,b.pos.y):b.pos.y-PLAY.radius;
-    const height=Math.max(b.pos.y-PLAY.radius-floor,0),near=1-Math.min(height/LOOK.shadowReach,1);
-    b.shadow.visible=b.sprite.visible&&near>0;
-    b.shadow.position.set(b.pos.x,floor+.07,b.pos.z);
-    b.shadow.scale.setScalar(PLAY.radius*(.55+.5*near));
-    b.shadow.material.opacity=LOOK.shadowOpacity*near*near;
+    if(b.ghost.visible){b.ghost.material.opacity=b.fade*b.fade;place(b.ghost,b.ghostPose,b.ghostFace,b.ghostFeet);}
+    drawShadow(b,flags);
   }
+}
+
+/** A soft pool on whatever is underneath: thrown away from the moon like the terrain's shadows, shrinking and fading as the resident climbs. */
+function drawShadow(b,flags) {
+  const under=flags.floorAt?flags.floorAt(b.pos.x,b.pos.z,b.pos.y):b.pos.y-PLAY.radius;
+  const shape=shadowShape(b.pos.y-PLAY.radius-under,LOOK),off=shadowOffset(G.uShadowDir.value,LOOK.shadowReachHeight,LOOK.shadowOffsetCap);
+  const radius=PLAY.radius*shape.scale,throwing=Math.hypot(off.x,off.z)>0;
+  const x=b.pos.x+off.x*shape.near,z=b.pos.z+off.z*shape.near;
+  // the pool lies on the ground where it falls, which on a slope is not the height under the feet
+  const floor=flags.floorAt?flags.floorAt(x,z,under+PLAY.radius):under;
+  b.shadow.visible=b.sprite.visible&&shape.near>0;
+  b.shadow.position.set(x,floor+LOOK.shadowLift,z);
+  b.shadow.rotation.y=throwing?Math.atan2(-off.z,off.x):0;
+  b.shadow.scale.set(radius*(throwing?LOOK.shadowStretch:1),radius,1);
+  b.shadow.material.uniforms.uOpacity.value=shape.opacity;
 }

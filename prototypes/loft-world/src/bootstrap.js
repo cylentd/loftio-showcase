@@ -1,10 +1,12 @@
 import { INITIAL_LOADING, nextLoading } from './loading-model.mjs';
 import { LOADING } from './loading-copy.mjs';
+import { openGate } from './intro-gate.js';
 
 const cover = document.querySelector('[data-world-loading]');
 const status = cover.querySelector('[role="status"]');
 const retry = cover.querySelector('[data-loading-retry]');
 const back = cover.querySelector('[data-loading-back]');
+const begin = cover.querySelector('[data-loading-begin]');
 cover.querySelector('h1').textContent = LOADING.title;
 status.textContent = LOADING.preparing;
 retry.textContent = LOADING.retry;
@@ -26,13 +28,17 @@ function send(event) {
     cover.dataset.failed = '';
     clearTimeout(timer);
   }
-  if (state.phase === 'ready') {
-    cover.remove();
-    clearTimeout(timer);
-    removeEventListener('error', fail);
-    removeEventListener('world-first-frame', rendered);
-    for (const type of ['pointerdown', 'keydown', 'wheel']) removeEventListener(type, block, true);
-  }
+  if (state.phase === 'ready') lift();
+}
+async function lift() {
+  clearTimeout(timer);
+  removeEventListener('error', fail);
+  removeEventListener('world-first-frame', rendered);
+  const gate = window.loftWorld.gate;
+  try { await openGate({ status, begin, gate }); } catch (error) { console.error(error); }
+  cover.remove();
+  for (const type of ['pointerdown', 'keydown', 'wheel']) removeEventListener(type, block, true);
+  gate.begin();
 }
 const fail = () => send('error');
 const rendered = () => { if (state.assets) send('frame'); };

@@ -7,6 +7,7 @@ const VILLAGES=[
   {name:'Moonwater',wall:'#9baeb3',roof:'#466b89',glow:'#b9e9de',tall:.75,homes:[[72,73,.85],[84,69,.7],[94,65,.6]]},
   {name:'Aurora camp',wall:'#b59b8d',roof:'#6a587d',glow:'#ffd8ac',tall:1.3,homes:[[-69,-36,.8],[-85,-37,.65],[-91,-22,.7]]},
 ];
+export const VILLAGE_HOMES=VILLAGES.flatMap((village)=>village.homes); // [x, z, scale] for every home: the woods keep clear of them
 const HOUSE={radius:2.8,height:3.4,roofRadius:3.3,segments:24,rings:16,window:.42,door:.72};
 function cottage(palette) {
   const parts=[], sphere=()=>new THREE.SphereGeometry(1,HOUSE.segments,HOUSE.rings);

@@ -52,7 +52,6 @@ export function createToys({ scene, world, sfx, glow }) {
   // ---- Pads: giant mushrooms that squash and spring ----
   const pads = world.padSpots.map((p) => ({ p, hit: 9, cool: 0 }));
   const padMesh = instanced(mushrooms([[0, 0, 0, 6]], '#b86e43').geometry, pads.length, softMaterial({ fuzz: 0, gloss: 0.7 }));
-  padMesh.material.uniforms.uOccluder.value = 1;
 
   // ---- Puffballs: soft balls you can kick around ----
   const puffGeo = tint(blob(3, 0.08, 2.2, 2), '#ffe1ee', 0.12, (c, x, y, z) => c.lerp(hue.set('#bfe8ff'), Math.max(Math.sin(x * 5 + z * 4), 0) * 0.7).multiplyScalar(0.7 + 0.3 * (y + 1) / 2));

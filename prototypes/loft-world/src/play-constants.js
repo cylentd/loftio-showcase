@@ -6,7 +6,13 @@ export const PLAY = {
   flingSpeed: 30, // direct fling, world units per second (was 22; the owner found it weak)
   flingCooldown: 0.15, // seconds between flings; otherwise unlimited, on the ground or in the air
   airFlings: Infinity,
-  revealRadius: 3.5,
+  // Whole-object see-through, owner request 2026-11-17 ("isn't the proper way to make it transparent?"): a tree that
+  // hides the lead resident fades as one object; nothing fades toward the aim target or Chomper.
+  fadeOpacity: 0.35, // how opaque a blocking object becomes ("about 35% opaque")
+  fadeSeconds: 0.2, // time to ease from solid to that, and back ("about 0.2 s")
+  fadeMargin: 0.4, // a sight line this close to an object's edge already counts as blocked, so it fades before it clips Sprout
+  fadeHysteresis: 0.8, // extra reach that keeps a faded object faded, so one at the edge does not flicker
+  fadeMax: 4, // at most this many objects fade at once
   stepUp: 1.4, // a ledge or deck this far below your feet is still walked onto; more than that is a fall
   wade: 0.55, // walking speed in water, as a share of normal
   reticleLift: 1.6, // with the mouse captured the view looks a little above the resident, so there is more to see ahead
@@ -43,6 +49,8 @@ export const PLAY = {
   focusLean: 0.35, // how far the view turns from you toward your target during slow-motion aim
   flingGrab: 0.16, // a press this close to the leader (share of the short screen side) starts a fling; elsewhere it turns the camera
   groundBounce: 0.45,
+  groundPlantBelow: 18, // landing slower than this (units/s) on plain ground plants: a 14 hop lands at about 13, a fling at about 34
+  groundRebound: 0.8, // above that, share of the excess speed that comes back up (a 34 fling rebounds at about 13, then plants)
   groundGrip: 0.8, // share of sideways speed kept on a ground bounce
   rollUnder: 9, // hitting the ground softer than this rolls instead of bouncing
   rollFriction: 0.5, // speed lost per second while rolling
@@ -82,10 +90,23 @@ export const PLAY = {
   radius: 1.05,
   spriteSize: 2.9,
   wispRadius: 2.1,
-  leash: 215, // past this distance from the middle, the wind turns you around
   walk: 10, // WASD speed on the ground
   jump: 14, // hop speed: about 4.5 units high
   airControl: 16, // WASD push while in the air
+  trailFade: 0.6, // seconds the flight trail takes to fade out once you land (it used to hang in the grass until the next flight)
   turn: 1.5, // how fast Q/E and the arrow keys swing the camera, radians per second
+};
+
+// The gold crash of a Skyfall (owner, 2026-11-18). Scales with the drop's power 0..1.
+export const SLAM_VIEW = {
+  gold: '#ffd58a', white: '#fff1b8', // the dive's puff colour, and the Pop's white core
+  puff: 2.2, // puff size per unit of reach: the Pop's own ratio, so the biggest slam dwarfs a Pop
+  burst: 90, burstMin: 14, // sparks: 14 for the smallest slam up to 104 for the biggest, past a Pop's 46
+  speed: 22, life: 9, // spark speed and life, a Pop's 26 and 9 pulled in a little
+  shakeMin: 0.6, // camera shake: .6 for the smallest slam, 1 (the camera's maximum) for the biggest
+  canopyShake: 1.4, // how hard a shockwave shakes each tree crown in its reach (the tree-shake strength)
+  coreSpread: 1.4, // the white core flies and lasts this many times as far and long as the gold sparks
+  waveRGB: [1.7, 1.2, 0.5], // the shockwave's gold, additive, so over 1 is bright
+  popRGB: [0.5, 1.6, 1.3], // the Pop's teal, restored when F pops
 };
 

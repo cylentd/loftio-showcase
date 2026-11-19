@@ -14,17 +14,33 @@ import { createAudio } from './audio.js';
 import { wirePointerControls } from './pointer-controls.mjs';
 import { wireMouseLock } from './mouse-lock.mjs';
 import { wireJumpButton } from './jump-controls.mjs';
+import { wireTouchStick } from './touch-stick.js';
+import { createStickView } from './stick-view.js';
 import { TEAM_COPY } from './teamwork-copy.mjs';
 import { TRAVERSAL_COPY } from './traversal-copy.mjs';
+import { createBench } from './bench.js';
+import { parseOff } from './bench-model.mjs';
+import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { bloomScale, msaaSamples } from './post-model.mjs';
+import { resolveMode, pixelRatioFor } from './mode-model.mjs';
+import { createModeRuntime } from './mode-runtime.js';
+import { wirePause } from './pause.js';
+import { createDay } from './day-view.js';
+import { warmScene, createTextureWarmer } from './warm.js';
+import { createPetals } from './petals.js';
 
 const params = new URLSearchParams(location.search);
+const benchOff = params.has('bench') ? parseOff(params.get('off')) : []; // parts a benchmark run switches off
 const canvas = document.querySelector('canvas');
 const loadingCover = document.querySelector('[data-world-loading]');
-const low = innerWidth < 700 || params.has('low');
+// ?mode=phone|high|showpiece (table in mode-data.mjs); ?low means phone. `low` stays the name of "everything phone turns down".
+const mode = resolveMode({ mode: params.get('mode'), aa: params.get('aa'), bloom: params.get('bloom'), low: params.has('low'), width: innerWidth });
+const low = mode.low;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: params.has('capture') });
-renderer.setPixelRatio(Math.min(devicePixelRatio, low ? 1.5 : 2));
+renderer.setPixelRatio(pixelRatioFor(mode, devicePixelRatio, 1));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = LOOK.exposure;
 renderer.info.autoReset=false;
@@ -32,7 +48,10 @@ renderer.info.autoReset=false;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, 1, 0.3, 3000);
 const world = buildWorld(scene, low);
+if (params.has('capture')) globalThis.__treeDebug = world.treeDebug; // QA hook: where trees stand; only capture runs get it
 const VIEWS = world.views;
+const petals = createPetals(world, mode.name); // cherry petals; they move on G.uTime, so pause stops them
+scene.add(petals);
 
 // Light shafts from the low sun plus a vignette, in one pass over the HDR image.
 const SHAFTS = {
@@ -82,7 +101,9 @@ const SHAFTS = {
     }`,
 };
 
-const target = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: low ? 0 : 4 });
+const aaMode = mode.aa, bloomMode = mode.bloom; // the mode's values unless ?aa=msaa|fxaa|smaa|none or ?bloom=full|half asks otherwise
+// The phone-drops-samples rule now lives in the phone row (aa none), so an explicit ?aa=msaa is honoured on a phone.
+const target = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: msaaSamples({ aa: aaMode, low: false, off: benchOff }) });
 const composer = new EffectComposer(renderer, target);
 composer.addPass(new RenderPass(scene, camera));
 // One bad pixel (not a number, or absurdly bright) makes the glow pass smear it into a flashing square.
@@ -96,12 +117,19 @@ composer.addPass(new ShaderPass({
       gl_FragColor=vec4(clamp(c,0.,24.),1.); }`,
 }));
 const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.5, 0.7, 1.05);
+// Half-size bloom: the composer calls setSize on every pass at start and on each resize, so scale it there.
+const bloomScaleBy = bloomScale(bloomMode);
+if (bloomScaleBy !== 1) bloom.setSize = (w, h) => UnrealBloomPass.prototype.setSize.call(bloom, Math.round(w * bloomScaleBy), Math.round(h * bloomScaleBy));
 composer.addPass(bloom);
 const shafts = new ShaderPass(SHAFTS);
 composer.addPass(shafts);
+// SMAA works in linear colour, so it goes before OutputPass; FXAA expects display colour, so it goes after.
+if (aaMode === 'smaa') composer.addPass(new SMAAPass());
 composer.addPass(new OutputPass());
+if (aaMode === 'fxaa') composer.addPass(new FXAAPass());
+bloom.enabled = !benchOff.includes('bloom'); shafts.enabled = !benchOff.includes('shafts'); // benchmark switches
 
-// ---- Shadows: the scene's depth seen from the moon key light, in a square that follows the focus point ----
+// ---- Shadows: the scene's depth seen from the key light (moon or sun, see day-view.js), in a square that follows the focus point ----
 const SHADOW_SIZE = low ? 1024 : 2048, SHADOW_HALF = 75; // texels across, and half the width of ground covered
 const shadowTarget = new THREE.WebGLRenderTarget(SHADOW_SIZE, SHADOW_SIZE);
 shadowTarget.depthTexture = new THREE.DepthTexture(SHADOW_SIZE, SHADOW_SIZE);
@@ -110,14 +138,16 @@ const toUv = new THREE.Matrix4().set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 
 const noShadow = G.uShadowMap.value, shadowFocus = new THREE.Vector3();
 G.uShadowTexel.value = 1 / SHADOW_SIZE;
 function renderShadows(focus) {
-  const reveal = G.uRevealOn.value;
-  G.uRevealOn.value = 0;
   shadowFocus.set(Math.round(focus.x), focus.y, Math.round(focus.z)); // whole steps, so shadows do not crawl as you move
-  lightCam.position.copy(shadowFocus).addScaledVector(G.uMoon.value, 200);
+  lightCam.position.copy(shadowFocus).addScaledVector(G.uShadowDir.value, 200);
   lightCam.lookAt(shadowFocus);
   lightCam.updateMatrixWorld();
   G.uShadowOn.value = 0; G.uShadowMap.value = noShadow; // never read the map while drawing into it
+  const meadowShown = world.terrain.meadow.visible; // a benchmark run may have hidden it
   world.terrain.meadow.visible = false; // grass receives shadows but is too fine to cast them
+  const gladeGrassShown = world.gladeGrass.visible;
+  world.gladeGrass.visible = false;
+  const petalsShown = petals.visible; petals.visible = false; // too small to cast a shadow worth the depth pass
   const actors=play.bodies.flatMap(body=>[body.sprite,body.ghost]);
   const actorVisibility=actors.map(actor=>actor.visible);
   actors.forEach(actor=>{actor.visible=false;});
@@ -126,8 +156,8 @@ function renderShadows(focus) {
   renderer.render(scene, lightCam);
   renderer.setRenderTarget(null);
   actors.forEach((actor,index)=>{actor.visible=actorVisibility[index];});
-  G.uRevealOn.value = reveal;
-  world.terrain.meadow.visible = true;
+  world.terrain.meadow.visible = meadowShown;
+  world.gladeGrass.visible = gladeGrassShown; petals.visible = petalsShown;
   G.uShadowMat.value.multiplyMatrices(toUv, lightCam.projectionMatrix).multiply(lightCam.matrixWorldInverse);
   G.uShadowMap.value = shadowTarget.depthTexture; G.uShadowOn.value = 1;
 }
@@ -138,7 +168,7 @@ const orbit = { yaw: 0, pitch: 0, goalYaw: 0, goalPitch: 0, zoom: 1, goalZoom: 1
 let viewName = VIEWS[params.get('view')] || params.get('view') === 'play' ? params.get('view') : 'all';
 
 function go(name, snap = false) {
-  pointerControls?.cancel(); held.clear(); readKeys();
+  pointerControls?.cancel(); touchStick?.stop(); held.clear(); readKeys();
   viewName = name;
   document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === name)));
   if (name === 'play') { play.start(); play.snapCamera(); return; }
@@ -155,7 +185,7 @@ function go(name, snap = false) {
 const hudEl = document.querySelector('.play-hud'), countEl = document.querySelector('[data-count]'), flashEl = document.querySelector('.flash');
 const audio = createAudio({ muted: params.has('mute') });
 const play = createPlay({
-  scene, camera, world, sfx: audio,
+  scene, camera, world, sfx: audio, low,
   hud: {
     charge(ready) { const el=document.querySelector('[data-fling-charge]');el.textContent=TRAVERSAL_COPY[ready?'ready':'spent'];el.dataset.ready=String(ready);el.hidden=true; }, // unused while flings are unlimited
     show(on) { hudEl.hidden = !on; document.body.classList.toggle('playing', on); },
@@ -167,10 +197,13 @@ const play = createPlay({
       if (frac === bossShown) return;
       bossShown = frac;
       bossEl.hidden = frac === null;
-      if (frac !== null) bossFill.style.width = `${Math.round(frac * 100)}%`;
+      if (frac !== null) bossFill.style.transform = `scaleX(${frac})`;
     },
     /** How ready the special move is, 0..1. */
-    special(ready) {
+    special(ready,airborne,counter=false) {
+      const label=counter?TEAM_COPY.counter:airborne?TEAM_COPY.bank:TEAM_COPY.pop;
+      if (counter !== specialCounter) { specialCounter = counter; specialButton.classList.toggle('counter', counter); } // gold: F counters now
+      if(specialButton.getAttribute('aria-label')!==label)specialButton.setAttribute('aria-label',label);
       const on = ready >= 1, step = Math.round(Math.min(Math.max(ready, 0), 1) * 50);
       if (step !== specialStep) { specialStep = step; specialButton.style.setProperty('--ready', String(step / 50)); } // the ring around the button
       if (on !== specialOn) { specialOn = on; specialButton.classList.toggle('cooling', !on); }
@@ -181,8 +214,8 @@ const bossEl = document.querySelector('.boss'), bossFill = document.querySelecto
 for(const input of document.querySelectorAll('[data-creature]')){
   input.addEventListener('input',()=>{for(const e of play.monster.items)e.tuning[input.dataset.creature]=Number(input.value);});
 }
-let bossShown = null, specialOn = true, specialStep = -1;
-specialButton.addEventListener('click', () => play.special());
+let bossShown = null, specialOn = true, specialStep = -1, specialCounter = false;
+specialButton.addEventListener('click', () => play.pressSpecial());
 wireJumpButton(document.querySelector('[data-jump]'),window,play);
 document.querySelector('.hint').textContent=TEAM_COPY.hint;
 document.querySelector('[data-controls]').textContent=TEAM_COPY.controls;
@@ -195,18 +228,25 @@ for(const input of document.querySelectorAll('[data-team]')) {
 }
 // Keys: WASD walk, Space hop, Shift dive, Q/E or left/right arrows turn the camera.
 const held = new Set();
+const stickReadout = { x: 0, z: 0, sprint: false, active: false }; // the touch stick, see touch-stick.js
+const keyDown = (...codes) => (codes.some((c) => held.has(c)) ? 1 : 0);
+// One walk path: the stick, while a thumb holds it, replaces the keys; either way it ends in play.input and setDive.
+function readWalk() {
+  const pad = stickReadout.active;
+  play.input.pad = pad;
+  play.input.x = pad ? stickReadout.x : keyDown('KeyD') - keyDown('KeyA');
+  play.input.z = pad ? stickReadout.z : keyDown('KeyW', 'ArrowUp') - keyDown('KeyS', 'ArrowDown');
+  play.setDive((pad && stickReadout.sprint) || keyDown('ShiftLeft', 'ShiftRight') === 1); // sprint on the ground, dive in the air
+}
 function readKeys() {
-  const k = (...codes) => (codes.some((c) => held.has(c)) ? 1 : 0);
-  play.input.x = k('KeyD') - k('KeyA');
-  play.input.z = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
-  play.input.turn = k('KeyE', 'ArrowRight') - k('KeyQ', 'ArrowLeft');
+  play.input.turn = keyDown('KeyE', 'ArrowRight') - keyDown('KeyQ', 'ArrowLeft');
   play.input.jumpHeld = held.has('Space');
-  play.setDive(k('ShiftLeft', 'ShiftRight') === 1); // Shift: sprint on the ground, dive in the air
+  readWalk();
 }
 addEventListener('keydown', (e) => {
   if (!play.active || e.target.matches('input')) return;
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) play.input.jump = true; }
-  if (e.code === 'KeyF' && !e.repeat) play.special();
+  if (e.code === 'KeyF' && !e.repeat) play.pressSpecial();
   held.add(e.code); readKeys();
 });
 addEventListener('keyup', (e) => { held.delete(e.code); readKeys(); });
@@ -244,9 +284,10 @@ function resize() {
   world.motes.material.uniforms.uPx.value = (h * renderer.getPixelRatio()) / (2 * Math.tan((camera.fov * Math.PI) / 360));
   shafts.uniforms.uAspect.value = camera.aspect;
 }
-addEventListener('resize', () => { resize(); if (!play.active) go(viewName); });
+addEventListener('resize', () => { modeRuntime.resized(); resize(); if (!play.active) go(viewName); });
+const modeRuntime = createModeRuntime({ mode, params, renderer, resize, thinTo: world.terrain.thinTo }); // self-tuning resolution; sets window.__valleyMode
 resize();
-let pointerControls;
+let pointerControls, touchStick;
 go(viewName, true);
 
 // The centre-ring aim is a choice (owner, 2026-11-17: "not sure I like the reticle"), remembered between visits.
@@ -258,6 +299,7 @@ aimRing.addEventListener('change', () => {
   try { localStorage.setItem(AIM_KEY, aimRing.checked ? 'on' : 'off'); } catch { /* not saved */ }
 });
 document.body.classList.toggle('aim-drag', !aimRing.checked);
+const pause = wirePause({ play, params, soundButton, pauseButton: document.querySelector('[data-pause]') }); // before the mouse lock: it reads the aim before the lock cancels it
 // Mouse lock must be wired first, so that while the mouse is captured it handles the events instead.
 const lockNote = document.querySelector('[data-lock-note]');
 const mouseLock = params.has('capture') || params.has('nolock') ? null : wireMouseLock({
@@ -266,6 +308,9 @@ const mouseLock = params.has('capture') || params.has('nolock') ? null : wireMou
   onChange(on) { play.state.reticle = on; document.body.classList.toggle('mouse-locked', on); lockNote.textContent = on ? 'Esc frees the mouse' : 'Click the game to capture the mouse'; },
 });
 pointerControls = wirePointerControls({canvas,win:window,play,orbit,size:()=>({width:innerWidth,height:innerHeight})});
+// The stick listens first (capture phase) and keeps its own finger away from the look and fling handlers above.
+touchStick = wireTouchStick({ canvas, play, size: () => ({ width: innerWidth, height: innerHeight }), view: createStickView(document.querySelector('.stick')),
+  onChange(s) { Object.assign(stickReadout, s); readWalk(); } });
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (play.active) { play.zoom(e.deltaY > 0 ? 1.1 : 0.9); return; } orbit.goalZoom = THREE.MathUtils.clamp(orbit.goalZoom * (e.deltaY > 0 ? 1.08 : 0.92), 0.55, 1.5); }, { passive: false });
 addEventListener('keydown', (e) => {
   if (play.active) return;
@@ -282,21 +327,46 @@ document.querySelectorAll('[data-tune]').forEach((input) => {
   input.addEventListener('input', () => { tune[input.dataset.tune] = Number(input.value); });
 });
 
+const bench = createBench({ params, renderer, camera, look, play, world, scene, off: benchOff, post: { aa: aaMode, bloom: bloomMode, mode: mode.name, low } }); // null unless ?bench or ?shot=<name>
+const day = createDay({ params, slider: document.querySelector('[data-day-time]'), renderer });
 const clock = new THREE.Clock(), sunWorld = new THREE.Vector3(), forward = new THREE.Vector3(), off = new THREE.Vector3();
 const state = { frames: 0, time: 0, go, ready: true, play, terrainProps:world.terrainProps };
 state.audioState = () => audio.debug();
-state.focusInfo = () => ({strength:shafts.uniforms.uFocus.value,x:shafts.uniforms.uFocusUv.value.x,y:shafts.uniforms.uFocusUv.value.y});
+state.wispSpots = world.wispSpots; // where the collectables are, for scripted checks
+state.petalCounts = petals.userData.counts; // falling and fallen petal instances, for the capture script
+/** Read-only resource counts for the soak script (perf-soak/soak.py): a count that keeps climbing is a leak. */
+state.stats = () => {
+  let objects = 0; scene.traverse(() => { objects++; });
+  const { memory, render, programs } = renderer.info;
+  return { objects, geometries: memory.geometries, textures: memory.textures, programs: programs.length, calls: render.calls, triangles: render.triangles, heap: performance.memory?.usedJSHeapSize ?? null };
+};
+/** What is in the scene right now, for the hitch script to diff before and after a fight: geometry and texture ids with their owner, and each compiled program. */
+state.inventory = () => {
+  const found = [];
+  scene.traverse((o) => {
+    const mats = [].concat(o.material ?? []);
+    const maps = mats.flatMap((m) => [m.map, ...Object.values(m.uniforms ?? {}).map((u) => u.value)].filter((t) => t?.isTexture)).map((t) => t.uuid);
+    found.push({ g: o.geometry?.uuid ?? null, o: `${o.type}:${o.name}:${o.parent?.type}`, m: mats.map((m) => `${m.type}:${m.name}`).join(','), t: maps, v: o.visible });
+  });
+  return { found, programs: renderer.info.programs.map((p) => p.cacheKey) };
+};
+state.focusInfo =() => ({strength:shafts.uniforms.uFocus.value,x:shafts.uniforms.uFocusUv.value.x,y:shafts.uniforms.uFocusUv.value.y});
 state.podTargets = () => play.pods.targets;
 state.rampPoints = world.ramps.at(-1).points; // the long bridge, for scripted checks
+state.camera = camera; state.heightAt = world.terrain.heightAt; // capture hooks: measure how high the far peaks stand on screen
 window.loftWorld = state;
-let time = Number(params.get('t') ?? 0);
+let time = Number(params.get('t') ?? bench?.startTime ?? 0);
 
+let warmed = false; // ?nowarm skips the warm-up, so the hitch script can measure the "before"
+// the resident paintings load after the first frame, so they are uploaded one per frame as they arrive
+let textureWarmer = params.has('nowarm') ? null : createTextureWarmer(renderer, play.bodies.flatMap((b) => [...Object.values(b.textures), ...Object.values(b.ghostTextures)]));
 function frame() {
   renderer.info.reset();
-  const dt = Math.min(clock.getDelta(), 0.1), still = reduced.matches;
+  const dt = pause.gate(Math.min(clock.getDelta(), 0.1)), still = reduced.matches || !!bench?.frozen;
   time = ambientStep(time,dt,still).time;
+  day.update(dt);
   G.uTime.value = time;
-  G.uFog.value = 0.0065 * tune.mist;
+  G.uFog.value = 0.0065 * tune.mist * day.state.mist;
   G.uWind.value = tune.wind;
   bloom.strength = tune.glow;
   world.motes.material.uniforms.uAmount.value = tune.motes;
@@ -312,7 +382,7 @@ function frame() {
     shafts.uniforms.uSpeed.value += (Math.min(rush, 1) - shafts.uniforms.uSpeed.value) * Math.min(dt * 4, 1);
   } else {
     shafts.uniforms.uSpeed.value = 0;
-    viewCamera(dt, still);
+    if (!bench?.drive()) viewCamera(dt, still);
   }
 
   // where the sun sits on screen, and whether we face it
@@ -320,7 +390,7 @@ function frame() {
   camera.getWorldDirection(forward);
   const facing = THREE.MathUtils.smoothstep(forward.dot(G.uSun.value), 0.2, 0.75);
   shafts.uniforms.uSunUv.value.set(sunWorld.x * 0.5 + 0.5, sunWorld.y * 0.5 + 0.5);
-  shafts.uniforms.uStrength.value = tune.shafts * facing;
+  shafts.uniforms.uStrength.value = tune.shafts * facing * day.state.shafts;
 
   // slow-motion aim keeps the thing you are aiming at sharp
   const focus = play.active ? play.state.focus || 0 : 0;
@@ -332,10 +402,18 @@ function frame() {
     shafts.uniforms.uLeadUv.value.set(sunWorld.x * 0.5 + 0.5, sunWorld.y * 0.5 + 0.5);
   }
   G.uViewEye.value.copy(camera.position);
-  if (!params.has('noshadow')) renderShadows(world.terrain.focus);
+  bench?.begin(); modeRuntime.begin();
+  if (!warmed && !params.has('nowarm')) { // first frame, still under the loading cover: compile and upload everything a fight will need
+    warmed = true;
+    warmScene(scene, () => { if (!params.has('noshadow')) renderShadows(world.terrain.focus); composer.render(); });
+  }
+  if (warmed && textureWarmer?.step() === 0) textureWarmer = null;
+  if (!params.has('noshadow') && !benchOff.includes('shadow') && day.state.shadowStrength > 0) renderShadows(world.terrain.focus);
   composer.render();
+  modeRuntime.end(); bench?.end();
+  modeRuntime.frame();
   if (loadingCover?.isConnected) dispatchEvent(new Event('world-first-frame'));
-  state.frames++; state.time = time; state.render={...renderer.info.render,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures};
+  state.frames++; state.time = time; state.render={...renderer.info.render,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs.length}; // read by the hitch script: a program or geometry that appears mid-fight is a first-use compile
   requestAnimationFrame(frame);
 }
 
@@ -357,8 +435,11 @@ function endIntro() {
   document.body.classList.remove('intro');
   go('all', true);
 }
-for (const type of ['pointerdown', 'keydown']) addEventListener(type, () => endIntro());
-if (viewName === 'all' && !params.has('capture') && !params.has('view') && !params.has('nointro') && !reduced.matches) startIntro();
+addEventListener('pointerdown', () => endIntro());
+addEventListener('keydown', (e) => { if (!e.repeat) endIntro(); }); // a held Enter from the begin button must not skip it
+const introWanted = viewName === 'all' && !params.has('capture') && !params.has('view') && !params.has('nointro') && !bench && !reduced.matches;
+// The flyover waits for the loading cover to lift (bootstrap calls begin), so it plays from its start, with the music.
+state.gate = { introWanted, soundOn: () => audio.on, tryStart: audio.tryStart, unlock: audio.unlock, begin: () => { if (introWanted) startIntro(); } };
 
 function viewCamera(dt, still) {
   if (intro.on) {

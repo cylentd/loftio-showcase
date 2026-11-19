@@ -3,6 +3,8 @@ import {softMaterial} from './glsl.js';
 import {V3,tint,place,merge,tube,rng} from './util.js';
 import {HABITATS,LOOK,MEADOW_LOOK} from './terrain-look-data.mjs';
 import {feedbackPose} from './terrain-props.mjs';
+import {smoothNormals} from './smooth-normals.mjs';
+import {rockDome} from './rock-dome.mjs';
 
 // A folded pointed leaf, merged into whole fronds/branches before being submitted.
 export function leafGeometry(length=1,width=.3){
@@ -11,11 +13,14 @@ export function leafGeometry(length=1,width=.3){
   g.setIndex([0,1,2,0,2,3,1,4,2,2,4,3]);g.computeVertexNormals();return g;
 }
 export function propGeometry(p){
-  const positions=[];
-  for(const f of p.faces)for(let i=1;i<f.length-1;i++)for(const index of [f[0],f[i],f[i+1]]){
+  let positions=[];
+  if(p.material==='rock')positions=rockDome(p); // drawn as a rounded boulder; the hull below it is what collides
+  else for(const f of p.faces)for(let i=1;i<f.length-1;i++)for(const index of [f[0],f[i],f[i+1]]){
     const v=p.vertices[index];positions.push(v.x-p.center.x,v.y-p.y,v.z-p.center.z);
   }
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.computeVertexNormals();
+  // a rock shades as one rounded boulder: the hull still collides on its flat faces, only the light is smoothed
+  if(p.material==='rock')g.setAttribute('normal',new THREE.Float32BufferAttribute(smoothNormals(positions),3));
   return tint(g,p.color,0,(c,x,y,z)=>{
     const grain=.78+.22*Math.sin(x*17+z*23+y*7);c.multiplyScalar(grain);
     if(p.material==='rock'&&y>p.height*.8)c.lerp(new THREE.Color('#667b42'),.45);

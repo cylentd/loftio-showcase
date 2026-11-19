@@ -7,8 +7,8 @@ import { build } from 'vite';
 const gameRoot = fileURLToPath(new URL('../', import.meta.url));
 const manifestPath = fileURLToPath(new URL('./world-files.json', import.meta.url));
 const route = '/play/valley/';
-const assetName = /^(?:[\w-]+\.(?:html|css|mp3)|src\/[\w-]+\.js|assets\/(?:residents|neighbours)\/[\w-]+\.png)$/;
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.mp3': 'audio/mpeg' };
+const assetName = /^(?:[\w-]+\.(?:html|css|mp3)|src\/[\w-]+\.js|assets\/residents\/[\w-]+\.webp)$/;
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.webp': 'image/webp', '.mp3': 'audio/mpeg' };
 
 export async function publishWorld(root, output) {
   const source = resolve(root, 'prototypes/loft-world');
@@ -22,7 +22,7 @@ export async function publishWorld(root, output) {
       .replace('<html lang="en">', '<html lang="en" data-published-world>') } }],
     build: { outDir: target, emptyOutDir: true, assetsInlineLimit: 0 },
   });
-  for (const name of files.filter(name => /\.(png|mp3)$/.test(name))) {
+  for (const name of files.filter(name => /\.(webp|mp3)$/.test(name))) {
     await mkdir(dirname(join(target, name)), { recursive: true });
     await copyFile(join(source, name), join(target, name));
   }

@@ -5,7 +5,7 @@ import { COMMON, shaderMaterial, softMaterial } from './glsl.js';
 import { V3, blob, merge, place, rng, tint } from './util.js';
 
 export const LIFE = {
-  butterflies: [45, 22], // desktop, phone: how many flutter in the patch around you
+  butterflies: [24, 12], // desktop, phone: how many flutter in the patch around you (was 45 and 22; owner, 2026-11-18: "might be too many butterflies")
   butterflyTile: 84, // the patch is this wide and follows you, like the grass
   birds: 18,
   fluffs: 26,
@@ -66,6 +66,7 @@ function wings(scene, land, count, bird, tile, R, seat) {
   geo.instanceCount = count;
   const mesh = new THREE.Mesh(geo, shaderMaterial(WING_VERT, WING_FRAG, { ...land, uTile: { value: tile }, uBird: { value: bird ? 1 : 0 } }, { side: THREE.DoubleSide }));
   mesh.frustumCulled = false;
+  mesh.userData.part = 'life'; // bench part name
   scene.add(mesh);
   return mesh;
 }
@@ -89,6 +90,7 @@ export function createLife(o) {
   ]);
   const fluffMesh = new THREE.InstancedMesh(fluffGeo, softMaterial({ fuzz: 1, leaf: 3.2 }), L.fluffs);
   fluffMesh.frustumCulled = false;
+  fluffMesh.userData.part = 'life'; // bench part name
   scene.add(fluffMesh);
   const fluffs = [];
   for (let tries = 0; fluffs.length < L.fluffs && tries < 900; tries++) {
@@ -103,7 +105,7 @@ export function createLife(o) {
     place(tint(blob(9, 0.05, 2, 2), '#8fe6e0', 0, (c, _x, y) => c.lerp(new THREE.Color('#fff6e0'), Math.max(-y, 0) * 0.8)), 0, 0, 0, 0, 0, 0, 0.3, 0.36, 0.85),
     place(tint(new THREE.ConeGeometry(0.34, 0.6, 4), '#63c9d4'), 0, 0, -1.05, -Math.PI / 2, 0, 0, 1, 1, 0.35),
   ]);
-  const fish = [0, 1, 2].map(() => { const m = new THREE.Mesh(fishGeo, softMaterial({ fuzz: 0, gloss: 0.9 })); m.visible = false; scene.add(m); return { m, f: 1, from: V3(), dir: V3(), reach: 4 }; });
+  const fish = [0, 1, 2].map(() => { const m = new THREE.Mesh(fishGeo, softMaterial({ fuzz: 0, gloss: 0.9 })); m.visible = false; m.userData.part = 'life'; scene.add(m); return { m, f: 1, from: V3(), dir: V3(), reach: 4 }; });
   let fishIn = 2;
 
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = V3(), p = V3();

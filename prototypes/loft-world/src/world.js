@@ -11,12 +11,25 @@ import { Motes, makePond, makeStream } from './fx.js';
 import { LAND, createTerrain } from './terrain.js';
 import { V3, fbm, rng } from './util.js';
 import { dressValley } from './scenery.js';
-import { buildVillages } from './biome-villages.js';
+import { applyLampMap } from './lamp-map-view.js';
+import { buildVillages, VILLAGE_HOMES } from './biome-villages.js';
+import { planWoods, positionHash } from './woodland-plan.mjs';
+import { SIGHTLINES, HOME_KEEP_CLEAR, SPOT } from './woodland-plan-data.mjs';
+import { CHERRY_LOOK, SAPLING_HEIGHT } from './tree-clay-data.mjs';
 import { forestBatches, FOREST_BATCH } from './forest-batches.mjs';
+import { treeBulk, treeVariety } from './tree-variety.mjs';
+import { PINE_HEIGHT_POWER, TREE_KEEP_CLEAR } from './tree-variety-data.mjs';
+import { treeRef, treeMatrix, treeBaseY } from './tree-instance.js';
 
 const TREE = [-7.5, -5], LOFT = [3.6, 0.4], LOFT_SCALE = 1.5;
+const HERO_TREE_HEIGHT = 34; // the loft's big tree, in world units: about twice the loft roof, as the old blob tree stood (top near 38)
+const BLOSSOM_TREE = { archetype: 'canopy', height: 13, girth: 1.1, leaf: 4.2 }; // world units; about twice the standing stones, as the old tree stood
+const HERO_TREE_LEAF = 6.5, HERO_TREE_GIRTH = 2.6; // crown puff size and trunk width, scaled up with the height so it is not a thin pole with a small top
 const CAFE = [72, 63], CAMP = [-78, -28], GLADE = [20, 40, -105], POOL = [20, -82];
-const SEA_Y = -18; // the cloud sea the mountains rise out of
+const SEA_Y = LAND.sea; // the cloud sea the mountains rise out of
+/** Trees wanted, [desktop, phone]: the valley as before, plus pines and cones on the outer hills (brief 2026-11-18: at most 900 and 360). */
+const WOODS = { valley: [470, 190], hills: [400, 150] };
+const STREAM_STEPS = 10; // points per creek segment in the drawn stream
 
 export function buildWorld(scene, low) {
   makeSky(scene, SEA_Y);
@@ -24,18 +37,22 @@ export function buildWorld(scene, low) {
   const terrain = createTerrain([[LOFT[0] + 1.5, LOFT[1], 8], [CAFE[0], CAFE[1], 8], [CAMP[0], CAMP[1], 9], [POOL[0], POOL[1], 5]], low);
   scene.add(terrain.group);
   const H = terrain.heightAt, ground = { heightAt: H };
-  const solids = [], canopies = [];
+  const solids = [], canopies = [], fadeables = []; // fadeables: trees that go see-through when they hide the lead (fade-view.js)
   const terrainProps=makeTerrainProps(H),woodland=buildWoodland(scene,terrain,terrainProps);
 
   // ---- Loft knoll ------------------------------------------------------------------------------
-  const tree = makeTree({ seed: 7, height: 18, girth: 1.8, leaf: 3.1, depth: 2, spread: 1, palette: ['#0e5a44', '#63c06a', '#d6e884'] });
+  // The loft's big tree towers over the roof again (owner, 2026-11-18): the clay bonsai was squat, flat pads hidden behind the loft.
+  const tree = makeTree({ archetype: 'canopy', lod: low ? 'phone' : 'high', seed: 7, height: HERO_TREE_HEIGHT, girth: HERO_TREE_GIRTH, leaf: HERO_TREE_LEAF, depth: 2, spread: 1, palette: ['#0e5a44', '#63c06a', '#d6e884'] });
   const treeGroup = new THREE.Group(), treeY = H(...TREE) - 0.3;
   treeGroup.position.set(TREE[0], treeY, TREE[1]);
   treeGroup.add(tree.wood, tree.leaves);
+  treeGroup.userData.part = 'trees'; // bench part name
   scene.add(treeGroup);
   scene.add(lanterns(tree.tips.filter((_, i) => i % 3 === 0).map((t) => t.clone().add(treeGroup.position).add(V3(0, -1.5, 0))), 12));
-  solids.push([TREE[0], TREE[1], 1.9, treeY + 14]);
+  const heroTrunk = tree.trunk ?? { radius: 1.9, top: 14 }; // faceted trees carry their own trunk numbers
+  solids.push([TREE[0], TREE[1], heroTrunk.radius, treeY + heroTrunk.top]);
   canopies.push([TREE[0]+tree.envelope.center.x,treeY+tree.envelope.center.y,TREE[1]+tree.envelope.center.z,tree.envelope.radius+.3,{group:treeGroup}]);
+  fadeables.push({ meshes: [tree.wood, tree.leaves], shapes: [{ center: { x: TREE[0] + tree.envelope.center.x, y: treeY + tree.envelope.center.y, z: TREE[1] + tree.envelope.center.z }, radius: tree.envelope.radius + 0.3 }, { center: { x: TREE[0], y: 0, z: TREE[1] }, radius: heroTrunk.radius, minY: treeY, maxY: treeY + heroTrunk.top }] });
 
   const loft = makeLoft(), loftY = H(...LOFT);
   loft.scale.setScalar(LOFT_SCALE);
@@ -65,10 +82,14 @@ export function buildWorld(scene, low) {
 
   // ---- Creek -----------------------------------------------------------------------------------
   const creek = [];
+  for (let s = 0; s < LAND.creekHead.length - 1; s++) { // the upper course, from the spring on the northern rim to the old source
+    const [ax, az, ay] = LAND.creekHead[s], [bx, bz, by] = LAND.creekHead[s + 1];
+    for (let k = 0; k < STREAM_STEPS; k++) { const f = k / STREAM_STEPS; creek.push(V3(ax + (bx - ax) * f, ay + (by - ay) * f - 0.45, az + (bz - az) * f)); }
+  }
   for (let s = 0; s < LAND.creek.length - 1; s++) {
     const [ax, az] = LAND.creek[s], [bx, bz] = LAND.creek[s + 1];
-    for (let k = 0; k < 10; k++) {
-      const f = k / 10, t = (s + f) / (LAND.creek.length - 1);
+    for (let k = 0; k < STREAM_STEPS; k++) {
+      const f = k / STREAM_STEPS, t = (s + f) / (LAND.creek.length - 1);
       creek.push(V3(ax + (bx - ax) * f, terrain.creekY(t) - 0.45, az + (bz - az) * f));
     }
   }
@@ -99,12 +120,17 @@ export function buildWorld(scene, low) {
   scene.add(glade.group);
   const gladeSet = makeGlade(glade.heightAt);
   glade.group.add(gladeSet.group);
-  glade.group.add(makeGrass(glade, low ? 14000 : 28000, 4, (x, z) => Math.hypot(x, z) > 7.9, .9));
-  const blossom = makeTree({ seed: 61, height: 6.5, girth: 0.6, leaf: 2.6, depth: 1, spread: 1, palette: ['#7a3f7a', '#f2a6cf', '#ffe0a8'] });
+  const gladeGrass = makeGrass(glade, low ? 14000 : 28000, 4, (x, z) => Math.hypot(x, z) > 7.9, .9);
+  glade.group.add(gladeGrass);
+  // The glade's blossom tree (owner, 2026-11-18: the clay ball here read as "a weird boulder"; wants a nice tree, not the old one).
+  const blossom = makeTree({ archetype: BLOSSOM_TREE.archetype, lod: low ? 'phone' : 'high', seed: 61, height: BLOSSOM_TREE.height, girth: BLOSSOM_TREE.girth, leaf: BLOSSOM_TREE.leaf, depth: 1, spread: 1, palette: ['#7a3f7a', '#f2a6cf', '#ffe0a8'] });
   const blossomGroup = new THREE.Group();
   blossomGroup.position.set(-11, glade.heightAt(-11, -3), -3);
   blossomGroup.add(blossom.wood, blossom.leaves);
+  blossomGroup.userData.part = 'trees'; // bench part name
   glade.group.add(blossomGroup);
+  const blossomAt = new THREE.Vector3().copy(blossomGroup.position).add(glade.group.position);
+  fadeables.push({ meshes: [blossom.wood, blossom.leaves], shapes: [{ center: { x: blossomAt.x + blossom.envelope.center.x, y: blossomAt.y + blossom.envelope.center.y, z: blossomAt.z + blossom.envelope.center.z }, radius: blossom.envelope.radius + 0.3 }, { center: { x: blossomAt.x, y: 0, z: blossomAt.z }, radius: blossom.trunk?.radius ?? 0.6, minY: blossomAt.y, maxY: blossomAt.y + (blossom.trunk?.top ?? 5) }] });
   motes.add({ at: [GLADE[0], GLADE[1] + 1, GLADE[2]], spread: [7, 0.5, 7], n: 140, rise: 0.9, range: 15, size: 0.3, color: '#63f2d4', alpha: 0.9 });
   motes.add({ at: [GLADE[0], GLADE[1] + 1, GLADE[2]], spread: [8, 0.5, 8], n: 50, rise: 0.6, range: 12, size: 0.28, color: '#ffc26b', alpha: 0.9 });
   // a waterfall off its near edge into a pool on the valley floor
@@ -124,47 +150,48 @@ export function buildWorld(scene, low) {
   [[44, 30, -80, 3], [-6, 26, -84, 2.6], [36, 50, -126, 3.4], [2, 52, -128, 2.4], [52, 20, -58, 2.2], [-22, 14, -64, 2.8]].forEach(([x, y, z, r], i) => {
     const rock = makeIsle({ r, depth: r * 2.1, seed: 50 + i * 3, pos: [x, y, z], seg: 20, rings: 4, bump: 0.2, crystals: 3 });
     scene.add(rock.group);
-    if (r > 2.5) rock.group.add(pines([[0, rock.heightAt(0, 0) - 0.1, 0, r * 1.2]], i));
+    if (r > 2.5) rock.group.add(pines([[0, rock.heightAt(0, 0) - 0.1, 0, r * 1.2]], i, low));
     rocks.push({ g: rock.group, r, y, phase: i * 1.7, amp: 0.25 + (i % 3) * 0.12 });
   });
 
-  // ---- Woods: three tree shapes and one pine, placed by a density map ---------------------------
-  const kinds = [
-    { tree: makeTree({ seed: 19, height: 9, girth: 0.8, leaf: 2.6, depth: 1, spread: 0.95, palette: ['#12553f', '#5cb663', '#d6e884'] }), crown: [10.5, 5.2], spots: [] },
-    { tree: makeTree({ seed: 44, height: 6, girth: 0.5, leaf: 2.1, depth: 1, spread: 0.85, palette: ['#1c5a46', '#8cc46a', '#ffd28a'] }), crown: [7, 4.2], spots: [] },
-    { tree: makeTree({ seed: 63, height: 7, girth: 0.6, leaf: 2.4, depth: 1, spread: 1, palette: ['#7a3f7a', '#f2a6cf', '#ffe0a8'] }), crown: [8, 4.6], spots: [] },
+  // ---- Woods: three tree shapes and one pine, placed by the woodland plan (gates, groves, specimens, backdrop) ---------------------------
+  const lod = low ? 'phone' : 'high';
+  const kinds = [ // the order is the planner's list order and cap.py's KIND_COLOURS order
+    { name: 'canopy', tree: makeTree({ archetype: 'canopy', lod, seed: 19, height: 10.5, girth: 0.8, leaf: 2.6, depth: 1, spread: 0.95, palette: ['#12553f', '#5cb663', '#d6e884'] }), crown: [12, 5.2], spots: [] }, // oak: lumpy crown on a visible trunk
+    { name: 'cone', tree: makeTree({ archetype: 'cone', lod, seed: 44, height: 6, girth: 0.5, leaf: 2.1, depth: 1, spread: 0.85, palette: ['#1c5a46', '#8cc46a', '#ffd28a'] }), crown: [7, 4.2], spots: [] },
+    { name: 'column', tree: makeTree({ archetype: 'column', lod, seed: 63, height: 11, girth: 0.34, leaf: 2.1, depth: 1, spread: 1, palette: ['#14503c', '#4fa85c', '#c9e27a'] }), crown: [12, 3], spots: [] }, // poplar: the tall narrow accent
+    { name: 'umbrella', tree: makeTree({ archetype: 'umbrella', seed: 71, height: 11, girth: 0.34, leaf: 2.6, depth: 1, spread: 1, palette: ['#163f2e', '#4c8f4e', '#b9d27a'], lod }), crown: [12, 6], spots: [] }, // stone pine: bare trunk, flat pads
+    { name: 'cherry', tree: makeTree({ archetype: 'cherry', seed: 83, height: 7, girth: 0.5, leaf: 2.4, depth: 1, spread: 1, palette: ['#f26a7a', '#ffb8c2', '#fff4ec'], blossom: true, bark: '#2b1d19', lod }), crown: [8, 6], spots: [], fade: { opacity: CHERRY_LOOK.fadeOpacity, depthFirst: true } }, // fade: see fade-view.js; cherry blossom: low fork, wide cloud of lumpy pale puffs, near-black bark; the palette leans warm because the blue ambient turns pink mauve
   ];
-  const pineSpots = [], clear = [[0, 0, 26], [CAFE[0], CAFE[1], 16], [CAMP[0], CAMP[1], 13], [POOL[0], POOL[1], 9], [12, -68, 7]];
-  const want = low ? 190 : 470; // a denser wood (was 330)
-  for (let tries = 0; kinds[0].spots.length + kinds[1].spots.length + kinds[2].spots.length + pineSpots.length < want && tries < 9000; tries++) {
-    const x = (R() * 2 - 1) * 235, z = (R() * 2 - 1) * 235, d = Math.hypot(x, z), h = H(x, z);
-    if (d > 240 || h < LAND.water + 1.5 || h > 62) continue;
-    if (clear.some(([cx, cz, cr]) => Math.hypot(x - cx, z - cz) < cr)) continue;
-    const m = terrain.maskAt(x, z);
-    if (m.path > 0.01 || m.sand > 0.2 || m.wet > 0.01) continue;
-    const dense = fbm(x * 0.018 + 6, z * 0.018, 3.3, 2) + (z < -45 ? 0.1 : 0) + (d > 140 ? 0.12 : 0);
-    if (dense < 0.56 && R() > 0.05) continue;
-    const size = 0.8 + R() * 0.6;
-    if (h > 26 || R() < 0.3) pineSpots.push([x, h - 0.2, z, 7 + R() * 6]);
-    else kinds[R() < 0.1 ? 2 : R() < 0.45 ? 1 : 0].spots.push([x, h - 0.2, z, size]);
-  }
+  const kindIndex = Object.fromEntries(kinds.map((k, i) => [k.name, i]));
+  const clear = [[0, 0, 26], [CAFE[0], CAFE[1], 16], [CAMP[0], CAMP[1], 13], [POOL[0], POOL[1], 9], [12, -68, 7], ...TREE_KEEP_CLEAR, ...VILLAGE_HOMES.map(([x, z]) => [x, z, HOME_KEEP_CLEAR])];
+  const plan = planWoods({ count: WOODS.valley[low ? 1 : 0], hills: WOODS.hills[low ? 1 : 0], heightAt: H, maskAt: terrain.maskAt, varietyAt: treeVariety, densityAt: (x, z) => fbm(x * 0.018 + 6, z * 0.018, 3.3, 2), paths: LAND.paths, creek: LAND.creek, lake: LAND.lake, water: LAND.water, sea: SEA_Y, clear, sightlines: SIGHTLINES }); // woodland-plan.mjs: gates, groves, specimens, backdrop
+  const pineSpots = plan.pine.map(([x, z]) => { const h = H(x, z); return [x, h - 0.2, z, (SPOT.pine.base + positionHash(x, z) * SPOT.pine.span) * Math.pow(treeVariety(x, z).height, PINE_HEIGHT_POWER)]; }); // pines share the size classes
+  kinds.forEach((kind) => plan[kind.name].forEach(([x, z]) => {
+    const to = kind.name !== 'cherry' && treeVariety(x, z).height < SAPLING_HEIGHT ? kindIndex.canopy : kindIndex[kind.name]; // a green sapling is always the canopy kind; a cherry stays cherry at any size
+    kinds[to].spots.push([x, treeBaseY(H, x, z), z, SPOT.size.min + positionHash(z, x) * SPOT.size.span]);
+  }));
   const mat4 = new THREE.Matrix4(), quat = new THREE.Quaternion(), euler = new THREE.Euler();
   for (const kind of kinds) {
     for (const spots of forestBatches(kind.spots)) {
     const insts = [kind.tree.wood, kind.tree.leaves].map((part) => {
       const inst = new THREE.InstancedMesh(part.geometry, part.material, spots.length);
-      spots.forEach(([x, y, z, s], i) => inst.setMatrixAt(i, mat4.compose(V3(x, y, z), quat.setFromEuler(euler.set(0, x * 12.9 + z * 7.3, 0)), V3(s, s, s))));
+      spots.forEach(([x, y, z], i) => inst.setMatrixAt(i, treeMatrix(mat4, quat, euler, treeRef(x, y, z), 0, 0)));
       inst.computeBoundingSphere();inst.boundingSphere.radius+=FOREST_BATCH.padding;
+      inst.userData.part='trees'; // bench part name
       scene.add(inst);
       return inst;
     });
-    spots.forEach(([x, y, z, s], i) => {
-      solids.push([x, z, 0.9 * s, y + kind.crown[0] * s * 0.6]);
-      const c=kind.tree.envelope.center.clone().applyAxisAngle(V3(0,1,0),x*12.9+z*7.3).multiplyScalar(s).add(V3(x,y,z));
-      canopies.push([c.x,c.y,c.z,kind.tree.envelope.radius*s+.3,{insts,i,x,y,z,s,rotY:x*12.9+z*7.3}]);
+    spots.forEach(([x, y, z], i) => {
+      const ref = { ...treeRef(x, y, z), insts, i }, v = ref.v, bulk = treeBulk(v), tk = kind.tree.trunk, trunkR = tk ? tk.radius * v.width : 0.9 * v.width, trunkTop = y + (tk ? tk.top * v.height : kind.crown[0] * v.height * 0.6);
+      solids.push([x, z, trunkR, trunkTop]); // the collider follows the tree's own width and height
+      const c = kind.tree.envelope.center.clone().multiply(V3(v.width, v.height, v.width)).applyAxisAngle(V3(0, 1, 0), ref.rotY).add(V3(x, y, z));
+      canopies.push([c.x, c.y, c.z, kind.tree.envelope.radius * bulk + .3, ref]);
+      fadeables.push({ ref, look: kind.fade, shapes: [{ center: { x: c.x, y: c.y, z: c.z }, radius: kind.tree.envelope.radius * bulk + 0.3 }, { center: { x, y: 0, z }, radius: trunkR, minY: y, maxY: trunkTop }] });
     });
     }
   }
+  const treeDebug = { pines: pineSpots, kinds: kinds.map((k) => ({ spots: k.spots, envelope: k.tree.envelope, trunk: k.tree.trunk })), canopies, hero: { at: TREE, y: treeY, envelope: tree.envelope } }; // QA data: where trees stand, handed out by main.js only under ?capture
   // a bumped tree rocks on its base for a moment
   const shaking = [];
   function shake(ref, power, lean) {
@@ -178,19 +205,24 @@ export function buildWorld(scene, low) {
       const done = it.age > 2, a = done ? 0 : it.power * 0.13 * Math.exp(-it.age * 2.6) * Math.sin(it.age * 15);
       if (r.group) r.group.rotation.set(Math.cos(it.lean) * a * 0.4, 0, Math.sin(it.lean) * a * 0.4);
       else {
-        quat.setFromEuler(euler.set(Math.cos(it.lean) * a, r.rotY, Math.sin(it.lean) * a, 'XZY'));
-        mat4.compose(V3(r.x, r.y, r.z), quat, V3(r.s, r.s, r.s));
-        for (const inst of r.insts) { inst.setMatrixAt(r.i, mat4); inst.instanceMatrix.needsUpdate = true; }
+        treeMatrix(mat4, quat, euler, r, Math.cos(it.lean) * a, Math.sin(it.lean) * a);
+        if (r.faded) r.faded.setMatrix(mat4); // a see-through tree: the batch slot stays hidden, its copy shakes
+        else for (const inst of r.insts) { inst.setMatrixAt(r.i, mat4); inst.instanceMatrix.needsUpdate = true; }
       }
       if (done) shaking.splice(k, 1);
     }
   }
   let lastT = 0;
-  const pine = pines([[0, 0, 0, 1]], 3);
+  const pine = pines([[0, 0, 0, 1]], 3, low);
   for(const spots of forestBatches(pineSpots)){
     const pineInst=new THREE.InstancedMesh(pine.geometry,pine.material,spots.length);
-    spots.forEach(([x,y,z,s],index)=>pineInst.setMatrixAt(index,mat4.compose(V3(x,y,z),quat.identity(),V3(s,s,s))));
+    spots.forEach(([x,y,z,s],index)=>{
+      pineInst.setMatrixAt(index,mat4.compose(V3(x,y,z),quat.identity(),V3(s,s,s)));
+      // a pine is s tall and about 0.3 s across at its widest: a cylinder is the closest of the camera model's shapes
+      fadeables.push({ ref: { insts: [pineInst], i: index }, shapes: [{ center: { x, y: 0, z }, radius: 0.3 * s, minY: y, maxY: y + s }] });
+    });
     pineInst.computeBoundingSphere();pineInst.boundingSphere.radius+=FOREST_BATCH.padding;
+    pineInst.userData.part='trees'; // bench part name
     scene.add(pineInst);
   }
   for (const [x, y, z, s] of pineSpots) solids.push([x, z, 0.08 * s + 0.4, y + s * 0.9]);
@@ -200,6 +232,7 @@ export function buildWorld(scene, low) {
   const dress = dressValley({ scene, terrain, LAND, CAFE, CAMP, glade, treeSpots, low, LOFT, TREE, treeTop: treeY + 15 });
   terrain.uniforms.uGarden.value.set(LOFT[0] + 2, LOFT[1] + 3, 19); // flowers always grow around the loft
   ramps.push(...dress.ramps);
+  applyLampMap(dress.lampSpots, LAND.half); // path lamps cast baked warm pools on the ground
 
   // ---- Bounce pads (giant mushrooms) and wisps -------------------------------------------------
   const padSpots = [[-16, 12], [18, -12], [32, 24], [56, 20], [-40, 22], [-60, -8], [8, -30], [-4, -58], [28, -70], [40, -40], [-30, -70], [100, 60], [8, -84], [36, -96]]
@@ -260,14 +293,11 @@ export function buildWorld(scene, low) {
 
   const view = (x, y, z, dx, dy, dz) => ({ p: [x + dx, y + dy, z + dz], t: [x, y, z] });
   buildVillages(scene,terrain,solids);
-  scene.traverse(object => {
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    for (const material of materials) {
-      if (material?.uniforms?.uOccluder) material.uniforms.uOccluder.value = 1;
-    }
-  });
   return {
-    motes, terrain, terrainProps, woodland,
+    fadeables, treeDebug,
+    motes, terrain, terrainProps, woodland, gladeGrass,
+    /** Where the cherry trees stand, [x, groundY, z, size], for the falling petals. */
+    cherrySpots: kinds.find((kind) => kind.name === 'cherry').spots,
     /** Camera stops: p = eye, t = look-at. */
     views: {
       all: view(27, 5, 27, -38, 30, 54),

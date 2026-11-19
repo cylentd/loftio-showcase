@@ -129,6 +129,7 @@ export function makePond(x, y, z, radius, land) {
   m.rotation.x = -Math.PI / 2;
   m.position.set(x, y, z);
   m.renderOrder = 1;
+  m.userData.part = 'water'; // bench part name
   return m;
 }
 
@@ -158,6 +159,7 @@ export function makeStream(points, edgeIndex, width, fadeFrom = 0.55) {
   const m = new THREE.Mesh(g, shaderMaterial(WATER_VERT, FALL_FRAG, { uEdge: { value: edgeLen }, uLen: { value: len }, uFadeFrom: { value: fadeFrom } },
     { transparent: true, depthWrite: false, side: THREE.DoubleSide }));
   m.renderOrder = 2;
+  m.userData.part = 'water'; // bench part name
   m.frustumCulled = false;
   return m;
 }

@@ -1,0 +1,39 @@
+/* The pause window and its HUD button. Tokens come from style.css. */
+:root {
+  --pause-layer: 50; /* above the corner tools (6), below the loading cover (100) */
+  --pause-width: 440px;
+  --pause-dim: rgba(10, 6, 30, 0.62);
+  --pause-gap: 14px;
+}
+[data-pause] { display: none; }
+.playing [data-pause] { display: inline-flex; }
+.pause { position: fixed; inset: 0; z-index: var(--pause-layer); display: grid; place-items: center; padding: var(--edge); background: var(--pause-dim); }
+.pause[hidden] { display: none; }
+.pause-card { width: min(var(--pause-width), 100%); max-height: 100%; overflow-y: auto; overscroll-behavior: contain; user-select: text; -webkit-user-select: text;
+  padding: 20px 20px 22px; border-radius: var(--card-radius); background: var(--ink-strong); border: 1px solid var(--line);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); display: flex; flex-direction: column; gap: var(--gap); }
+.pause-card h2 { margin: 0; font: 600 28px/1.1 var(--font); text-shadow: var(--shadow); }
+.pause-card h3 { margin: 6px 0 0; font: 600 18px/1.2 var(--font); color: var(--amber); }
+.pause-card h4 { margin: 4px 0 0; font: 600 14px/1.2 var(--ui); }
+.pause-primary { color: #2a1c10; background: var(--amber); border-color: transparent; font-weight: 600; }
+.pause-primary:hover { background: #ffd58f; }
+.pause-keys { list-style: none; margin: 0; padding: 0; display: none; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.4; }
+.pause-keys li { display: grid; grid-template-columns: 9.5em 1fr; gap: 10px; align-items: baseline; }
+.pause-keys strong { font-weight: 600; color: var(--cream); }
+.pause-keys span { opacity: 0.85; }
+@media (hover: hover) and (pointer: fine) { .pause-keys.for-mouse { display: flex; } }
+@media (hover: none), (pointer: coarse) { .pause-keys.for-touch { display: flex; } }
+.pause-switch { justify-content: space-between; width: 100%; padding: 0 16px; }
+.pause-switch::after { content: 'Off'; color: var(--cream); opacity: 0.7; }
+.pause-switch[aria-checked="true"] { color: var(--amber); border-color: rgba(255, 196, 107, 0.6); }
+.pause-switch[aria-checked="true"]::after { content: 'On'; color: var(--amber); opacity: 1; }
+.pause-modes { display: flex; flex-direction: column; gap: var(--gap); }
+.pause-mode { justify-content: space-between; border-radius: var(--card-radius); text-align: left; width: 100%; padding: 8px 16px; }
+.pause-mode span { opacity: 0.8; font-size: 13px; text-align: right; }
+.pause-mode[aria-checked="true"] { color: var(--amber); border-color: rgba(255, 196, 107, 0.6); background: rgba(255, 196, 107, 0.14); }
+.pause-note { margin: 0; font-size: 13px; opacity: 0.75; }
+.pause-loft[hidden] { display: none; }
+@media (max-width: 560px) {
+  .pause-keys li { grid-template-columns: 1fr; gap: 1px; }
+  .pause-card { padding: 16px; }
+}

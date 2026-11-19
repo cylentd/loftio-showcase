@@ -6,14 +6,32 @@ const ROOT_HZ = 523.25; // C5
 const MUSIC_TRACKS = ['./music.mp3', './path-through-the-glowing-grove.mp3'];
 const BATTLE_TRACK = './battle.mp3'; // plays while a monster is engaged with you
 const MUSIC_LEVEL = 0.42, BATTLE_LEVEL = 0.5; // volumes
+const MUSIC_RISE = 1.5; // seconds for the valley music to reach full level when sound first starts
+const AUTOPLAY_WAIT_MS = 400; // how long a no-gesture start may take to answer before it counts as blocked
 const FADE_IN = 0.9, FADE_OUT = 2.6; // seconds: battle music arrives quickly and leaves slowly
 
 export function createAudio({ muted = false }) {
   let ctx, master, wet, noiseBuf, wind, windGain, windFilter, music, musicGain, on = !muted, chime = 0, lastChime = 0, lastTick = 0;
   let musicIndex = 0, waterGain = null, battle = null, battleGain = null, inBattle = false, battleStop = 0;
 
+  /** A later gesture wakes a context that was created before one (the browser kept it suspended). */
+  function unlock() {
+    ctx.resume?.();
+    if (on && music.paused) music.play().catch(() => {});
+  }
+
+  /** Try to start sound with no gesture; true only if the context runs and the music is really playing. */
+  async function tryStart() {
+    boot();
+    // a blocked resume() or play() can stay pending, so together they only get a short moment to answer
+    const patience = new Promise((done) => setTimeout(done, AUTOPLAY_WAIT_MS));
+    try { await Promise.race([Promise.all([ctx.resume(), on && music.paused ? music.play() : null]), patience]); } catch { return false; }
+    return playing();
+  }
+  const playing = () => !!ctx && ctx.state === 'running' && !music.paused;
+
   function boot() {
-    if (ctx) return;
+    if (ctx) { unlock(); return; }
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain();
     master.gain.value = on ? 0.9 : 0;
@@ -54,7 +72,9 @@ export function createAudio({ muted = false }) {
       if (on) music.play().catch(() => {});
     });
     musicGain = ctx.createGain();
-    musicGain.gain.value = MUSIC_LEVEL;
+    // fade in, so the music does not jump in under the flyover; the clock is frozen while suspended, so it starts when sound does
+    musicGain.gain.value = 0;
+    musicGain.gain.setTargetAtTime(MUSIC_LEVEL, ctx.currentTime, MUSIC_RISE / 3);
     ctx.createMediaElementSource(music).connect(musicGain).connect(master);
     if (on) music.play().catch(() => {});
 
@@ -130,6 +150,9 @@ export function createAudio({ muted = false }) {
 
   return {
     boot,
+    tryStart,
+    unlock: () => { if (ctx) unlock(); else boot(); },
+    playing,
     material: ready((event) => {
       if(!event.gain)return;
       const recipe={f0:event.f0,f1:event.f1,dur:event.duration,gain:Math.min(event.gain,.12),send:event.send,type:event.type};
@@ -146,7 +169,7 @@ export function createAudio({ muted = false }) {
     encounter,
     get inBattle() { return inBattle; },
     /** For scripted checks: what the two music players are doing right now. */
-    debug() { return ctx ? { inBattle, battleVolume: +battleGain.gain.value.toFixed(2), valleyVolume: +musicGain.gain.value.toFixed(2), battlePaused: battle.paused } : null; },
+    debug() { return ctx ? { playing: playing(), inBattle, battleVolume: +battleGain.gain.value.toFixed(2), valleyVolume: +musicGain.gain.value.toFixed(2), battlePaused: battle.paused } : null; },
     /** speed 0..1 and whether we are diving: the wind follows. */
     wind: ready((speed, dive) => {
       const t = ctx.currentTime;
@@ -217,6 +240,13 @@ export function createAudio({ muted = false }) {
     bump: ready(() => {
       tone({ f0: 210, f1: 640, dur: 0.3, gain: 0.3, wobble: 70, wobbleHz: 19, type: 'triangle' });
       bell(ROOT_HZ * 1.5, 0.14, 0.02, 0.6); bell(ROOT_HZ * 2, 0.12, 0.09, 0.8);
+    }),
+    /** A Chomp combo landing: a rising major chord rung over the hit, a scale step higher for each link in the chain. */
+    chompCombo: ready((chain = 1) => {
+      const step = Number.isFinite(chain) ? Math.max(0, Math.min(Math.floor(chain) - 1, PENTATONIC.length - 1)) : 0;
+      const root = ROOT_HZ * 2 * 2 ** (PENTATONIC[step] / 12);
+      [0, 4, 7, 12].forEach((semi, i) => bell(root * 2 ** (semi / 12), 0.14, 0.04 + i * 0.05, 1));
+      tone({ f0: 300, f1: 1200, dur: 0.3, gain: 0.12, type: 'triangle', wobble: 40, wobbleHz: 20 });
     }),
     /** Dropping into water: a slap, a deep "ploomp", then falling droplets. */
     splash: ready((power = 0.5) => {

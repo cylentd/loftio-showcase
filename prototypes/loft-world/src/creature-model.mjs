@@ -26,6 +26,27 @@ export function safeStep(from,to,radius,world,home){
  }
  return true;
 }
+/** A hit is a new angle when its contact normal turned at least 60 degrees from the last hit's; the top counts. */
+export function newAngle(last,normal){
+ if(!last)return false;
+ const a=Math.hypot(last.x,last.y,last.z),b=Math.hypot(normal.x,normal.y,normal.z);
+ return a>0&&b>0&&(last.x*normal.x+last.y*normal.y+last.z*normal.z)/(a*b)<=C.linkAngleCos;
+}
+/** F counters while the enemy telegraphs (stomp crouch, headbutt rear-back, gust swell, Drift's shot wind-up) or follows through an attack. */
+export function counterOpen(enemy){return !!enemy&&(winding(enemy)||(enemy.opening??0)>0||!!enemy.aiming);}
+/** True while a stomp, headbutt or gust is winding up. */
+export function winding(enemy){return (enemy.wind??-1)>=0||(enemy.bonkWind??-1)>=0||(enemy.gustWind??-1)>=0;}
+/** A countered enemy stays locked in its swing while Chomper zips Sprout round to its back. */
+export function counterEnemy(enemy){enemy.commit=Math.max(enemy.commit??0,C.counterLock);enemy.read=0;}
+/** An untimed F is read: the enemy shakes off its stagger and turns on Sprout; a floater gusts as soon as he is near. */
+export function readEnemy(enemy){enemy.read=C.readTime;enemy.commit=0;if(enemy.floats)enemy.gust=Math.min(enemy.gust??0,0);}
+const clamp01=x=>Math.min(Math.max(x,0),1);
+/** Damage multiplier for a diving hit by how far Sprout fell: 1 up to dropMin, rising to dropCap. */
+export function dropBonus(fall){return 1+clamp01((fall-C.dropMin)/(C.dropCap-C.dropMin))*(C.dropCap-C.dropMin)*C.dropPerUnit;}
+/** 0..1 strength of a Skyfall's ground shockwave: 0 below slamMin, 1 at dropCap. */
+export function slamPower(fall){return clamp01((fall-C.slamMin)/(C.dropCap-C.slamMin));}
+/** How far the shockwave reaches along the ground. */
+export function slamReach(power){return C.slamRange[0]+(C.slamRange[1]-C.slamRange[0])*power;}
 export function safeHome(def,radius,world){
  for(let i=0;i<C.homeSearch;i++){
   const angle=i*C.goldenAngle,distance=Math.sqrt(i)*C.homeStep;

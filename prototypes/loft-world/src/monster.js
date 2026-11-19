@@ -5,7 +5,7 @@ import { softMaterial } from './glsl.js';
 import { blob, merge, place, tint } from './util.js';
 import { sweepSphere } from './contact-model.mjs';
 import {CREATURE as C} from './creature-constants.mjs';
-import {initialPatrol,nextPatrol,patrolPosition,safeHome,movingContact} from './creature-model.mjs';
+import {initialPatrol,nextPatrol,patrolPosition,safeHome,movingContact,newAngle,winding,dropBonus,slamReach} from './creature-model.mjs';
 import {CREATURE_COPY} from './creature-copy.mjs';
 import {buildDrift} from './drift-view.js';
 
@@ -87,20 +87,20 @@ function build(style = 'walk') {
 }
 
 export function createMonster({ scene, world, sfx, toys, hud, puff, definition={id:"grumble",name:"Grumble",x:2,z:72,scale:1,style:"walk"} }) {
-  const M = {...MONSTER,radius:MONSTER.radius*definition.scale}, H = world.terrain.heightAt;
+  const M = {...MONSTER,radius:MONSTER.radius*definition.scale,health:definition.health??MONSTER.health}, H = world.terrain.heightAt;
   const home=safeHome(definition,M.radius,world), tuning={speed:definition.style==='hop'?C.hopSpeed:C.walk,hopHeight:C.hopHeight};
   let visible=true;
   const floats = definition.style === 'float', group = build(definition.style);
   scene.add(group);
-  const s = { hp: M.health, at: 0, pos: new THREE.Vector3(), yaw: 0, hit: 9, stompIn: M.stompEvery, wind: -1, down: -1, combo: 0, sinceHit: 9, alive: true, grow: 0 };
-  Object.assign(s,{id:definition.id,name:definition.name??CREATURE_COPY[definition.id],radius:M.radius,heading:definition.heading??0,engaged:false,patrol:initialPatrol(),home});
+  const s = { hp: M.health, maxHp: M.health, at: 0, pos: new THREE.Vector3(), yaw: 0, hit: 9, stompIn: M.stompEvery, wind: -1, down: -1, combo: 0, sinceHit: 9, alive: true, grow: 0 };
+  Object.assign(s,{floats,id:definition.id,name:definition.name??CREATURE_COPY[definition.id],radius:M.radius,heading:definition.heading??0,engaged:false,patrol:initialPatrol(),home});
   s.previous=new THREE.Vector3();
   s.sweep=(from,to,radius)=>movingContact(from,to,s.previous,s.pos,M.radius+radius);
   function spawn() {
     const {x,z}=home??{x:definition.x,z:definition.z};
     s.pos.set(x, H(x, z) + M.radius * C.foot, z); s.hp = M.health; s.alive = true; s.grow = 0; s.stompIn = M.stompEvery; s.wind = -1;
     s.alive=!!home;s.engaged=false;s.combo=0;s.sinceHit=9;s.down=-1;s.patrol=initialPatrol(definition.style==='hop'?C.hopWait:C.wait);s.previous.copy(s.pos);s.velocity?.set(0,0,0);group.rotation.z=0;
-    s.stun=0;s.commit=0;s.distracted=0;s.distractAt=null;s.shove?.set(0,0,0);s.bonk=C.bonkEvery;s.gust=M.gustEvery;
+    s.lastNormal=null;s.lastLink=s.lastCounter=false;s.opening=s.read=0;s.bonkWind=s.gustWind=-1;s.stun=0;s.commit=0;s.distracted=0;s.distractAt=null;s.shove?.set(0,0,0);s.bonk=C.bonkEvery;s.gust=M.gustEvery;
   }
   spawn();
   s.velocity=new THREE.Vector3();
@@ -110,7 +110,7 @@ export function createMonster({ scene, world, sfx, toys, hud, puff, definition={
     reset(){s.at++;spawn();},
     setVisible(on){visible=on;group.visible=on&&s.alive;},
     /** Pushes a resident out of the monster. If it came in fast, that is a hit: returns the damage dealt. */
-    touch(b, radius, isLead, dived) {
+    touch(b, radius, isLead, dived, fall = 0) {
       if (!s.alive || s.grow < 0.9) return 0;
       const contact=s.sweep?s.sweep(b.previous??b.pos,b.pos,radius):sweepSphere(b.previous??b.pos,b.pos,s.pos,M.radius+radius);
       if(!contact)return 0;
@@ -121,12 +121,20 @@ export function createMonster({ scene, world, sfx, toys, hud, puff, definition={
       if(into>0){b.vel.copy(response.outgoing);b.propulsion=0;}
       if (!response.qualifying || into < M.hitSpeed) return 0;
       // only your own hits build the combo; an ally's hit keeps it alive but does not raise it
-      if (isLead) s.combo = s.sinceHit < M.comboWindow ? s.combo + 1 : 1;
+      // and it only climbs when you strike from a new angle: circling the monster is the combo (owner, 2026-11-18)
+      // a counter (F timed against this monster's telegraph) is always a link, even as the opening hit
+      if (isLead) {
+        const live = s.sinceHit < M.comboWindow && s.combo > 0;
+        s.lastCounter = b.counter?.id === s.id && b.counter?.at === s.at;
+        s.lastLink = s.lastCounter || (live && newAngle(s.lastNormal, n));
+        s.combo = live ? s.combo + (s.lastLink ? 1 : 0) : 1;
+        s.lastNormal = {x: n.x, y: n.y, z: n.z};
+      }
       s.sinceHit = 0; s.hit = 0; s.engaged=true;
       if (!isLead) { s.distracted = M.distract; s.distractAt = b.pos; } else s.commit = Math.max(s.commit ?? 0, M.commitAfterHit);
       // weak spot: the back of the walkers, the top of the floater. The contact normal says where you struck.
       const weak = (floats ? n.y : -(n.x * Math.sin(s.yaw) + n.z * Math.cos(s.yaw))) > M.weakCone;
-      const damage = Math.max(1, Math.round(into * M.damagePerSpeed * (dived ? M.diveBonus : 1) * (weak ? M.weakBonus : 1) * (isLead ? 1 + (s.combo - 1) * M.comboBonus : M.allyShare)));
+      const damage = Math.max(1, Math.round(into * M.damagePerSpeed * (dived ? M.diveBonus * dropBonus(fall) : 1) * (weak ? M.weakBonus : 1) * (isLead ? 1 + (s.combo - 1) * M.comboBonus : M.allyShare)));
       s.lastWeak = weak;
       s.hp = Math.max(s.hp - damage, 0);
       // Contact recoil belongs to the incoming resident; patrol remains within its safe hull.
@@ -149,12 +157,28 @@ export function createMonster({ scene, world, sfx, toys, hud, puff, definition={
     pop(p, range) {
       if (!s.alive || p.distanceTo(s.pos) > range + M.radius) return false;
       s.hp = Math.max(s.hp - M.popDamage, 1); s.hit = 0; s.engaged = true;
-      s.stun = M.popStun; s.wind = -1; s.stompIn = Math.max(s.stompIn, M.popStun + 1); // an interrupted stomp starts over
+      s.stun = M.popStun; s.wind = s.bonkWind = s.gustWind = -1; s.stompIn = Math.max(s.stompIn, M.popStun + 1); // an interrupted stomp starts over
       n.set(s.pos.x - p.x, 0, s.pos.z - p.z);
       if (n.lengthSq() < 0.01) n.set(1, 0, 0);
       s.shove = (s.shove ?? new THREE.Vector3()).copy(n.normalize()).multiplyScalar(M.popShove);
       toys.burst(v.copy(s.pos), '#8ff5e0', 18, 14, 8);
       return true;
+    },
+    /** A Skyfall landing shakes the ground: power 0..1 from the drop. Hurts, staggers and shoves what is in reach, nearer is worse.
+     *  Like a Pop it never finishes a monster: a direct dive does that. Returns the damage dealt. */
+    slam(p, power) {
+      if (!s.alive || !(power > 0)) return 0;
+      const reach = slamReach(power), d = Math.hypot(p.x - s.pos.x, p.z - s.pos.z);
+      if (d > reach + M.radius) return 0;
+      const falloff = 1 - C.slamEdgeLoss * Math.min(Math.max(d - M.radius, 0) / reach, 1);
+      const damage = Math.max(1, Math.round(C.slamDamage * power * falloff));
+      s.hp = Math.max(s.hp - damage, 1); s.hit = 0; s.engaged = true;
+      s.stun = Math.max(s.stun ?? 0, C.slamStun * power); s.wind = s.bonkWind = s.gustWind = -1; s.stompIn = Math.max(s.stompIn, s.stun + 1);
+      n.set(s.pos.x - p.x, 0, s.pos.z - p.z);
+      if (n.lengthSq() < 0.01) n.set(1, 0, 0);
+      s.shove = (s.shove ?? new THREE.Vector3()).copy(n.normalize()).multiplyScalar(C.slamShove * power);
+      toys.burst(v.copy(s.pos), C.slamColor, 18, 14, 8);
+      return damage;
     },
     update(dt, time, bodies) {
       if(!visible)return;
@@ -174,14 +198,20 @@ export function createMonster({ scene, world, sfx, toys, hud, puff, definition={
       s.patrol=nextPatrol(s.patrol,{type:'tick',dt});
       // Chase: once you are close enough to notice, it leaves its patrol and comes for you.
       // staggered by a Pop: slide back along the shove, and do nothing else until it wears off
-      s.stun=Math.max((s.stun??0)-dt,0);s.commit=Math.max((s.commit??0)-dt,0);
+      s.stun=Math.max((s.stun??0)-dt,0);s.commit=Math.max((s.commit??0)-dt,0);s.opening=Math.max((s.opening??0)-dt,0);
+      // it read an untimed F: it whirls to face Sprout, reeling or not, so the zip ends at its side, not its back
+      s.read=Math.max((s.read??0)-dt,0);
+      if(s.read>0&&s.stun<=0){
+        const want=Math.atan2(dx,dz),turn=Math.atan2(Math.sin(want-s.yaw),Math.cos(want-s.yaw)),most=C.readTurn*dt;
+        s.yaw+=Math.max(-most,Math.min(most,turn));
+      }
       if(s.shove&&s.shove.lengthSq()>.01){
         const nx=s.pos.x+s.shove.x*dt,nz=s.pos.z+s.shove.z*dt,lake=world.lake;
         if(!(lake&&Math.hypot(nx-lake.x,nz-lake.z)<lake.r+M.radius*.5)){s.pos.x=nx;s.pos.z=nz;}
         s.shove.multiplyScalar(Math.exp(-dt*5));
       }
       const recovering=s.stun>0||s.commit>0;
-      const chasing=dist<C.notice&&s.wind<0&&!recovering;
+      const chasing=dist<C.notice&&!winding(s)&&!recovering;
       s.bonk=(s.bonk??0)-dt;
       if(chasing){
         s.engaged=true;
@@ -196,16 +226,25 @@ export function createMonster({ scene, world, sfx, toys, hud, puff, definition={
           const lake=world.lake,wet=lake&&Math.hypot(nx-lake.x,nz-lake.z)<lake.r+M.radius*.5;
           if(!wet){s.pos.x=nx;s.pos.z=nz;}
         }else if(!floats&&s.bonk<0&&lead.grounded&&Math.abs(lead.pos.y-s.pos.y)<M.radius+2){
-          // close enough to shove: a headbutt that sends you tumbling
-          s.bonk=C.bonkEvery;s.hit=0;s.commit=M.commitAfterAttack;
-          n.set(dx,0,dz).normalize();
-          lead.vel.copy(n).multiplyScalar(C.bonkToss[0]).setY(C.bonkToss[1]);lead.grounded=false;lead.squash=1;lead.dizzy=.6;
-          puff(lead.pos,12,'#c9b2ff');sfx.hit(.5,1);hud.shake(.6);
+          // close enough to shove: it rears back first (the telegraph, a counter window), then headbutts
+          s.bonkWind=0;sfx.growl?.();
         }
-      } else if(s.patrol.phase==='move'&&s.wind<0&&!recovering){
+      } else if(s.patrol.phase==='move'&&!winding(s)&&!recovering){
         const next=patrolPosition(s,home,dt,tuning.speed,world,M.radius);
         if(next){s.pos.copy(next);const want=Math.atan2(s.pos.x-previous.x,s.pos.z-previous.z);s.yaw+=Math.atan2(Math.sin(want-s.yaw),Math.cos(want-s.yaw))*Math.min(dt*C.turn,1);}
         else s.patrol={phase:'wait',remaining:C.wait,leg:s.patrol.leg+1};
+      }
+      if(s.bonkWind>=0){
+        s.bonkWind+=dt;
+        if(s.bonkWind>C.bonkWindup){
+          s.bonkWind=-1;s.bonk=C.bonkEvery;s.hit=0;s.commit=M.commitAfterAttack;s.opening=C.counterAfter;
+          // it lands only on a Sprout still on the ground and in reach: jumping or stepping back slips it
+          if(lead.grounded&&dist<=M.radius+C.chaseStop&&Math.abs(lead.pos.y-s.pos.y)<M.radius+2){
+            n.set(dx,0,dz).normalize();
+            lead.vel.copy(n).multiplyScalar(C.bonkToss[0]).setY(C.bonkToss[1]);lead.grounded=false;lead.squash=1;lead.dizzy=.6;
+            puff(lead.pos,12,'#c9b2ff');sfx.hit(.5,1);hud.shake(.6);
+          }
+        }
       }
       const hop=definition.style==='hop'&&(chasing||s.patrol.phase==='move')?Math.abs(Math.sin((chasing?time:C.travel-s.patrol.remaining)/C.hopPeriod*Math.PI))*tuning.hopHeight*(chasing?2:1):0;
       s.pos.y=H(s.pos.x,s.pos.z)+M.radius*C.foot+hop+(floats?M.floatHeight+Math.sin(time*1.1+s.heading)*1.2:0);
@@ -214,13 +253,21 @@ export function createMonster({ scene, world, sfx, toys, hud, puff, definition={
       const pulse=1+Math.sin(time*3.2+s.heading)*.09+Math.exp(-s.spotHit*5)*.7,spot=group.userData.spot;
       if(floats)spot.scale.set(1.9*pulse,.5,1.9*pulse);else spot.scale.set(1.8*pulse,1.8*pulse,.5);
       if(floats){
-        // a gust: a puff of air that shoves you sideways when you get close
+        // a gust: it swells first (the telegraph, a counter window), then a puff of air shoves you sideways
         s.gust=(s.gust??M.gustEvery)-dt;
-        if(s.gust<0&&!recovering&&lead.pos.distanceTo(s.pos)<M.gustRange){
-          s.gust=M.gustEvery;s.hit=0;s.commit=M.commitAfterAttack;
-          n.set(lead.pos.x-s.pos.x,0,lead.pos.z-s.pos.z);if(n.lengthSq()<.01)n.set(1,0,0);n.normalize();
-          lead.vel.copy(n).multiplyScalar(M.gustPush[0]).setY(Math.max(lead.vel.y,M.gustPush[1]));lead.grounded=false;lead.propulsion=0;lead.squash=.6;
-          puff(s.pos,20,'#8fe0d0');toys.burst(v.copy(lead.pos),'#c9fff2',18,14,4);sfx.rustle?.();hud.shake(.4);
+        if(s.gustWind<0&&s.gust<0&&!recovering&&lead.pos.distanceTo(s.pos)<M.gustRange){s.gustWind=0;s.gust=M.gustEvery;}
+        if(s.gustWind>=0){
+          s.gustWind+=dt;
+          if(s.gustWind>C.gustWindup){
+            s.gustWind=-1;s.hit=0;s.commit=M.commitAfterAttack;s.opening=C.counterAfter;
+            puff(s.pos,20,'#8fe0d0');sfx.rustle?.();hud.shake(.4);
+            n.set(lead.pos.x-s.pos.x,0,lead.pos.z-s.pos.z);if(n.lengthSq()<.01)n.set(1,0,0);n.normalize();
+            // a countering Sprout slips the gust; anyone else in range is shoved, and knocked out of a zip
+            if(!lead.counter&&lead.pos.distanceTo(s.pos)<M.gustRange){
+              lead.vel.copy(n).multiplyScalar(M.gustPush[0]).setY(Math.max(lead.vel.y,M.gustPush[1]));lead.grounded=false;lead.propulsion=0;lead.squash=.6;lead.knocked=true;
+              toys.burst(v.copy(lead.pos),'#c9fff2',18,14,4);
+            }
+          }
         }
       }
       if(dt>0)s.velocity.set((s.pos.x-previous.x)/dt,(s.pos.y-previous.y)/dt,(s.pos.z-previous.z)/dt);
@@ -229,7 +276,7 @@ export function createMonster({ scene, world, sfx, toys, hud, puff, definition={
       if (s.wind >= 0) {
         s.wind += dt;
         if (s.wind > M.stompWindup) {
-          s.wind = -1; s.stompIn = M.stompEvery; s.commit = M.commitAfterAttack;
+          s.wind = -1; s.stompIn = M.stompEvery; s.commit = M.commitAfterAttack; s.opening = C.counterAfter;
           v.copy(s.pos).setY(s.pos.y - M.radius * 0.8);
           puff(v, 44, '#c9b2ff'); toys.burst(v, '#e9dcc0', 30, 22, 5);
           sfx.stomp();
@@ -241,14 +288,17 @@ export function createMonster({ scene, world, sfx, toys, hud, puff, definition={
           }
           hud.shake(0.9);
         }
-      } else if (!floats && !recovering && dist < M.stompRange * definition.scale) { s.stompIn -= dt; if (s.stompIn < 0) { s.wind = 0; sfx.growl(); } }
+      } else if (!floats && !recovering && !winding(s) && dist < M.stompRange * definition.scale) { s.stompIn -= dt; if (s.stompIn < 0) { s.wind = 0; sfx.growl(); } }
 
       const breathe = Math.sin(time * 1.6) * 0.025, flinch = Math.exp(-s.hit * 7) * Math.cos(s.hit * 26) * 0.22;
       const crouch = s.wind >= 0 ? Math.sin(Math.min(s.wind / M.stompWindup, 1) * Math.PI * 0.5) * 0.3 : 0;
-      const g = definition.scale * s.grow * s.grow * (3 - 2 * s.grow);
+      // the headbutt rears back and the gust swells, so every attack shows before it lands
+      const rear = s.bonkWind >= 0 ? Math.sin(Math.min(s.bonkWind / C.bonkWindup, 1) * Math.PI * 0.5) : 0;
+      const swell = s.gustWind >= 0 ? Math.min(s.gustWind / C.gustWindup, 1) * C.gustSwell : 0;
+      const g = definition.scale * s.grow * s.grow * (3 - 2 * s.grow) * (1 + swell);
       group.visible=visible&&s.alive;
       group.position.copy(s.pos).setY(s.pos.y - crouch * M.radius * 0.5);
-      group.rotation.y = s.yaw;
+      group.rotation.order = 'YXZ'; group.rotation.y = s.yaw; group.rotation.x = -rear * C.bonkLean; // lean in its own frame
       group.scale.set(g * (1 + crouch * 0.25 - flinch), g * (1 + breathe - crouch + flinch), g * (1 + crouch * 0.25 - flinch));
       // The collection chooses one contextual HUD, never one bar per instance.
     },

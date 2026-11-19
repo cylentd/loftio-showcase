@@ -6,6 +6,7 @@
 <title>Loftio: Plush Valley</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="loading.css">
+<link rel="stylesheet" href="pause.css">
 <script type="importmap">
 { "imports": { "three": "../loft-outside/node_modules/three/build/three.module.js", "three/addons/": "../loft-outside/node_modules/three/examples/jsm/" } }
 </script>
@@ -14,6 +15,7 @@
 <section class="world-loading" data-world-loading aria-label="Loading Plush Valley">
   <h1>Plush Valley</h1>
   <p role="status" aria-live="polite">Finding a path through the grove…</p>
+  <button type="button" data-loading-begin hidden></button>
   <button type="button" data-loading-retry hidden>Try again</button>
   <a data-loading-back hidden>Back to Loft</a>
 </section>
@@ -32,12 +34,14 @@
     <g id="i-sound"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="waves" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.6 7.6 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></g>
     <g id="i-tune"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></g>
     <g id="i-exit"><path d="M10 5H5v14h5"/><path d="M14 8l4 4-4 4M18 12H9"/></g>
+    <g id="i-pause"><path d="M9 5v14M15 5v14"/></g>
     <g id="i-jump"><path d="M6 13l6-6 6 6"/><path d="M6 19l6-6 6 6"/></g>
     <g id="i-pop"><ellipse cx="12" cy="17" rx="9" ry="4"/><path d="m12 3-3 6h2v5h2V9h2l-3-6ZM4 8l-2 4M20 8l2 4M6 15c1.5-2 10.5-2 12 0"/></g>
     <g id="i-mouse"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 3v6"/></g>
     <g id="i-click"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 3v6M7 9h5" /><path d="M7.4 6.5A5 5 0 0 1 12 3v6H7z" fill="currentColor" stroke="none"/></g>
     <g id="i-drag"><circle cx="9" cy="14" r="3"/><path d="M12 11l7-7M15 4h4v4"/></g>
     <g id="i-look"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></g>
+    <g id="i-walk"><path d="M12 3.5 9.5 6M12 3.5 14.5 6M12 20.5 9.5 18M12 20.5 14.5 18M3.5 12 6 9.5M3.5 12 6 14.5M20.5 12 18 9.5M20.5 12 18 14.5"/><circle cx="12" cy="12" r="1.4"/></g>
     <g id="i-two"><circle cx="8" cy="13" r="2.6"/><circle cx="16" cy="9" r="2.6"/></g>
     <g id="i-chomper"><circle cx="12" cy="13" r="7"/><path d="M8 12.5h8a4 4 0 0 1-8 0z"/><path d="M7 7 5.5 4M17 7l1.5-3"/></g>
   </defs>
@@ -61,6 +65,7 @@
 
 <!-- Corner tools: always available. -->
 <div class="tools">
+  <button class="tool" data-pause aria-label="Pause" title="Pause (Esc)"><svg class="icon"><use href="#i-pause"/></svg></button>
   <button class="tool" data-exit aria-label="Leave Explore" title="Leave Explore"><svg class="icon"><use href="#i-exit"/></svg></button>
   <button class="tool" data-help aria-pressed="true" aria-label="Tutorial" title="Tutorial"><svg class="icon"><use href="#i-help"/></svg></button>
   <button class="tool" data-sound aria-pressed="true" aria-label="Sound" title="Sound"><svg class="icon"><use href="#i-sound"/></svg></button>
@@ -76,6 +81,7 @@
       <label>Glow <input type="range" data-tune="glow" min="0" max="1.5" step="0.01"></label>
       <label>Mist <input type="range" data-tune="mist" min="0.2" max="2.5" step="0.01"></label>
       <label>Light shafts <input type="range" data-tune="shafts" min="0" max="1.5" step="0.01"></label>
+      <label>Time of day <input type="range" data-day-time min="0" max="1" step="0.005"></label>
       <label>Wind <input type="range" data-tune="wind" min="0" max="2.5" step="0.01"></label>
       <label>Fireflies <input type="range" data-tune="motes" min="0" max="1" step="0.01"></label>
     </div>
@@ -100,18 +106,24 @@
       <li><kbd>Space</kbd><span>Hold to charge a jump</span></li>
       <li><kbd>Space</kbd><svg class="icon"><use href="#i-chomper"/></svg><span>In the air: Chomper bumps you higher</span></li>
       <li><kbd>Shift</kbd><span>Sprint, or dive in the air</span></li>
-      <li><kbd>F</kbd><svg class="icon"><use href="#i-pop"/></svg><span>Pop: a shockwave</span></li>
+      <li><kbd>F</kbd><svg class="icon"><use href="#i-pop"/></svg><span>Pop on the ground, Chomper zip in the air</span></li>
     </ul>
     <ul class="for-touch">
+      <li><svg class="icon"><use href="#i-walk"/></svg><span>Left thumb walks; push to the edge to sprint</span></li>
       <li><svg class="icon"><use href="#i-drag"/></svg><span>Drag from your resident to fling</span></li>
       <li><svg class="icon"><use href="#i-look"/></svg><span>Drag anywhere else to look</span></li>
       <li><svg class="icon"><use href="#i-two"/></svg><span>A second finger looks while you aim</span></li>
       <li><svg class="icon"><use href="#i-jump"/></svg><span>Hold to charge a jump</span></li>
       <li><svg class="icon"><use href="#i-jump"/></svg><svg class="icon"><use href="#i-chomper"/></svg><span>In the air: Chomper bumps you higher</span></li>
-      <li><svg class="icon"><use href="#i-pop"/></svg><span>Pop: a shockwave</span></li>
+      <li><svg class="icon"><use href="#i-pop"/></svg><span>Pop on the ground, Chomper zip in the air</span></li>
     </ul>
   </aside>
 
+  <!-- Touch walk stick: a faint hint in the lower-left until first use, then a base and knob under the thumb. -->
+  <div class="stick" aria-hidden="true">
+    <div class="stick-hint"><svg class="icon"><use href="#i-walk"/></svg></div>
+    <div class="stick-base"><i class="stick-knob"></i></div>
+  </div>
   <button class="action jump" data-jump aria-label="Jump"><svg class="icon"><use href="#i-jump"/></svg><kbd>Space</kbd></button>
   <button class="action pop" data-special aria-label="Pop"><svg class="icon"><use href="#i-pop"/></svg><kbd>F</kbd></button>
 </section>

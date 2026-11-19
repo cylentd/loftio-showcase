@@ -31,8 +31,8 @@ test('release packages a local world without experiment artifacts', async () => 
     assert.match(html, /data-published-world/);
     assert.match(html, /data-world-loading/);
     assert.doesNotMatch(html, /importmap|node_modules|localhost|loft-outside/);
-    await access(join(output, 'play/valley/assets/residents/sprout-idle.png'));
-    await access(join(output, 'play/valley/assets/residents/chomper-idle.png'));
+    await access(join(output, 'play/valley/assets/residents/sprout-idle.webp'));
+    await access(join(output, 'play/valley/assets/residents/chomper-idle.webp'));
     for (const track of ['music.mp3', 'path-through-the-glowing-grove.mp3', 'battle.mp3']) {
       assert.deepEqual(await readFile(join(output, 'play/valley', track)),
         await readFile(join(gameRoot, 'prototypes/loft-world', track)));

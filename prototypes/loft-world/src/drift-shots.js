@@ -33,11 +33,11 @@ export function createDriftShots({scene,glow,lead,monster,world,floorAt,puff,sfx
     update(dt){
       const enemy=monster.states.find(value=>value.id==='drift');
       const before=state.serial;
-      const hits=updateShots(state,dt,enemy,{pos:lead.pos,radius:1.1},floorAt,blockedAt);
+      const hits=updateShots(state,dt,enemy,{pos:lead.pos,radius:1.1,dodge:!!lead.counter},floorAt,blockedAt);
       if(state.serial>before)sfx.rustle?.();
       for(const hit of hits){
         lead.vel.set(hit.direction.x*SHOT.push,Math.max(lead.vel.y,SHOT.lift),hit.direction.z*SHOT.push);
-        lead.grounded=false;lead.propulsion=0;lead.squash=.6;
+        lead.grounded=false;lead.propulsion=0;lead.squash=.6;lead.knocked=true;
         puff(lead.pos,VIEW.warningSize,VIEW.color);sfx.hit(.4,1);
       }
       warning.visible=state.phase==='windup';
