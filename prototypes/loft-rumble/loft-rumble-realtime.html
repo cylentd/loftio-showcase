@@ -72,7 +72,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor
 </div>
 <div id="portrait-hint" role="note"><span></span><button id="hint-close"></button></div>
 </main><script src="art-manifest.js"></script><script src="arena-skins.js"></script><script src="arena-scenery.js"></script><script src="colosseum-relief.js"></script><script src="battle-materials-config.js"></script><script src="battle-materials.js"></script><script src="art-renderer.js"></script><script src="arena-skin-controls.js"></script><script src="hero-card-data.js"></script><script src="hero-cards.js"></script><script src="rumble-hud-data.js"></script><script src="rumble-hud-model.js"></script><script src="rumble-hud.js"></script><script src="stage-layout-data.js"></script><script src="stage-layout-controls.js"></script><script src="rumble-encounter-data.js"></script><script src="rumble-encounters.js"></script><script src="rumble-demo-data.js"></script><script src="rumble-music-data.js"></script><script src="rumble-music.js"></script><script src="rumble-demo.js"></script><script src="rumble-cues-data.js"></script><script src="rumble-cues-view.js"></script><script src="rumble-cues.js"></script>
-<script src="roster-reader.js"></script><script src="rumble-synergy-data.js"></script><script src="rumble-synergy-copy.js"></script><script src="rumble-synergy.js"></script><script src="rumble-slot-fill.js"></script><script src="rumble-team-apply.js"></script><script>try{window.rumbleTeam=window.LoftRumbleSlotFill.fromStorage(localStorage)}catch(e){window.rumbleTeam=null}</script>
+<script src="roster-reader.js"></script><script src="rumble-synergy-data.js"></script><script src="rumble-synergy-copy.js"></script><script src="rumble-synergy.js"></script><script src="rumble-elements-data.js"></script><script src="rumble-elements.js"></script><script src="rumble-slot-fill.js"></script><script src="rumble-team-apply.js"></script><script>try{window.rumbleTeam=window.LoftRumbleSlotFill.fromStorage(localStorage)}catch(e){window.rumbleTeam=null}</script>
 <script src="rumble-tutorial-model.js"></script>
 <script src="rumble-tutorial-script.js"></script>
 <script src="rumble-tutorial-plain.js"></script>
@@ -306,7 +306,7 @@ function resize(){const edge=arena.offsetWidth-arena.clientWidth,main=stage.pare
 // A ready resident (stopped, ring full) launches at full trait speed; a charged special fires on this fling and spends the charge.
 // power (0 to 1) is the share of the trait's travel range: a sling is 1, a fling is set by the fling-power switch (drag-feedback-data.js, fling).
 function fling(id,angle,power=1){const b=s.bodies[id];if(!b||s.phase!=='play'||b.moving||b.charge<1||stunned(b))return false;camera?.onLaunch(names[id]);const t=profile(b),range=t.range*power;
- Object.assign(b,{moving:true,vx:Math.cos(angle)*t.speed,vy:Math.sin(angle)*t.speed,glide:{speed:t.speed,budget:range,left:range},walls:0,cool:0,inside:false,used:[],charge:0,boost:null,special:null,specialTriggered:false,trail:null,trailD:0,boostHit:false,fielded:false,fieldMult:1});
+ Object.assign(b,{moving:true,vx:Math.cos(angle)*t.speed,vy:Math.sin(angle)*t.speed,glide:{speed:t.speed,budget:range,left:range},boostT:0,walls:0,cool:0,inside:false,used:[],charge:0,boost:null,special:null,specialTriggered:false,trail:null,trailD:0,boostHit:false,fielded:false,fieldMult:1});
  if(!camera?.predicting)dragFeel.launch(b);s.flings++;window.LoftRumbleStats.credit(s.fightStats,{kind:'throw',by:id,special:s.specialCharge[id]>=1});if(s.flings===1)describe();if(s.tutor)s.tutor.pull=true;
  if(s.specialCharge[id]>=1){s.specialCharge[id]=0;b.special=kind(id);if(b.special==='springy'){b.vx*=A.overdrive;b.vy*=A.overdrive;b.glide.speed*=A.overdrive;b.glide.budget*=FEEL.overdriveRange;b.glide.left=b.glide.budget}
   collisionEffect(b.x,b.y,true);s.teamEffects.push({type:'wave',x:b.x,y:b.y,r:85,life:A.effectLife,label:specials[b.special]})}
@@ -350,7 +350,7 @@ function comboHit(){if(s.phase!=='play')return;s.hits++;s.hitsIdle=0;s.hitsPeak=
   s.popups.push({x:a.x,y:a.y+FEEL.comboPopGap+FEEL.popupBig/2,text:COPY.comboMiles[m],big:true,hud:true,align:a.align,color:'chip',bounce:!still(),life:C.popupLife})}
 function breakCombo(why){if(!s.hits)return;s.hitBreaks[why]=(s.hitBreaks[why]??0)+1;s.hitsLost={n:s.hits,life:FEEL.comboLostLife,shatter:why!=='timeout'};s.hits=0;s.hitsIdle=0}
 // Camera experiment only: the last factor is the combo payoff (camera-payoff.js). Without the experiment it is 1.
-function damage(b,weak){const hit=Math.round(profile(b).damage*(weak?C.weakMultiplier:1)*bounceMult(b.walls)*(b.boost?.mult??1)*(b.fieldMult??1)*(camera?window.LoftRumblePayoff.multiplier(s.hits):1));if(b.boost)s.tally??={total:0,parts:[]},s.tally.boost=b.boost;s.focus=Math.min(RT.focusMax,s.focus+RT.focusHit);
+function damage(b,weak){const hit=Math.round(profile(b).damage*(weak?C.weakMultiplier:1)*bounceMult(b.walls)*(b.boost?.mult??1)*(b.fieldMult??1)*window.LoftRumbleElements.damageFactor(TEAM.element?.[b.id])*(camera?window.LoftRumblePayoff.multiplier(s.hits):1));if(b.boost)s.tally??={total:0,parts:[]},s.tally.boost=b.boost;s.focus=Math.min(RT.focusMax,s.focus+RT.focusHit);
  if(camera?.predicting)camera.predictionHits[b.id]={weak};
  window.LoftRumbleStats.credit(s.fightStats,{kind:'hit',by:b.id,amount:Math.min(hit,s.hp),weak:weak?C.weakMultiplier:1,walls:bounceMult(b.walls)});
  s.hp=Math.max(0,s.hp-hit);b.pulse=.2;const e=enemy(),a=Math.atan2(b.y-e.y,b.x-e.x),cx=e.x+Math.cos(a)*C.enemyRadius,cy=e.y+Math.sin(a)*C.enemyRadius;s.lastHit={x:cx,y:cy};
@@ -391,7 +391,7 @@ function abilityAt(a,m){window.LoftRumbleStats.credit(s.fightStats,{kind:'activa
 // made the contact. The bubble pays off in guardAmount below, the one seam every boss hit on the team passes through.
 function supportSynergy(sid,a,m,look){const P=window.LoftRumbleSynergySupport;
  if(sid===P.ids.mend){const next=P.mend(s.teamHP,RT.teamHP,syn(sid)),gain=next-s.teamHP;s.teamHP=next;if(gain)flyToTeam('+'+gain,'good',{x:a.x,y:a.y},'','heal',gain);s.supportRings.push({x:a.x,y:a.y,life:window.LoftRumbleSynergyFx.ringLife})}
- else s.bubbles=P.grantBubble(s.bubbles,m.id,syn(sid));
+ else if(sid===P.ids.booster)m.boostT=P.grantBoost(syn(sid));else s.bubbles=P.grantBubble(s.bubbles,m.id,syn(sid));
  s.teamEffects.push(look({type:'wave',r:syn('seed-burst').waveRadius}))}
 // The boss hit `hitIds` for `amount` in all. Each hero holding a bubble absorbs its share of the hit (the bubble pops, no team damage);
 // the rest of the amount lands. Returns the amount that still lands on the team.
@@ -797,10 +797,10 @@ function fire(id,angle,grade,power){if(!fling(id,angle,power)||!grade)return;con
   s.hitStop=Math.max(s.hitStop,pf?FEEL.perfectFreeze:FEEL.greatFreeze);
   if(pf){burst(b.x,b.y,FEEL.weakParticles,FEEL.weakSparkSpeed,'perfect');s.flash=FEEL.perfectFlash;s.kick={x:Math.cos(angle),y:Math.sin(angle),life:FEEL.kickLife}}}
 // ---- Simulation ----
-function stop(b){b.vx=b.vy=0;if(!b.moving)return;b.moving=false;b.glide=null;b.boost=null;b.special=null;b.trail=null}
+function stop(b){b.vx=b.vy=0;b.boostT=0;if(!b.moving)return;b.moving=false;b.glide=null;b.boost=null;b.special=null;b.trail=null}
 // Glide: full speed, then roll to rest over the last glideEase of the budget with a power-glideCurve ease-out.
-function glide(b,dt){const speed=Math.hypot(b.vx,b.vy),g=b.glide;if(!speed||!g){stop(b);return}
-  const ease=g.budget*FEEL.glideEase,target=g.left>=ease?g.speed:g.speed*Math.pow(Math.max(0,g.left)/ease,(FEEL.glideCurve-1)/FEEL.glideCurve);
+function glide(b,dt){const speed=Math.hypot(b.vx,b.vy),g=b.glide,P=window.LoftRumbleSynergySupport;if(!speed||!g){stop(b);return}
+  const ease=g.budget*FEEL.glideEase,target=(g.left>=ease?g.speed:g.speed*Math.pow(Math.max(0,g.left)/ease,(FEEL.glideCurve-1)/FEEL.glideCurve))*P.boostMultiplier(b.boostT,syn(P.ids.booster));b.boostT=P.tickBoost(b.boostT,dt);
   g.left-=target*dt;if(target<C.stopSpeed||g.left<=0){stop(b);return}b.vx*=target/speed;b.vy*=target/speed}
 function moveBody(b,dt){if(!b.moving||stunned(b))return;glide(b,dt);if(!b.moving)return;b.cool=Math.max(0,b.cool-dt);b.x+=b.vx*dt;b.y+=b.vy*dt;
   if(b.trail&&(b.trailD+=Math.hypot(b.vx,b.vy)*dt)>=FEEL.trailGap){b.trailD=0;s.particles.push({x:b.x,y:b.y,vx:0,vy:0,life:FEEL.trailLife,max:FEEL.trailLife,color:b.trail,size:FEEL.trailSize})}

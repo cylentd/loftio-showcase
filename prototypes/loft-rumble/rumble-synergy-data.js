@@ -58,7 +58,7 @@
     'chain-lightning':entry(true,CHAIN_LIGHTNING),
     'poison-cloud':entry(true,POISON_CLOUD),
     'power-field':entry(true,POWER_FIELD),
-    'booster':entry(false,BOOSTER),
+    'booster':entry(true,BOOSTER),
     'mend':entry(true,MEND),
     'bubble-guard':entry(true,BUBBLE_GUARD),
   });

@@ -46,6 +46,8 @@
   "rumble-synergy-data.js",
   "rumble-synergy-copy.js",
   "rumble-synergy.js",
+  "rumble-elements-data.js",
+  "rumble-elements.js",
   "rumble-slot-fill.js",
   "rumble-team-apply.js",
   "rumble-demo.js",

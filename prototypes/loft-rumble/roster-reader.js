@@ -47,6 +47,14 @@
     return Object.freeze({schemaVersion:1,trait,synergy,special});
   };
 
+  // The element of a resident's loadout (rumble-elements-data.js IDS), or null: missing, non-string or unknown is neutral,
+  // not a reason to drop the resident. Read at call time: the data file loads after this one. Rumble-only, not in the contract yet.
+  const elementIds=()=>root.LoftRumbleElementsData?.IDS??[];
+  const readElement=rumble=>{
+    const e=isObject(rumble)?own(rumble,'element'):undefined;
+    return typeof e==='string'&&elementIds().includes(e)?e:null;
+  };
+
   const readResident=raw=>{
     if(!isObject(raw))return null;
     const id=own(raw,'id'),name=own(raw,'name'),kind=own(raw,'kind'),castId=own(raw,'castId');
@@ -54,10 +62,10 @@
     if(kind!=='original'&&kind!=='made')return null;
     if(castId!==undefined&&typeof castId!=='string')return null;
     if(kind==='original'&&castId===undefined)return null;
-    const art=readArt(own(raw,'art')),loadout=readLoadout(own(raw,'rumble'));
+    const rumble=own(raw,'rumble'),art=readArt(own(raw,'art')),loadout=readLoadout(rumble);
     if(!art.ok||loadout===null)return null;
     return Object.freeze({id:clip(id,MAX_ID),kind,name:clip(name,MAX_NAME),art:art.art,
-      trait:loadout.trait,loadout,synergy:loadout.synergy});
+      trait:loadout.trait,loadout,synergy:loadout.synergy,element:readElement(rumble)});
   };
 
   // The player's team (at most MAX_TEAM valid residents, snapshot order, first of a duplicate id), or null so the caller

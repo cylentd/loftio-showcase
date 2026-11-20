@@ -10,8 +10,9 @@
   const slot=(syn,index,hero)=>{
     const usable=syn.has(hero.synergy)&&syn.ready(hero.synergy);
     const synergy=usable?hero.synergy:syn.defaultFor(hero.trait);
+    const element=root.LoftRumbleElements?.heroElement(hero);   // the roster's top-level element; absent for a hero with none
     return Object.freeze({id:SLOT_IDS[index],residentId:hero.id,name:hero.name,art:hero.art??null,trait:hero.trait,
-      synergy,fellBack:!usable,numbers:syn.numbers(synergy)});
+      synergy,fellBack:!usable,numbers:syn.numbers(synergy),...(element?{element}:{})});
   };
 
   const demoHeroes=()=>{

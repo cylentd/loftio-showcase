@@ -14,14 +14,15 @@
   // `pageKinds` is the page's trait ids; a slot trait outside it plays as the first one, so the fight never reads an unknown profile.
   const plan=(team,pageKinds)=>{
     if(!team||team.source!=='roster'||!Array.isArray(team.slots)||team.slots.length===0)return INACTIVE;
-    const names={},trait={},synergy={};
+    const names={},trait={},synergy={},element={};
     for(const slot of team.slots){
       names[slot.id]=slot.name;
+      element[slot.id]=slot.element;   // undefined when the slot has none (neutral); loftio #483 adds the roster field
       trait[slot.id]=pageKinds.includes(slot.trait)?slot.trait:pageKinds[0];
       synergy[slot.id]=slot.synergy;
     }
     const ids=team.slots.map(slot=>slot.id);
-    return Object.freeze({active:true,ids,names,trait,synergy,...rules(true,ids)});
+    return Object.freeze({active:true,ids,names,trait,synergy,element,...rules(true,ids)});
   };
 
   const api=Object.freeze({plan});
