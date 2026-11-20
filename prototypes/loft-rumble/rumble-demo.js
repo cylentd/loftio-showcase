@@ -89,7 +89,11 @@
       if(!boss.children.length)boss.append(make('span',{textContent:copy.boss}),make('span',{id:'demo-bossHP'}));
       document.getElementById('demo-bossHP').textContent=factValue.bossHP(state);
     }
-    if(list.children.length===items.length){
+    fillSummary(list,items);
+  }
+  // The summary list for any set of facts {key,label,value}: updated in place when the keys match, else rebuilt.
+  function fillSummary(list,items){
+    if(list.children.length===items.length&&items.every(item=>document.getElementById('demo-'+item.key))){
       for(const item of items)document.getElementById('demo-'+item.key).textContent=item.value;
       return;
     }
@@ -188,19 +192,29 @@
     const boss=make('div',{className:'results-boss'});
     panel.replaceChildren(boss,surface);
   }
-  function present(state,ready){
-    if(!active(state))return;
+  // A swarm fight reaches here without the demo install while it is lab-only (SWARM_LIVE false): build the results kit once
+  // and wire its replay to the page's again().
+  function swarmKit(again){
+    if(document.getElementById('demo-summary'))return;
+    buildResults();
+    document.getElementById('demo-replay').addEventListener('click',()=>again?.());
+  }
+  function present(state,ready,again){
+    if(!active(state)&&!state.swarm)return;
+    if(!active(state))swarmKit(again);
     const panel=document.getElementById('demo-results'),wasHidden=panel.hidden;
     panel.hidden=!ready;
     for(const chrome of document.querySelectorAll('.top,.roster'))chrome.inert=ready;
-    document.getElementById('stage-label').textContent=state.demo.enraged?copy.enragedBoss:copy.boss;
+    if(state.demo)document.getElementById('stage-label').textContent=state.demo.enraged?copy.enragedBoss:copy.boss;
     if(!ready)return;
-    const result=state.battleEnd.result;
-    panel.dataset.outcome=result.won?'victory':'defeat';
-    document.getElementById('demo-result-title').textContent=result.won?copy.victory:copy.defeat;
-    document.getElementById('demo-result-hint').textContent=result.won?copy.winHint:copy.lossHint;
-    renderSummary(state);
-    if(wasHidden)renderDamage(state,renderStage(state));
+    const result=state.battleEnd.result,swarm=state.swarm?swarmEnd(state.swarm.model):null; // a swarm fight shows its own facts (swarmEnd), no damage list
+    panel.dataset.outcome=swarm?swarm.outcome:result.won?'victory':'defeat';panel.toggleAttribute('data-swarm',!!swarm); // swarm-only layout (rumble-demo.css)
+    document.getElementById('demo-result-title').textContent=swarm?swarm.title:result.won?copy.victory:copy.defeat;
+    document.getElementById('demo-result-hint').textContent=swarm?'':result.won?copy.winHint:copy.lossHint;
+    panel.querySelector('#demo-damage').hidden=!!swarm;
+    if(swarm){panel.querySelector('.results-boss').replaceChildren();fillSummary(document.getElementById('demo-summary'),swarm.facts)}
+    else renderSummary(state);
+    if(wasHidden&&!swarm)renderDamage(state,renderStage(state));
     const surface=panel.querySelector('.results-surface'),body=panel.querySelector('.results-body');
     const celebration=panel.querySelector('.results-celebration');
     const compactVictory=result.won&&getComputedStyle(panel).getPropertyValue('--lm-scroll-celebration').trim()==='1';
@@ -293,6 +307,15 @@
     const cinematic=root.LoftRumbleCinematic.play({main:document.querySelector('main'),setBlocked:on=>{s.cinematic=on}});
     reveal(ready,draw,cinematic);
   }
+  // ---- Swarm end screen (ledger #487): pure data from a SwarmState; Bramble's present() is untouched. ----
+  const swarmResult=state=>({mode:state.mode,won:state.outcome==='won',kills:state.kills,seconds:state.t});
+  function swarmEnd(state){
+    const result=swarmResult(state),words=copy.swarm;
+    const kills={key:'kills',label:words.kills,value:String(result.kills)},time={key:'time',label:words.time,value:clock(result.seconds)};
+    // Hold is won by time, so the time held leads; Hunt is won by kills (U6: a Hold loss led with "Kills 0").
+    return {outcome:result.won?'victory':'defeat',title:result.won?words.won:words.lost,facts:result.mode==='hold'?[time,kills]:[kills,time]};
+  }
   root.LoftRumbleDemo=Object.freeze({active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install,nameResident,
+    swarm:Object.freeze({swarmResult,swarmEnd}),
     results:Object.freeze({facts,actions,looks,placements})});
 })(globalThis);

@@ -115,6 +115,9 @@ window.LoftRumbleArtConfig = Object.freeze({
     "bramble-particle-bark",
     "bramble-particle-leaf"
   ],
+  // Swarm stage art (ledger #487, ASSET-PROMPTS batch 6). Not in `assets`: a Bramble page never requests these. The renderer's
+  // loadSwarm() fetches them when a swarm fight starts; a missing file resolves as not available and swarm-view.js skips it.
+  swarmAssets: Object.freeze(["lm-enemy-capling", "lm-enemy-mossback", "lm-enemy-sporemoth", "lm-enemy-bar", "lm-enemy-bar-fill"]),
   metrics: Object.freeze({
     frames: 4, bossSize: 2.25, bumperSize: 2.8, hornWidth: 1.65,
     hornHeight: 1.7, hornBase: 0.95, weakspotSize: 28,

@@ -45,6 +45,8 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','music-track
       // Enrage shows on the field only (owner, 2026-11-15): no banner and no subline. This sentence is for screen readers.
       enrage:boss+' is enraged!',
       victory:boss+' defeated',defeat:'Team knocked out',
+      // Swarm end screen (ledger #487): labels only, no sentences. Same results-v1 kit as Bramble's screen.
+      swarm:Object.freeze({won:'Victory',lost:'Team knocked out',kills:'Kills',time:'Time'}),
       winHint:'Try another run. Build a longer combo.',lossHint:'Bump teammates. Watch the warnings.',
       time:'Battle time',combo:'Best combo',replay:'Play Again', // "Play Again" is the owner's pick, 2026-11-15; it wins over the audit glossary's sentence case
       // End-screen damage list and breakdown: labels and numbers only. Counts are plain numbers, never "×2" (audit glossary).

@@ -8,7 +8,7 @@
   if(!D||!M)return;
   const HALF=.5;
   const {sheen:SHEEN,sheenAlpha:SHEEN_ALPHA,strandBand:STRAND_BAND}=D.fill;
-  const shown={boss:null,shield:null,team:null,combo:null};
+  const shown={boss:null,shield:null,counter:null,team:null,combo:null};
   let palette=null;
   const tinted=new Map();
   const screenScale=()=>typeof document==='undefined'?1:parseFloat(document.getElementById?.('arena')?.style.getPropertyValue('--k'))||1;
@@ -125,6 +125,31 @@
     if(screenScale()>=D.compactScale)label(ctx,String(bar.value),L.hp.x,L.hp.y,typeSize(D.boss.hpFont),font,'right');
     shown.boss={value:bar.value,max:bar.max,share:filled/L.channel.w,text:String(bar.value)};
     shown.shield=shield?{share:shieldBar(ctx,L,shield,font)}:null;
+    return true;
+  }
+
+  // Swarm counter (ledger #487 U3): Hunt reads kills/goal, Hold reads the time left as m:ss, rounded up so it shows 0:00
+  // only at the win. progress: swarm-model.js progress(state) {mode, kills, goal, remaining, frac}.
+  function counterText(progress){
+    if(progress.mode==='hunt')return Math.min(progress.kills,progress.goal)+'/'+progress.goal;
+    const left=Math.max(0,Math.ceil(progress.remaining)),perMinute=D.swarm.secondsPerMinute;
+    return Math.floor(left/perMinute)+':'+String(left%perMinute).padStart(2,'0');
+  }
+
+  // The counter takes the boss plate's place in a swarm fight: the same frame, the channel filled to frac in the team's
+  // colour, and the counter text where the boss name sits. No words.
+  function counter(ctx,{width,top,progress,font,image}){
+    const frame=image(D.art.bossFrame);
+    if(!frame)return false;
+    const L=M.bossLayout(width,D,screenScale(),top);
+    if(!L.channel.w)return false;
+    const share=Math.max(0,Math.min(1,progress.frac)),max=D.swarm.counterMax,value=share*max;
+    scrim(ctx,width,top);
+    ctx.drawImage(frame,L.frame.x,L.frame.y,L.frame.w,L.frame.h);
+    const filled=channel(ctx,L.channel,{value,chip:value,max,flash:0},colours().team,image(D.art.fill));
+    const text=counterText(progress);
+    label(ctx,text,L.name.x,L.name.y,typeSize(D.boss.nameFont,D.type.body),font,'center');
+    shown.counter={text,share:filled/L.channel.w};
     return true;
   }
 
@@ -275,5 +300,5 @@
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',dock,{once:true});else dock();
   }
 
-  root.LoftRumbleHud=Object.freeze({boss,team,combo,comboAnchor,channels,fitNames,shown});
+  root.LoftRumbleHud=Object.freeze({boss,counter,counterText,team,combo,comboAnchor,channels,fitNames,shown});
 })(globalThis);

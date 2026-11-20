@@ -33,13 +33,22 @@
     for(const [id,point] of Object.entries(entry.starts??{}))Object.assign(state.bodies[id],{x:state.w*point[0],y:state.h*point[1]});
     if(entry.id!==data.defaultId)state.tutor=null;
   }
+  // A swarm in the fight: its ?stage id and short name, or null. The control shows it as a locked option, no description.
+  function swarmStage(state){
+    const mode=state.swarm?.model?.mode,label=data.swarm.labels[mode];
+    return label?{id:Object.keys(data.swarm.stages).find(id=>data.swarm.stages[id]===mode),label}:null;
+  }
   function sync(state){
     const select=document.getElementById('rumble-encounter');
     if(!select)return;
-    const entry=current(state),layout=document.getElementById('stage-layout');
-    select.value=entry.id;
-    document.getElementById('rumble-encounter-note').textContent=entry.description;
-    const status=document.getElementById('stage-label');if(status)status.textContent=entry.label;
+    const entry=current(state),swarm=swarmStage(state),layout=document.getElementById('stage-layout');
+    let option=swarm?select.querySelector('option[data-swarm]'):null; // no swarm: the control is untouched (Bramble path)
+    if(swarm&&!option){option=document.createElement('option');option.dataset.swarm='';select.append(option)}
+    if(option){option.hidden=!swarm;if(swarm)Object.assign(option,{value:swarm.id,textContent:swarm.label})}
+    select.disabled=!!swarm;
+    select.value=swarm?swarm.id:entry.id;
+    document.getElementById('rumble-encounter-note').textContent=swarm?'':entry.description;
+    const status=document.getElementById('stage-label');if(status)status.textContent=swarm?swarm.label:entry.label;
     if(layout)layout.disabled=!!entry.bumpers;
     const note=document.getElementById('stage-layout-note');
     if(note)note.textContent=entry.bumpers?data.layoutNote:root.LoftRumbleStageLayoutData.note;
@@ -63,5 +72,12 @@
     });
     label.append(caption,select,note);menu.prepend(label);reset();draw();
   }
-  root.LoftRumbleEncounters=Object.freeze({validate,current,enemy,rotation,apply,sync,install});
+  // ?stage=swarm-hunt|swarm-hold -> the swarm mode, or null (the default encounter runs). While the swarm is not live the stage
+  // is honoured only with the lab (the caller passes LoftRumbleLabPolicy.allowed). An unknown value is null, never an error.
+  function stageMode(search,{live,lab}){
+    const value=new URLSearchParams(search).get(data.swarm.param);
+    if(!Object.prototype.hasOwnProperty.call(data.swarm.stages,value))return null;
+    return live||lab?data.swarm.stages[value]:null;
+  }
+  root.LoftRumbleEncounters=Object.freeze({validate,current,enemy,rotation,apply,sync,install,stageMode});
 })(globalThis);

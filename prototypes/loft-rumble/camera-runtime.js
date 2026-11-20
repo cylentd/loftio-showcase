@@ -37,6 +37,7 @@
     resetScene() {
       if (this.baseBumpers) this.game.FEEL.bumpers=structuredClone(this.baseBumpers);
       this.game.s.cameraScene = {name:'BASELINE',elapsed:0,enemies:[],paths:{},inside:{},randomState:config.randomSeed,punish:root.LoftRumblePunish.initial()};
+      root.LoftRumbleSwarmRuntime?.rearm(this); // a swarm in the fight restarts with a fresh scene (swarm-runtime.js)
       this.launchState = null;
       this.forecast = null;
       this.controls?.sync();
@@ -52,7 +53,8 @@
 
     enemies() {
       const {s,C} = this.game;
-      return s.cameraScene.enemies.length ? s.cameraScene.enemies : [{id:'enemy-0',type:'boss',...this.game.baseEnemy(),radius:C.enemyRadius}];
+      // A swarm with no live monster has no enemy: the boss is absent, not a fallback.
+      return s.cameraScene.enemies.length || s.cameraScene.swarm ? s.cameraScene.enemies : [{id:'enemy-0',type:'boss',...this.game.baseEnemy(),radius:C.enemyRadius}];
     }
 
     withEnemy(target, operation) {
@@ -73,7 +75,8 @@
       const original = body.inside;
       for (const target of this.enemies()) {
         body.inside = contacts[target.id] ?? false;
-        this.withEnemy(target, () => this.game.collide(body));
+        const run = () => this.withEnemy(target, () => this.game.collide(body));
+        if (root.LoftRumbleSwarmRuntime) root.LoftRumbleSwarmRuntime.collide(this, target, run); else run(); // a swarm routes the hit to this monster
         contacts[target.id] = body.inside;
       }
       body.inside = original;
@@ -154,6 +157,7 @@
     }
 
     beforeStep(dt) {
+      root.LoftRumbleSwarmRuntime?.beforeStep(this, dt); // the swarm ticks with the fight, and in the forecast on its clone
       if (this.comboLock) Object.assign(this.game.s,{hits:this.comboLock,hitsIdle:0});
       const scene = this.game.s.cameraScene;
       scene.elapsed += dt;
@@ -167,6 +171,7 @@
 
     afterStep() {
       if (this.predicting) return;
+      root.LoftRumbleSwarmRuntime?.afterStep(this);
       const {s,ids} = this.game;
       if (!this.predicting) root.LoftRumbleHeat.ambient(this.game);
       for (const id of ids) {
@@ -198,13 +203,16 @@
     }
 
     scene(name) {
-      if (name!=='BASELINE' && !root.LoftRumbleCameraScenes[name]) throw new RangeError('Unknown camera encounter');
+      // SWARM is the name of a swarm in the fight (swarm-runtime.js rearm): the lab's Replay and Boss HP re-enter it, and the reset restarts it.
+      const swarm = name==='SWARM' && root.LoftRumbleSwarmRuntime?.active(this);
+      if (name!=='BASELINE' && !swarm && !root.LoftRumbleCameraScenes[name]) throw new RangeError('Unknown camera encounter');
       const {s,FEEL,C,reset,roster} = this.game;
+      if (!swarm) delete s.swarm; // another lab scene leaves the swarm
       const frozen=s.paused;
       reset();
       s.paused=frozen;
       s.cameraScene.name=name;
-      if (name!=='BASELINE') {
+      if (name!=='BASELINE' && !swarm) {
         s.cameraScene.enemies=structuredClone(root.LoftRumbleCameraScenes[name]).map(target => ({...target,baseX:target.x,baseY:target.y,
           shield:structuredClone(s.shield)}));
         s.enemyT=config.fixtureAttackDelay;

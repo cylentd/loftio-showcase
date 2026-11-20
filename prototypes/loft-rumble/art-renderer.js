@@ -5,7 +5,7 @@
   document.documentElement.classList.add('loft-art');
   const images = new Map();
   const base = document.currentScript.src;
-  const ready = Promise.all(assets.map(name => new Promise(resolve => {
+  const fetchImage = name => new Promise(resolve => {
     const image = new Image();
     images.set(name, image);
     image.onload = () => {
@@ -15,10 +15,15 @@
     };
     image.onerror = () => resolve(false);
     image.src = new URL('art/' + name + '.webp', base).href;
-  }))).then(async loaded => {
+  });
+  const ready = Promise.all(assets.map(fetchImage)).then(async loaded => {
     await document.fonts?.ready;
     return loaded;
   });
+
+  // Swarm stage art is fetched when a swarm fight starts, not on every page load. Once only; a missing file stays unavailable.
+  let swarmLoad = null;
+  const loadSwarm = () => (swarmLoad ??= Promise.all((config.swarmAssets ?? []).map(fetchImage)));
 
   function available(name) {
     const image = images.get(name);
@@ -375,5 +380,5 @@
     ctx.restore();
   }
 
-  window.LoftRumbleArt = Object.freeze({ available, ready, metrics, paint, frame, horn, shield, bar, bumper, bumperSkin, beam, panel, effects });
+  window.LoftRumbleArt = Object.freeze({ available, ready, loadSwarm, metrics, paint, frame, horn, shield, bar, bumper, bumperSkin, beam, panel, effects });
 })();

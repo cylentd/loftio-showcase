@@ -61,6 +61,11 @@
 #demo-results[data-compact-victory] .results-surface{display:flex;flex-direction:column;align-items:center}
 #demo-results[data-compact-victory] .results-body{flex:1 1 auto;min-height:0}
 #demo-results[data-compact-victory] .results-celebration{flex-shrink:0}
+/* Swarm victory (ledger #487 U6): two facts and one button, no damage list, so the full-height scene left a tall empty band.
+   The panel sizes to its content inside the defeat card's clearance and width. Scoped by data-swarm, which only the swarm
+   end screen sets (rumble-demo.js present), so Bramble's screen is untouched. */
+#demo-results[data-swarm][data-outcome="victory"] .results-surface{height:auto;max-height:calc(100% - var(--lm-defeat-clearance));
+  width:min(100%,var(--lm-defeat-width));padding:calc(var(--lm-frame-slice) + var(--lm-defeat-pad));grid-template-rows:auto auto auto}
 /* Each resident stands on the stage floor (--ground of the stage height) with its own slot: x, size, tilt and a small step
    back. The portrait's transparent foot rows (--foot) are pulled under the floor line so the feet touch it. */
 .results-figure{position:absolute;z-index:var(--layer);left:calc(var(--x) * 100%);bottom:calc((1 - var(--ground) + var(--back)) * 100%);height:calc(var(--size) * 100%);

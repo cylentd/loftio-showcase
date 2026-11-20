@@ -71,6 +71,46 @@
       scrim:'--hud-scrim',flash:'--hud-flash',low:'--danger',
       shield:'--hud-shield-fill',shieldTrack:'--hud-shield-track',
     }),
+    // Swarm stage (ledger #487 U3): monsters, their small bar, spawn rune, spit ring and the boss-plate counter.
+    // Drawing in swarm-view.js; the counter in rumble-hud.js. Lengths are arena units. Marked LOOK: picks for the
+    // owner's look round, not measured.
+    swarm:Object.freeze({
+      art:Object.freeze({
+        // Art keys for LOFT-RUMBLE-ASSET-PROMPTS.md batch 6 (lm_enemy_*), named as file stems like every other key.
+        monsters:Object.freeze({capling:'lm-enemy-capling',mossback:'lm-enemy-mossback',sporemoth:'lm-enemy-sporemoth'}),
+        bar:'lm-enemy-bar',barFill:'lm-enemy-bar-fill', // lm_enemy_bar's two rows, cut into two files when prepared
+        puff:'fx-leaf-puff',seed:'fx-seed-projectile',   // existing effects reused (brief #487 U3)
+      }),
+      // Draw sizes from the batch 6 table; anchor from each prompt's "Prepare" line: feet = bottom centre at the ground
+      // contact (the bottom of the hit circle), centre = body centre on the monster's position (the flyer).
+      sprites:Object.freeze({
+        capling:Object.freeze({w:52,h:52,anchor:'feet'}),
+        mossback:Object.freeze({w:48,h:38,anchor:'feet'}),
+        sporemoth:Object.freeze({w:64,h:56,anchor:'centre'}),
+      }),
+      // lm_enemy_bar: bar 48 x 7, fill 44 x 4 (batch 6 table), so the fill is that share of the bar each way; gap above
+      // the sprite's top. LOOK: gap.
+      bar:Object.freeze({w:48,h:7,fillShare:44/48,fillHeight:4/7,gap:3}),
+      // Spawn rune, code geometry like the danger rings. Radius as a share of the monster's r; it grows from `from` to
+      // full over SPAWN_RUNE_S (LoftRumbleSwarmData). spin in radians per second, never under reduced motion. LOOK: all.
+      // U5 browser pass: 1.6 from .4 width 2 was a 7-17 px hairline gone before the eye found it on a 390 px phone.
+      rune:Object.freeze({radius:2.4,from:.6,width:3,ticks:6,tick:.35,spin:1.5,alpha:.9}),
+      // Spit telegraph ring round the spit's origin, radius a share of the shot's r; pulse in Hz between alphaMin and 1,
+      // a steady ring under reduced motion. aim: the line toward where the seed flies, as seconds of its flight speed.
+      // U5 browser pass: radius 2.2 (13 px) sat inside the 64 px sporemoth sprite and never showed; 5 rings the sprite. LOOK: all.
+      // U6: the pink core alone measured 1.34:1 on the arena sand (sampled rgb 230 165 106 from the phone spit capture), under
+      // the 3:1 WCAG non-text floor. caseWidth: a steady --rumble-danger-deep casing under the core, 2 px proud each side; the
+      // casing measured 4.54:1 against the same sand. LOOK: caseWidth.
+      telegraph:Object.freeze({radius:5,width:3,caseWidth:7,pulse:4,alphaMin:.45,aim:.5}),
+      // Death puff: fx-leaf-puff at the art renderer's leafSize (art-manifest.js metrics, 46), growing from `from` to `to`
+      // over `seconds` while the sprite fades; reduced motion keeps size 1 and only fades. LOOK: seconds, from, to.
+      puff:Object.freeze({size:46,seconds:.35,from:.7,to:1.4}),
+      seed:Object.freeze({size:2.4}), // flying seed draw size as a multiple of the shot's r. LOOK
+      // The counter fills with the team's own colour: progress toward the win is the team's, not the boss's. LOOK
+      counterMax:100,     // the counter bar's scale; frac 0..1 maps onto it so the shared channel draws it
+      secondsPerMinute:60,
+      tokens:Object.freeze({rune:'--rumble-amber',telegraph:'--danger',telegraphCase:'--rumble-danger-deep',ink:'--hud-ink'}),
+    }),
     // Canonical portraits for the three dock slots. The third slot is the demo's resident (rumble-demo-data.js, Puff); a
     // card with its own art (data-own-art) keeps it, so player-made residents use the same frame and pipeline.
     portraits:Object.freeze({sprout:'lm-portrait-sprout',chomper:'lm-portrait-chomper',custom:'lm-portrait-puff'}),
