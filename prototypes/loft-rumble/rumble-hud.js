@@ -8,7 +8,7 @@
   if(!D||!M)return;
   const HALF=.5;
   const {sheen:SHEEN,sheenAlpha:SHEEN_ALPHA,strandBand:STRAND_BAND}=D.fill;
-  const shown={boss:null,team:null,combo:null};
+  const shown={boss:null,shield:null,team:null,combo:null};
   let palette=null;
   const tinted=new Map();
   const screenScale=()=>typeof document==='undefined'?1:parseFloat(document.getElementById?.('arena')?.style.getPropertyValue('--k'))||1;
@@ -96,8 +96,24 @@
     ctx.save();ctx.globalAlpha=D.scrimAlpha;ctx.fillStyle=shade;ctx.fillRect(0,0,width,top);ctx.restore();
   }
 
-  // bar: {value, chip, max, flash, wash}; image(name) returns a loaded texture or null.
-  function boss(ctx,{width,top,name,bar,font,image}){
+  // Shield health under the boss bar (owner 2026-11-18, round 5): ink outline, dark track, amber fill to `fill` (0..1),
+  // and the live "Shield" word left of it. An empty track while the shield is broken; it refills with the regrow.
+  function shieldBar(ctx,L,shield,font){
+    const P=colours(),S=M.shieldLayout(L,D),{x,y,w,h}=S.bar,e=D.shield.edge,share=Math.max(0,Math.min(1,shield.fill));
+    ctx.save();
+    ctx.fillStyle=P.ink;ctx.beginPath();ctx.roundRect(x-e,y-e,w+2*e,h+2*e,(h+2*e)*HALF);ctx.fill();
+    ctx.fillStyle=P.shieldTrack;ctx.beginPath();ctx.roundRect(x,y,w,h,h*HALF);ctx.fill();
+    ctx.beginPath();ctx.roundRect(x,y,w,h,h*HALF);ctx.clip();
+    ctx.fillStyle=P.shield;ctx.fillRect(x,y,w*share,h);
+    ctx.restore();
+    ctx.textBaseline='middle';
+    label(ctx,shield.label,S.label.x,S.label.y,typeSize(D.shield.labelFont),font,'right');
+    ctx.textBaseline='alphabetic';
+    return share;
+  }
+
+  // bar: {value, chip, max, flash, wash}; shield: {fill, label} or null; image(name) returns a loaded texture or null.
+  function boss(ctx,{width,top,name,bar,font,image,shield=null}){
     const frame=image(D.art.bossFrame);
     if(!frame)return false;
     const L=M.bossLayout(width,D,screenScale(),top);
@@ -108,6 +124,7 @@
     label(ctx,name,L.name.x,L.name.y,typeSize(D.boss.nameFont,D.type.body),font,'center');
     if(screenScale()>=D.compactScale)label(ctx,String(bar.value),L.hp.x,L.hp.y,typeSize(D.boss.hpFont),font,'right');
     shown.boss={value:bar.value,max:bar.max,share:filled/L.channel.w,text:String(bar.value)};
+    shown.shield=shield?{share:shieldBar(ctx,L,shield,font)}:null;
     return true;
   }
 

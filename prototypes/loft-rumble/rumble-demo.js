@@ -244,7 +244,13 @@
         arrive();document.getElementById('menu-toggle').focus({preventScroll:true});
       });
   }
-  function install({s,names,reset:restart,again,draw,ready}){
+  // The demo's third hero is Puff, unless a saved team (keep) already named it (#443 B3a).
+  function nameResident({names,doc,keep}){
+    if(keep)return;
+    names.custom=data.resident.name;
+    doc.querySelector('[data-resident="custom"] b').textContent=data.resident.name;
+  }
+  function install({s,names,reset:restart,again,draw,ready,keep=false}){
     if(root.LoftRumbleLabPolicy.allowed(location,document.documentElement))return;
     rememberRoster();
     s.demo={enraged:false};document.documentElement.dataset.rumbleDemo='';
@@ -259,8 +265,7 @@
     toggle.setAttribute('aria-label',copy.menuLabel);toggle.title=copy.menuLabel;
     pause.textContent=copy.resume;help.textContent=copy.helpMenu;
     menu.prepend(pause,help);
-    names.custom=data.resident.name;
-    document.querySelector('[data-resident="custom"] b').textContent=data.resident.name;
+    nameResident({names,doc:document,keep});
     for(const child of document.getElementById('menu').children){
       if(!data.playerControls.includes(child.id))child.hidden=true;
     }
@@ -270,7 +275,7 @@
     const title=document.createElement('h2');title.id='pause-title';title.textContent=copy.pausedTitle;
     menu.setAttribute('aria-labelledby',title.id);
     menu.prepend(brand,title);
-    menu.append(pause,document.getElementById('sound'),document.getElementById('music'),document.getElementById('haptics'),document.getElementById('throw-style'),help,document.getElementById('replay-tutorial'),document.getElementById('reset'));
+    menu.append(pause,document.getElementById('sound'),document.getElementById('music'),document.getElementById('music-track-row'),document.getElementById('haptics'),document.getElementById('throw-style'),help,document.getElementById('replay-tutorial'),document.getElementById('reset'));
     const helpPanel=document.getElementById('help-panel'),helpTitle=document.createElement('h2');
     helpTitle.id='battle-help-title';helpTitle.textContent=copy.helpMenu;helpTitle.tabIndex=-1;helpTitle.autofocus=true;
     const helpBody=document.createElement('div');helpBody.className='help-body';
@@ -288,6 +293,6 @@
     const cinematic=root.LoftRumbleCinematic.play({main:document.querySelector('main'),setBlocked:on=>{s.cinematic=on}});
     reveal(ready,draw,cinematic);
   }
-  root.LoftRumbleDemo=Object.freeze({active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install,
+  root.LoftRumbleDemo=Object.freeze({active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install,nameResident,
     results:Object.freeze({facts,actions,looks,placements})});
 })(globalThis);

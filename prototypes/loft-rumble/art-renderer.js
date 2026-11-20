@@ -210,16 +210,15 @@
     return true;
   }
 
-  function horn(ctx, definition, broken, radius, length, stump) {
-    const name = broken ? 'boss-horn-stub' : 'boss-horn-' + definition.id;
+  function horn(ctx, definition, radius, length) {
+    const name = 'boss-horn-' + definition.id;
     if (!available(name)) return false;
-    const reach = length * (broken ? stump : 1);
-    const center = radius * metrics.hornBase + reach / 2;
+    const center = radius * metrics.hornBase + length / 2;
     const sourceAngle = definition.id === 'left' ? metrics.leftHornAngle : metrics.rightHornAngle;
     ctx.save();
     ctx.translate(Math.cos(definition.angle) * center, Math.sin(definition.angle) * center);
-    ctx.rotate(definition.angle - (broken ? -Math.PI / 2 : sourceAngle));
-    paint(ctx, name, 0, 0, reach * metrics.hornWidth, reach * metrics.hornHeight);
+    ctx.rotate(definition.angle - sourceAngle);
+    paint(ctx, name, 0, 0, length * metrics.hornWidth, length * metrics.hornHeight);
     ctx.restore();
     return true;
   }

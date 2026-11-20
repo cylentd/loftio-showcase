@@ -18,6 +18,8 @@
   --hud-pending: var(--rumble-cream);
   --hud-scrim: var(--rumble-scrim);
   --hud-flash: var(--rumble-flash);
+  --hud-shield-fill: var(--rumble-amber); /* the shield's health under the boss bar (owner 2026-11-18, round 5) */
+  --hud-shield-track: var(--rumble-track);
   /* Special-ready amber, the brief's "amber special-ready energy". */
   --hud-ready: var(--rumble-amber);
   --hud-frame-rest-finish: saturate(.65) brightness(.52);

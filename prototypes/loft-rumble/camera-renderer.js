@@ -71,7 +71,7 @@
       }
       else game.drawBodies(font,item.id,false,false);
     }
-    game.drawHornBits();game.drawParticles();game.artwork?.effects(ctx,s,C,game.FEEL,game.enemy(),game.still());game.drawBodyEffects(font);
+    game.drawParticles();game.artwork?.effects(ctx,s,C,game.FEEL,game.enemy(),game.still());game.drawBodyEffects(font);
     for(const id of state.silhouettes){const body=s.bodies[id];ctx.save();ctx.strokeStyle=config.silhouetteColor;ctx.globalAlpha=config.silhouetteAlpha;ctx.lineWidth=config.silhouetteWidth;ctx.beginPath();ctx.arc(body.x,body.y,C.radius+config.silhouettePadding,0,Math.PI*2);ctx.stroke();ctx.restore();}
     if(s.phase==='play')game.aim(font);
     if(session.debugEnabled)root.LoftRumbleCameraDebug.draw(session);

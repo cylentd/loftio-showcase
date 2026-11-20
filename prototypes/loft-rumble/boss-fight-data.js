@@ -1,5 +1,6 @@
 // Bramble in the live fight (LM3): rig scale, shield views and break, the two-way beam and its two source glows.
-// Look only: damage, colliders, timings and attack logic never read these numbers. Lengths are logical arena units
+// Look only, except `guard` (the shield's rules, owner 2026-11-18): damage, colliders, timings and attack logic never
+// read the other numbers. Lengths are logical arena units
 // unless noted, times are seconds. Spec: docs/design/LOFT-RUMBLE-LIVING-MAGIC.md ("Boss attacks and defense").
 // Texture shares below were measured by studies/measure_boss_fight.py (alpha >= 128).
 (function(root){
@@ -17,6 +18,24 @@
     // The rig stands where the storybook boss stood (camera-storybook.js): crown top bossTop radii above the collider
     // centre, feet bossFoot radii below it, so the occlusion boxes and the attack label anchor still fit. Pinned by the test.
     storybook:freeze({bossTop:3.7,bossFoot:.9}),
+    // The shield guards the weak spot (owner decision 2026-11-18, #426; replaces the rotating plate). Rules, not look:
+    // the page's shieldHit and stepShield read these through boss-fight-model.js guardHit / guardStep.
+    // hp: the plate's shield HP; heavyShare / otherShare: the share of hp a Chomper-or-heavy / any other hit takes; crackedShare /
+    // darkShare: the HP shares at or under which the crack art shows its first and second stage. exposedSeconds: how long the weak spot stays open after the break.
+    // No exposed multiplier: the broken weak spot takes the usual weak-spot damage (owner, round 2, 2026-11-18).
+    // regrowSeconds: the plate's regrow after the window (Look round pick, owner to judge). regrowStart: the plate's
+    // width share as it starts to regrow, widening to 1 (Look round pick, owner to judge).
+    // No gold glow on the exposed weak spot (owner 2026-11-18, round 6: "Why the heck is that yellow thing?").
+    // Shield health (owner's 2026-11-18 shield-health change, round 4; replaces the 3-crack count): hp is the plate's
+    // integer health. heavyShare: a Chomper or heavy-trait plate hit takes a third (4 of 12, breaks in 3); otherShare:
+    // anyone else (not piercing) takes a twelfth (1 of 12, breaks in 12). Piercing takes none. crackedShare and darkShare:
+    // the plate shows the cracked art at 2/3 HP or less (8) and cracked and darkened at 1/3 or less (4).
+    // Lift opening (owner 2026-11-18, shield lift opening, #445 option A): as the boss rises for an attack the plate lifts
+    // clear of the weak spot. liftOpenAt: the attack envelope (actLevel, 0..1) from which the plate counts as lifted and a
+    // weak-arc hit is an opening (x3 for anyone, no shield HP). liftHeight: the plate's rise at the apex in plate heights
+    // (Look round pick from stills, owner to judge). Enrage only makes attacks come sooner; the opening is the same size.
+    guard:freeze({hp:12,heavyShare:1/3,otherShare:1/12,crackedShare:2/3,darkShare:1/3,exposedSeconds:6,regrowSeconds:.6,regrowStart:.2,
+      liftOpenAt:.6,liftHeight:1.4}),
     shield:freeze({
       // Front (intact and cracked share one canvas): the plate spans 0.044-0.956 of the width; at the centre column it
       // runs from 0.352 to its foot at 0.949 of the height.

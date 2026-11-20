@@ -296,6 +296,10 @@
   background: radial-gradient(circle at calc(100% - var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-toggle-knob) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle);
 }
 [data-rumble-demo] #menu #help-toggle { grid-column: 1 / -1; }
+#music-track-row { display: grid; grid-column: 1 / -1; gap: var(--stage-gap, var(--gap)); min-width: 0; color: var(--stage-sheet-ink, var(--foreground)); font-size: var(--stage-sheet-copy, var(--text-sm)); }
+#music-track { width: 100%; min-width: 0; min-height: var(--stage-control, var(--control)); padding: 0 var(--stage-sheet-gap, var(--gap)); border: var(--stage-border) solid var(--stage-sheet-edge); border-radius: var(--stage-radius); background: var(--stage-sheet-surface); color: var(--stage-sheet-ink); font: inherit; }
+#music-track:disabled { color: var(--stage-sheet-muted); border-color: var(--stage-sheet-rule); }
+#music-track:focus-visible { outline: var(--stage-focus) solid var(--stage-sheet-accent); outline-offset: var(--stage-dock-gap); }
 /* Throw style (unit B): a labelled row like the toggles, with a two-option segmented control on the right. */
 [data-rumble-demo] #menu #throw-style {
   grid-column: 1 / -1;

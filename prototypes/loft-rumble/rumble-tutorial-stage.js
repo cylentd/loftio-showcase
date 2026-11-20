@@ -150,7 +150,8 @@
     if(!running()||predicting())return;
     const s=host.s,beat=spec(),paced=beat.paced&&state.phase==='try';
     if(!paced)s.enemyT=beat.lock&&state.phase==='show'&&!recover?beat.lock.seconds:host.RT.firstAttack;
-    if(s.shield.down<script.shieldHold/2)s.shield.down=script.shieldHold;
+    // held: the plate stays down without the exposed bonus or gold glow, so a weak-spot hit reads exactly x3.
+    if(s.shield.down<script.shieldHold/2)Object.assign(s.shield,{down:script.shieldHold});
     if(state.beat!=='special'||state.phase==='cheer')return;
     const puff=s.bodies.custom;
     if(puff.moving||s.specialCharge.custom>=1){regrant=0;return}
@@ -185,9 +186,13 @@
   // The flag: Training exists only on a page opened with ?training. Without it nothing is installed, so the page is the plain fight.
   const enabled=()=>new URLSearchParams(root.location?.search).has(script.flagParam);
   // False only while the flag is on and install() has not run yet, so the page does not treat a not-yet-started Training as absent.
-  const settled=()=>!enabled()||!!host;
+  const settled=()=>!enabled()||!!host||skipped;
+  // Training stages the demo trio (it reads the sprout, chomper and custom bodies), so a saved team of fewer than three skips it (#443 B3a).
+  const FULL_TEAM=3;
+  let skipped=false;
   function install(options){
     if(!enabled())return;
+    if(options.ids.length<FULL_TEAM){skipped=true;return}
     host=options;view=options.view;
     view.install?.({skip:()=>send('skip'),replay,closeMenus:options.closeMenus});
     if(read()){reset();announce()}else begin('start');

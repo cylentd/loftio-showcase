@@ -9,7 +9,7 @@
         boss:{x:0.69,y:0.37,angle:Math.PI},
         bumpers:[[0.25,0.34],[0.42,0.54],[0.75,0.65]],
         starts:{sprout:[0.18,0.81],chomper:[0.42,0.73],custom:[0.8,0.86]},
-        rotation:['beam','pulse','slam']},
+        rotation:['beam','whiplash','slam']},
     ],
   });
 })(globalThis);

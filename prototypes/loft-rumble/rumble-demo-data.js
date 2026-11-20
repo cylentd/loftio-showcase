@@ -4,11 +4,11 @@
   const boss='Bramble';
   root.LoftRumbleDemoData=Object.freeze({
     enrageAt:0.35,enragedInterval:5.5,enrageLead:0.75,secondsPerMinute:60,
-    rotation:Object.freeze(['beam','slam','pulse']),
+    rotation:Object.freeze(['beam','slam','whiplash']),
     tutorialKey:'loftRumbleDemoTutorialSeen',
     soundKey:'loftRumbleSound',          // localStorage 'on' | 'off', read and written like loftRumbleMusic (docs/architecture/ICD.md)
     resident:Object.freeze({name:'Puff',trait:'piercing'}),
-playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','throw-style','reset','replay-tutorial']),
+playerControls:Object.freeze(['pause','help-toggle','sound','music','music-track-row','haptics','throw-style','reset','replay-tutorial']),
     // Living-magic results screen (LM6c, owner's results kit 2026-11-15). Every list here is data: the screen draws as many
     // summary items, heroes and actions as it is given, and no texture holds a fixed number of any of them.
     results:Object.freeze({
@@ -95,6 +95,7 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','t
         abilityName:Object.freeze({springy:'Seed burst',heavy:'Shockwave',piercing:'Piercing beam'}),
         specialName:Object.freeze({springy:'Overdrive',heavy:'Meteor smash',piercing:'Comet shot'}),
         attack:Object.freeze({
+          whiplash:Object.freeze({name:'Whiplash',tip:'Move to the rear'}),
           pulse:Object.freeze({name:'Pulse',tip:'Hits the whole team'}),
           beam:Object.freeze({name:'Beam',tip:'Leave the purple lane'}),
           slam:Object.freeze({name:'Slam',tip:'Leave the purple ring'}),
@@ -102,9 +103,8 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','haptics','t
         ability:Object.freeze({springy:'Seeds chase '+boss,heavy:'Blasts '+boss+' up close',piercing:'Zaps from anywhere'}), // ally intro taglines, 4 words max
         special:'Special',tutor:Object.freeze({bump:'Bump a teammate',zone:'Leave the zone'}), // first-battle steps, 4 words max
         combo:'combo',comboMiles:Object.freeze(['Nice','Great','Rumble']),comboSaved:'Combo saved!',comboLost:'Combo lost',
-        blocked:'Blocked',pierce:'Pierce!',crack:'Crack!',shattered:'Shield broken!',
-        shieldToast:Object.freeze({title:'Piercing passes shields',sub:'Heavy hits crack it'}),
-        hornBroken:Object.freeze({beam:'Horn broken! No more Beam',slam:'Horn broken! No more Slam'}),
+        shieldChip:'Shield -{points}',shieldLabel:'Shield',pierce:'Pierce!',crack:'Crack!',shattered:'Shield broken!', // shieldChip replaces 'Blocked' (owner 2026-11-18, round 4 shield health)
+        shieldToast:Object.freeze({title:'Shield on the weak spot',sub:'Heavy hits break it fast, Piercing passes'}), // owner rules 2026-11-18, round 4
         multiplier:'×{multiplier}', // the weak-spot mark and the bounce counter: the sign comes first, the number after (audit glossary)
         perfect:'PERFECT',perfectStreak:'PERFECT ×{streak}',grade:Object.freeze({perfect:'Perfect',great:'Great'}),
         weak:'Weak spot',missed:'Missed',dodged:'Dodged',heal:'Heal',newTrait:'New trait: {name}.',

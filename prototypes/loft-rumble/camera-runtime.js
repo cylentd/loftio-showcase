@@ -57,14 +57,14 @@
 
     withEnemy(target, operation) {
       const {s,C} = this.game;
-      const saved = {target:this.target,radius:C.enemyRadius,horns:s.horns,shield:s.shield,banned:s.banned};
+      const saved = {target:this.target,radius:C.enemyRadius,shield:s.shield};
       this.target = target;
       C.enemyRadius = target.radius;
-      if (this.fixture) { s.horns=target.horns;s.shield=target.shield;s.banned=target.banned; }
+      if (this.fixture) { s.shield=target.shield; }
       try { return operation(); }
       finally {
         this.target=saved.target;C.enemyRadius=saved.radius;
-        s.horns=saved.horns;s.shield=saved.shield;s.banned=saved.banned;
+        s.shield=saved.shield;
       }
     }
 
@@ -206,7 +206,7 @@
       s.cameraScene.name=name;
       if (name!=='BASELINE') {
         s.cameraScene.enemies=structuredClone(root.LoftRumbleCameraScenes[name]).map(target => ({...target,baseX:target.x,baseY:target.y,
-          horns:structuredClone(s.horns),shield:structuredClone(s.shield),banned:[]}));
+          shield:structuredClone(s.shield)}));
         s.enemyT=config.fixtureAttackDelay;
         s.toasts=[];s.banners=[];s.tutor=null;
         FEEL.bumpers=name==='BUMPER_CHAIN'?structuredClone(config.fixtureBumpers):structuredClone(this.baseBumpers);

@@ -1,6 +1,7 @@
 (function(root){
   'use strict';
   const data=root.LoftRumbleEncounterData;
+  const ATTACKS=['whiplash','beam','slam']; // the attack ids a rotation may hold, each once
   const normalized=value=>Number.isFinite(value)&&value>0&&value<1;
   function validate(input){
     if(!input||!Array.isArray(input.entries)||!input.entries.length)throw new TypeError('Missing encounters');
@@ -10,7 +11,7 @@
       identifiers.add(entry.id);
       if(entry.boss&&(!normalized(entry.boss.x)||!normalized(entry.boss.y)||!Number.isFinite(entry.boss.angle)))throw new TypeError('Invalid boss placement');
       if(entry.bumpers&&(!Array.isArray(entry.bumpers)||!entry.bumpers.every(point=>Array.isArray(point)&&point.length===2&&point.every(normalized))))throw new TypeError('Invalid bumper placement');
-      if(entry.rotation&&(!Array.isArray(entry.rotation)||entry.rotation.length!==3||new Set(entry.rotation).size!==3||!entry.rotation.every(id=>['pulse','beam','slam'].includes(id))))throw new TypeError('Invalid attack rotation');
+      if(entry.rotation&&(!Array.isArray(entry.rotation)||entry.rotation.length!==ATTACKS.length||new Set(entry.rotation).size!==ATTACKS.length||!entry.rotation.every(id=>ATTACKS.includes(id))))throw new TypeError('Invalid attack rotation');
       if(entry.starts&&(!['sprout','chomper','custom'].every(id=>Array.isArray(entry.starts[id])&&entry.starts[id].length===2&&entry.starts[id].every(normalized))))throw new TypeError('Invalid resident placement');
     }
     if(!identifiers.has(input.defaultId))throw new TypeError('Missing default encounter');

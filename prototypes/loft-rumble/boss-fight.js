@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  // Bramble in the live fight (LM3): the living-magic rig, the rotating shield with front, side and rear views, crack and
+  // Bramble in the live fight (LM3): the living-magic rig, the shield on the weak spot with front, side and rear views, crack and
   // break, and the two-way beam with its two source glows. Pure look: it reads the fight's state and never changes it.
   // Each function returns false when its textures are not loaded, so the page keeps its old drawing for that frame.
   // Geometry and state: boss-fight-model.js; numbers: boss-fight-data.js.
@@ -61,7 +61,8 @@
     if(!o.alive)return true;
     if(sh.down>0){if(o.layer==='front')shatter(ctx,o,sh,d,m);return true;}
     const v=m.shieldLook(sh.angle,d);if(v.depth!==o.layer)return true;
-    const image=o.image(m.shieldTexture(v.view,state.phase,d)),box=m.squashBox(m.shieldBox(v.view,sh.angle,o.plate,o.arc,o.upright,image,d),v.squash);
+    const grow=d.guard?m.regrowScale(sh.up,d.guard):1;  // the regrowing plate widens from regrowStart (owner 2026-11-18)
+    const image=o.image(m.shieldTexture(v.view,state.phase,d)),box=m.squashBox(m.shieldBox(v.view,sh.angle,o.plate,o.arc,o.upright,image,d),v.squash*grow);
     sprite(ctx,image,o.enemy.x+box.gx+m.crackShake(state,o.reduced,d),o.enemy.y+box.gy,box,o.upright,sh.up);
     return true;
   }
@@ -160,5 +161,30 @@
     return true;
   }
 
-  root.LoftRumbleBossFight=Object.freeze({body,shield,beam,sources,slam,shadow,ownsShadow});
+  // Guard plate (owner 2026-11-18, round 3): the painted front arc (intact, then cracked, then cracked and darkened) with its
+  // carved middle panel right on the weak spot, turned so the inner curve hugs the boss. Unrotated, the arc faces the player.
+  // o: {shield, enemy, radius, arc, feel, grow, jolt, shade, image(name)}
+  const shaded=new WeakMap();
+  function darkened(im,shade,colour){
+    if(shaded.has(im))return shaded.get(im);
+    const c=root.document.createElement('canvas');c.width=im.naturalWidth||im.width;c.height=im.naturalHeight||im.height;
+    const x=c.getContext('2d');x.drawImage(im,0,0);x.globalCompositeOperation='source-atop';x.globalAlpha=shade;x.fillStyle=colour;
+    x.fillRect(0,0,c.width,c.height);shaded.set(im,c);return c;
+  }
+  // The painted plate's width (logical px) and its anchor on the boss.
+  const plateWidth=(o,f,grow)=>2*(o.radius+f.shieldGap)*Math.sin(o.arc/2)*f.paintedWidth*grow;
+  const plateAnchor=(o,at)=>({x:o.enemy.x+Math.cos(o.shield.angle)*at,y:o.enemy.y+Math.sin(o.shield.angle)*at});
+  function guardPlate(ctx,o){
+    const T=F().textures,sh=o.shield,f=o.feel,im=o.image(sh.cracks>0?T.cracked:T.front);if(!im)return false;
+    // Round 6 (owner 2026-11-18, "I just wanted it to be shorter"): paintedHeight squashes the height only, about the
+    // anchor row on the weak spot, so the carved panel stays on it and the foot moves in by under 2 px.
+    const w=plateWidth(o,f,o.grow),h=w*im.height/im.width*f.paintedHeight,p=plateAnchor(o,o.radius+o.jolt);
+    // Lift opening (owner 2026-11-18, #445): o.lift (0..1) raises the plate up the screen by liftHeight plate heights,
+    // clamped so its top never passes o.top (the arena's top edge).
+    const rise=Math.min((o.lift??0)*F().guard.liftHeight*h,Math.max(0,p.y-h*f.paintedLift-(o.top??0)));
+    ctx.save();ctx.globalAlpha=sh.up;ctx.translate(p.x,p.y-rise);ctx.rotate(sh.angle-Math.PI*HALF);
+    ctx.drawImage(sh.cracks>1?darkened(im,f.paintedShade,o.shade):im,-w*HALF,-h*f.paintedLift,w,h);ctx.restore();return true;
+  }
+  // The shield's health bar moved to the HUD under the boss bar (owner 2026-11-18, round 5): rumble-hud.js shieldBar.
+  root.LoftRumbleBossFight=Object.freeze({body,shield,beam,sources,slam,shadow,ownsShadow,guardPlate});
 })(globalThis);

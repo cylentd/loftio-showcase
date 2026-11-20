@@ -23,6 +23,12 @@
       nameGap:2,
       nameFont:15,hpFont:13, // hpFont at the helper floor (type.helper; audit finding 3)
     }),
+    // Shield health bar (owner's 2026-11-18 round 5 feedback, #439: the on-arena bar read as a sign, not a health bar):
+    // a thinner bar hanging from the boss frame's lower lip, centred under the boss channel. share: its width as a share
+    // of the boss channel; height and edge (the ink outline that carries 3:1 on any frame or floor) in arena units;
+    // tuck: how far it rises onto the frame's lip so it reads as part of the frame; labelGap: the "Shield" word's gap
+    // left of the bar; labelFont at the helper floor (type.helper). Look round pick, owner to judge.
+    shield:Object.freeze({share:.5,height:5,edge:1.5,tuck:2,labelGap:6,labelFont:13}),
     // Team frame: visible 0.281-0.719 tall; the trough right of the empty left socket runs 0.107-0.935 wide, 0.393-0.6 tall.
     // The socket (centre 0.082, 0.5; 0.042 of the width across) holds the spiral seed.
     team:Object.freeze({
@@ -63,6 +69,7 @@
       cream:'--hud-cream',ink:'--hud-ink',boss:'--hud-boss-fill',team:'--hud-team-fill',pending:'--hud-pending',
       bossEnergy:'--hud-boss-energy',teamEnergy:'--hud-team-energy',
       scrim:'--hud-scrim',flash:'--hud-flash',low:'--danger',
+      shield:'--hud-shield-fill',shieldTrack:'--hud-shield-track',
     }),
     // Canonical portraits for the three dock slots. The third slot is the demo's resident (rumble-demo-data.js, Puff); a
     // card with its own art (data-own-art) keeps it, so player-made residents use the same frame and pipeline.

@@ -21,6 +21,14 @@
       name:{x:width/2,y:baseline},hp:{x:frame.x+frame.w-channel.h,y:baseline}};
   }
 
+  // Shield bar (owner 2026-11-18, round 5): centred under the boss channel, its top tucked onto the frame's lower lip;
+  // the "Shield" word right-aligned left of it, on the bar's middle. L: a bossLayout.
+  function shieldLayout(L,D){
+    const S=D.shield,w=L.channel.w*S.share,x=L.channel.x+(L.channel.w-w)*HALF;
+    const y=Math.max(L.channel.y+L.channel.h+S.edge,L.bottom-S.tuck);
+    return {bar:{x,y,w,h:S.height},label:{x:x-S.labelGap,y:y+S.height*HALF}};
+  }
+
   // Team bar: the frame from the left inset, centred in the bottom strip, with the live readout to its right.
   function teamLayout(width,height,strip,numberWidth,D){
     const P=D.team,T=D.textures.teamFrame,mid=height-strip*HALF;
@@ -64,5 +72,5 @@
     return degrees<0?degrees+FULL_TURN:degrees;
   }
 
-  root.LoftRumbleHudModel=Object.freeze({fillWidth,bossLayout,teamLayout,comboLayout,milestoneScale,textSize,chargeSweep});
+  root.LoftRumbleHudModel=Object.freeze({fillWidth,bossLayout,shieldLayout,teamLayout,comboLayout,milestoneScale,textSize,chargeSweep});
 })(globalThis);

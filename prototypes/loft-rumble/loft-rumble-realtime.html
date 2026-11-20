@@ -1,5 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="rumble-runtime" content="local-dev"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Loft Rumble · Real-time</title>
 <script src="rumble-lab-policy.js"></script>
+<script src="whiplash-look-data.js"></script><script src="whiplash-renderer.js"></script>
 <script>if(!LoftRumbleLabPolicy.allowed(location,document.documentElement)&&new URLSearchParams(location.search).get('camera')!=='0')document.documentElement.dataset.rumblePending='';</script>
 <style>:root{--stage-transition-surface:#16251f}html[data-rumble-pending],html[data-rumble-demo]{background:var(--stage-transition-surface)}html[data-rumble-pending] body,html[data-rumble-demo] body{background:transparent}html[data-rumble-pending] main{opacity:0}</style>
 <link rel="stylesheet" href="rumble-tokens.css">
@@ -11,6 +12,9 @@
 <link rel="stylesheet" href="rumble-cinematic.css">
 <link rel="stylesheet" href="battle-restart.css">
 <script src="battle-end-model.js"></script>
+<script src="whiplash-data.js"></script>
+<script src="whiplash-model.js"></script>
+<script src="whiplash-paint-data.js"></script><script src="whiplash-pose.js"></script><script src="whiplash-fx.js"></script><script src="whiplash-contact.js"></script>
 <script src="finish-presentation-constants.js"></script>
 <script src="finish-presentation-model.js"></script>
 <script src="finish-presentation-renderer.js"></script>
@@ -68,10 +72,12 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor
 </div>
 <div id="portrait-hint" role="note"><span></span><button id="hint-close"></button></div>
 </main><script src="art-manifest.js"></script><script src="arena-skins.js"></script><script src="arena-scenery.js"></script><script src="colosseum-relief.js"></script><script src="battle-materials-config.js"></script><script src="battle-materials.js"></script><script src="art-renderer.js"></script><script src="arena-skin-controls.js"></script><script src="hero-card-data.js"></script><script src="hero-cards.js"></script><script src="rumble-hud-data.js"></script><script src="rumble-hud-model.js"></script><script src="rumble-hud.js"></script><script src="stage-layout-data.js"></script><script src="stage-layout-controls.js"></script><script src="rumble-encounter-data.js"></script><script src="rumble-encounters.js"></script><script src="rumble-demo-data.js"></script><script src="rumble-music-data.js"></script><script src="rumble-music.js"></script><script src="rumble-demo.js"></script><script src="rumble-cues-data.js"></script><script src="rumble-cues-view.js"></script><script src="rumble-cues.js"></script>
+<script src="roster-reader.js"></script><script src="rumble-synergy-data.js"></script><script src="rumble-synergy-copy.js"></script><script src="rumble-synergy.js"></script><script src="rumble-slot-fill.js"></script><script src="rumble-team-apply.js"></script><script>try{window.rumbleTeam=window.LoftRumbleSlotFill.fromStorage(localStorage)}catch(e){window.rumbleTeam=null}</script>
 <script src="rumble-tutorial-model.js"></script>
 <script src="rumble-tutorial-script.js"></script>
 <script src="rumble-tutorial-plain.js"></script>
-<script src="rumble-tutorial-stage.js"></script><script src="camera-config.js"></script><script src="camera-stun.js"></script><script src="camera-impact.js"></script><script src="camera-telegraph.js"></script><script src="camera-intent.js"></script><script src="camera-projection.js"></script><script src="camera-scenes.js"></script><script src="camera-copy.js"></script><script src="camera-controls.js"></script><script src="camera-storybook.js"></script><script src="camera-heat.js"></script><script src="camera-payoff.js"></script><script src="camera-stats.js"></script><script src="camera-seek.js"></script><script src="camera-punish.js"></script><script src="camera-runtime.js"></script><script src="camera-renderer.js"></script><script src="camera-debug.js"></script><script src="drag-feedback-data.js"></script><script src="drag-feedback.js"></script><script src="drag-feedback-renderer.js"></script><script src="hero-ability-fx-data.js"></script><script src="hero-ability-fx.js"></script><script src="boss-rig-data.js"></script><script src="boss-rig-model.js"></script><script src="boss-fight-data.js"></script><script src="boss-fight-model.js"></script><script src="boss-fight.js"></script><script>
+<script src="rumble-tutorial-stage.js"></script><script src="camera-config.js"></script><script src="camera-stun.js"></script><script src="camera-impact.js"></script><script src="camera-telegraph.js"></script><script src="camera-intent.js"></script><script src="camera-projection.js"></script><script src="camera-scenes.js"></script><script src="camera-copy.js"></script><script src="camera-controls.js"></script><script src="camera-storybook.js"></script><script src="camera-heat.js"></script><script src="camera-payoff.js"></script><script src="camera-stats.js"></script><script src="camera-seek.js"></script><script src="camera-punish.js"></script><script src="camera-runtime.js"></script><script src="camera-renderer.js"></script><script src="camera-debug.js"></script><script src="drag-feedback-data.js"></script><script src="drag-feedback.js"></script><script src="drag-feedback-renderer.js"></script><script src="hero-ability-fx-data.js"></script><script src="hero-ability-fx.js"></script><script src="rumble-synergy-engine.js"></script><script src="rumble-synergy-field.js"></script><script src="rumble-synergy-support.js"></script><script src="rumble-synergy-fx.js"></script><script src="boss-rig-data.js"></script><script src="boss-rig-model.js"></script><script src="boss-fight-data.js"></script><script src="boss-fight-model.js"></script><script src="boss-fight.js"></script>
+<script src="bark-shield.js"></script><script>
 (()=>{'use strict';
 // Words: every player-facing string is a key in rumble-demo-data.js (DEMO.page, read as PAGE and COPY), rumble-cues-data.js or
 // drag-feedback-data.js. The markup carries none; WORDS gives each element its words at boot. rumble-copy.test.cjs fails on a new inline string.
@@ -86,8 +92,10 @@ for(const [selector,attribute,words] of WORDS){const node=document.querySelector
 // All distances/speeds are logical arena units (per second). The arena is a fixed C.arenaW x C.arenaH portrait playfield,
 // scaled to fit its container, so ranges and bounce counts are identical on every screen. Prototype feel-test values.
 // hp 600 (round 8): with the bounce multiplier, an average-player sim (40 battles per trait) wins in a median 12-13 shots.
-const C={arenaW:360,arenaH:640,hudTop:50,hudBottom:32,radius:15,visualSize:46,ringLife:.32,popupLife:.95,enemyRadius:38,hp:600,weakArc:.55,weakMultiplier:3,maxBonusWalls:3,stopSpeed:45,hitCooldown:.22,step:1/180,maxFrame:.04,padding:7,hitReach:47,particleLife:.65,particleCount:12,aimStep:.12,enemyX:.5,enemyY:.3,homeX:.22,homeY:.82};
+const C={arenaW:360,arenaH:640,hudTop:50,hudBottom:32,radius:15,visualSize:46,ringLife:.32,popupLife:.95,enemyRadius:38,hp:600,weakArc:.55,weakMultiplier:3,maxBonusWalls:3,stopSpeed:45,hitCooldown:.22,step:1/180,maxFrame:.04,padding:7,hitReach:47,particleLife:.65,particleCount:12,aimStep:.12,enemyX:.5,enemyY:.3,homeX:.22,homeY:.82,
+  weakAngle:Math.PI/2}; // owner 2026-11-18: the weak spot faces the player (was 2.55, lower-left) so its shield shows the carved front art
 // Feel tuning, polish pass 2026-11-08. Seconds, CSS px, px/s. Colours are the CSS tokens in :root, named here by key.
+const GUARD=window.LoftRumbleBossFightData.guard,GUARD_RULES=window.LoftRumbleBossFightModel; // the shield's rules (owner 2026-11-18)
 const FEEL={
  // Glide (rounds 3-4): every shot flies at full trait speed until its travel budget (trait range, units of path) is partly
  // spent, then rolls to rest over the last glideEase share with a power-glideCurve ease-out (2 quadratic, 3 cubic).
@@ -136,16 +144,16 @@ const FEEL={
  // which pops (grows finalePop and fades) in a shard burst while the last total flies into the empty bar. Then the win screen. A tap skips.
  // Reduced motion: no slow-mo, no zoom, no pop growth: the burst and a fade.
  finaleSlow:.2,finaleTime:1.2,finaleZoom:.15,finaleZoomIn:.35,finalePop:.35,finaleSparks:28,finaleSparkSpeed:320,finaleShards:14,finaleShardSpeed:150,finaleShardSize:6,finaleShake:10,finaleVibrate:60,
- // Round 19 horns: two horns on the upper body (angles from the enemy centre, rad; the weak spot sits lower left). Each has hornHP of the boss HP.
- // A contact hit within hornArc of a horn damages the horn and the boss by the same amount. Breaking one removes its attack (left Beam, right Slam;
- // Pulse can never go) and staggers the boss: the enemy clock pauses staggerTime with a dizzy wobble. Crack state at hornCrack of its HP.
- horns:[{id:'left',angle:-2.5,removes:'beam'},{id:'right',angle:-.64,removes:'slam'}],hornHP:.07,hornArc:.5,hornLength:22,hornBase:.3,hornCrack:.5,hornStump:.35,
- staggerTime:3,staggerWobble:9,staggerTilt:.12,dizzyDots:3,dizzySpin:4,dizzySize:3,
- hornBitLife:.8,hornBitSpeed:200,hornBitSpin:9,hornBitFall:500,hornSparks:14,hornShake:7,hornVibrate:[30,20,30],
- // Round 19 shield plate: one curved plate covering shieldArc that turns once every shieldTurn s (battle time). A contact hit on it, by trait:
- // Springy is blocked (no damage, still bounces); Piercing passes and damages as normal; Heavy damages as normal and cracks it, and
- // shieldCracks Heavy hits shatter it for shieldReform s. Abilities and specials ignore it. The weak spot can sit under it.
- shieldArc:Math.PI/2,shieldTurn:10,shieldStart:-Math.PI/2,shieldGap:9,shieldWidth:9,shieldSheen:.3,shieldSheenSpeed:1.2,shieldCracks:3,shieldReform:8,shieldSparks:10,shieldShards:12,shieldFade:.4,shieldPop:1.6,
+ // Horns are drawn only (angles from the enemy centre, rad; the weak spot sits lower left). Owner 2026-11-18 removed horn breaking:
+ // no horn HP, no stagger, and Beam and Slam are always in the rotation.
+ horns:[{id:'left',angle:-2.5},{id:'right',angle:-.64}],hornLength:22,hornBase:.3,
+ // Shield plate (owner rules 2026-11-18, #426 round 2; replaces the Round 19 rotating plate): one plate covering shieldArc that sits on
+ // the weak spot and moves with it. A body hit always damages. On the plate: Chomper or Heavy cracks it for 0, Piercing passes through
+ // to the weak spot (x3), anyone else is blocked for 0. shieldCracks cracks break it and the weak spot is exposed (usual x3, its painted art only) for
+ // shieldReform s, then the plate regrows. Drawn front-facing in code: bark-shield.js. barkHitLife: s the plate jolts after a hit.
+ // Rules: boss-fight-model.js guardZone / guardHit / guardStep; numbers: boss-fight-data.js guard. Abilities and specials ignore it.
+ shieldArc:Math.PI/2,shieldStart:-Math.PI/2,shieldGap:9,shieldWidth:9,shieldSheen:.3,shieldSheenSpeed:1.2,shieldCracks:GUARD_RULES.CRACK_STAGES+1,shieldReform:GUARD.exposedSeconds,shieldSparks:10,shieldShards:12,shieldFade:.4,shieldPop:1.6,barkHitLife:.25,barkSize:1.15,paintedWidth:2,paintedLift:.68,paintedJolt:3,paintedShade:.3, // round 3: painted arc width per plate chord (round 4 tried 1.5; round 6 back to 2, owner 2026-11-18 'Why didn't we use the previous shield?'), its anchor row, hit jolt px (Look round pick); round 5 moved the shield bar to the HUD (rumble-hud-data.js shield)
+ paintedHeight:.85, // round 6: the plate's drawn height share, width unchanged (owner 2026-11-18 'I just wanted it to be shorter'; tuned from a still)
  shieldBreakShake:7, // px; the break shakes the arena a little harder than an ordinary hit (shakeHit 3) and below a weak-spot hit (shakeWeak 8). Reduced motion: none. 2026-11-15, the break was hard to see (owner)
  counterHide:90,                        // one floating number per moving resident (its bounce x); hidden while a PERFECT pop is this close
  restLine:1.5,restAlpha:.6,             // recharge off: a resting resident's faint neutral outline, width and opacity, so it reads as grabbable
@@ -179,7 +187,7 @@ const FEEL={
  attackDelay:.4,windup:.34,travel:.22,attackResponse:1,// enemy attack: waits attackDelay after the shot total, then winds up and lands; all inside attackResponse (tests advance 1 s)
  payoffLife:1.2,payoffSize:40,payoffLine:12,payoffDrain:.45,bannerDelay:.8,payoffGap:8, // end-of-shot total: number life, sizes, pending-segment drain time, wait before the end banner
  // Enemy attack cycle, fired every TURN.attackEvery shots in this order. Pulse damage is TURN.attackDamage in total.
- attacks:[{id:'pulse',name:PAGE.attack.pulse.name,colour:'danger',tip:PAGE.attack.pulse.tip},{id:'beam',name:PAGE.attack.beam.name,colour:'boss-beam',perHit:26,tip:PAGE.attack.beam.tip},{id:'slam',name:PAGE.attack.slam.name,colour:'slam',perHit:30,tip:PAGE.attack.slam.tip}],
+ attacks:[{id:'whiplash',name:PAGE.attack.whiplash.name,colour:'danger',tip:PAGE.attack.whiplash.tip},{id:'beam',name:PAGE.attack.beam.name,colour:'boss-beam',perHit:26,tip:PAGE.attack.beam.tip},{id:'slam',name:PAGE.attack.slam.name,colour:'slam',perHit:30,tip:PAGE.attack.slam.tip}],
  dodgeWindow:3, // round 7: Beam and Slam are announced a full rotation ahead (3 shots, one move per resident), zone locked; dodgeable, so perHit rose from 18 and 20. Pulse keeps TURN.attackEvery.
  beamHalf:30,beamJitter:.3,beamFade:.4,  // lane half-width (px; a resident touching it is hit), aim jitter (rad) off a random resident, beam fade (s)
  slamRadius:.36,slamMin:140,slamHop:22,slamRingLife:.32, // slam zone = max(slamMin, slamRadius × the shorter arena side)
@@ -202,7 +210,7 @@ const FEEL={
  grabRadius:C.visualSize/2*1.6,grabReach:120, // a press within 1.6x the resident radius takes it; a press in empty space takes the nearest READY one within grabReach
  dangerTime:1,dangerAttacks:['beam','slam'],dangerBlink:18,dangerAlpha:.45, // last seconds before a zone attack: residents inside flash red (rad/s, peak opacity)
  toastLife:1.6,toastSlide:.22,toastMax:2,   // seconds on screen, slide (or fade) time, how many show at once (more queue)
- toastW:170,toastH:46,toastGap:8,toastArt:36,toastRadius:12,toastName:15,toastSub:12, // card size (two fit side by side in one low row), gap, portrait, corner, type
+ toastW:170,toastH:46,toastGap:8,toastArt:36,toastRadius:12,toastName:15,toastSub:12,toastLines:2,toastLeading:3, // card size (two fit side by side in one low row), gap, portrait, corner, type; a long second line wraps to toastLines lines toastLeading px apart at toastSub instead of shrinking (owner 2026-11-18 round 5: the shield toast's line was a few pixels tall)
  specialTagGap:10,                     // round 14: the SPECIAL tag sits this far above the gauge while aiming a charged resident
  telegraphPulse:6,telegraphGlow:14,lunge:16,windupGrow:.14,
  shakeAttack:13,vignetteLife:.55,vignetteAlpha:.5,flinchLife:.42,flinchRecoil:14,attackStop:.08,
@@ -248,36 +256,43 @@ const RT={
  slowVignette:.3,slowPulse:3            // bullet-time edge darkening (opacity) and its pulse (rad/s; steady under reduced motion)
 
 };
-C.hp=RT.hp;const ids=['sprout','chomper','custom'],TURN={order:ids,hp:RT.teamHP,heal:RT.heal,heartRadius:RT.heartRadius};
-const s={w:C.arenaW,h:C.arenaH,scale:1,timing:true,gaugeT:0,custom:'springy',paused:false,bodies:{},positions:{},held:null,pointer:null,ax:0,ay:0,px:0,py:0,pulled:false,focus:RT.focusMax,slow:false,clock:0,phase:'play',hp:RT.hp,teamHP:RT.teamHP,particles:[],rings:[],popups:[],bolts:[],teamEffects:[],reactions:{},banners:[],splash:{},introduced:{},specialCharge:{},toasts:[],flings:0,time:0};
+// The saved team (#443 B3a, rumble-team-apply.js): inactive with no roster, and the fight is the demo trio as before.
+const TEAM=window.LoftRumbleTeamApply.plan(window.rumbleTeam,Object.keys(traits));
+C.hp=RT.hp;const ids=TEAM.ids??['sprout','chomper','custom'],TURN={order:ids,hp:RT.teamHP,heal:RT.heal,heartRadius:RT.heartRadius};
+const s={w:C.arenaW,h:C.arenaH,scale:1,timing:true,gaugeT:0,custom:'springy',paused:false,bodies:{},positions:{},held:null,pointer:null,ax:0,ay:0,px:0,py:0,pulled:false,focus:RT.focusMax,slow:false,clock:0,phase:'play',hp:RT.hp,teamHP:RT.teamHP,particles:[],rings:[],popups:[],bolts:[],synHits:[],synArcs:[],synFields:[],bubbles:{},supportRings:[],teamEffects:[],reactions:{},banners:[],splash:{},introduced:{},specialCharge:{},toasts:[],flings:0,time:0};
 let last=0,colors={};const images={};for(const key in art){images[key]=new Image();images[key].src=art[key]}
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),kind=id=>id==='sprout'?'springy':id==='chomper'?'heavy':s.custom,profile=b=>traits[kind(b.id)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),kind=id=>TEAM.trait?.[id]??(id==='sprout'?'springy':id==='chomper'?'heavy':s.custom),profile=b=>traits[kind(b.id)];
 let camera=null;
 const cues=window.LoftRumbleCues; // rumble-cues.js: the battle cue rail; every hook is a no-op until installed
 const tutorial=window.LoftRumbleTutorialStage; // rumble-tutorial-stage.js: the scripted Training run on a first visit; hooks are no-ops until installed
 const stunned=body=>!!camera&&window.LoftRumbleStun.active(body);
-const baseEnemy=()=>{const fallback={x:s.w*C.enemyX,y:s.h*C.enemyY,angle:s.bossAngle??2.55};return camera?window.LoftRumbleEncounters.enemy(s,fallback):fallback};
-function enemy(){return camera?.enemy()??baseEnemy()}
+const baseEnemy=()=>{const fallback={x:s.w*C.enemyX,y:s.h*C.enemyY,angle:s.bossAngle??C.weakAngle};return camera?window.LoftRumbleEncounters.enemy(s,fallback):fallback};
+function enemy(){const e=camera?.enemy()??baseEnemy();return camera&&LoftRumbleStorybook.enabled(camera)?{...e,facing:LoftRumbleWhiplashLook.paintedFacing}:e}
 const random=()=>camera?camera.random():Math.random();
 function message(text){if(camera?.predicting)return;feedback.textContent=text}
 function cancelHold(){if(!camera?.predicting){document.querySelector('[data-grabbed]')?.removeAttribute('data-grabbed');dragFeel.cancel();board.classList.remove('held')}s.held=null;s.pointer=null}
-const names={...PAGE.name}; // mutable: the demo renames the third resident
+const names={...PAGE.name,...TEAM.names};s.synergy=TEAM.synergy;s.teamActive=TEAM.active; // mutable: the demo renames the third resident
 const abilities=PAGE.abilityName,specials=PAGE.specialName;
 // Prototype ability tuning: fixed damage avoids a second weak-spot multiplier.
-const A={radius:18,burstDamage:8,burstCount:3,boltSpeed:540,shockDamage:36,shockRange:230,beamDamage:26,effectLife:.65,overdrive:1.4,heavySpecial:55,pierceSpecial:40};
+// Ability numbers live in the synergy registry (rumble-synergy-data.js): syn('seed-burst').damage, and so on. The three read-only
+// getters below keep the frozen browser checks (check_realtime*.py) working; they read the registry, they hold no number.
+const SYN=window.LoftRumbleSynergy,syn=id=>SYN.numbers(id,'boss');
+const A={radius:18,effectLife:.65,overdrive:1.4,heavySpecial:55,pierceSpecial:40,get shockDamage(){return syn('shockwave').damage},get shockRange(){return syn('shockwave').range},get burstCount(){return syn('seed-burst').count}};
 const specialBonus={springy:0,heavy:A.heavySpecial,piercing:A.pierceSpecial}; // first-contact bonus each special adds, for the cue rail
 const clockText=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
 function newBody(id){const [x,y]=START[id];return{id,x:s.w*x,y:s.h*y,vx:0,vy:0,angle:0,moving:false,glide:null,walls:0,cool:0,inside:false,used:[],charge:1,boost:null,special:null,specialTriggered:false,squash:null,counter:0,pulse:0,ping:0,stun:0}}
-function reset(){s.battleEnd=window.LoftRumbleBattleEnd.initial();camera?.resetScene();cues.reset();s.fightStats=window.LoftRumbleStats.fresh(ids);window.LoftRumbleDemo?.reset(s);music.setPaused(false);cancelHold();for(const id in cardState)delete cardState[id];
+function reset(){s.whipTail=null;s.battleEnd=window.LoftRumbleBattleEnd.initial();camera?.resetScene();cues.reset();s.fightStats=window.LoftRumbleStats.fresh(ids);window.LoftRumbleDemo?.reset(s);music.setPaused(false);cancelHold();for(const id in cardState)delete cardState[id];
  const stageLayout=tutorial.layout(s.demo?window.LoftRumbleStageLayoutData.options.find(layout=>layout.id===window.LoftRumbleStageLayoutData.defaultId):window.LoftRumbleStageLayouts?.current());if(stageLayout)FEEL.bumpers=stageLayout.bumpers.map(point=>[...point]);
 
  s.bodies=Object.fromEntries(ids.map(id=>[id,newBody(id)]));s.positions=s.bodies;
- Object.assign(s,{phase:'play',won:false,time:0,hp:RT.hp,teamHP:RT.teamHP,enemyT:RT.firstAttack,attackIndex:0,warn:null,attackFx:null,tally:null,comboT:0,combos:0,payoff:null,heart:null,hitStop:0,reactions:{},particles:[],rings:[],popups:[],bolts:[],teamEffects:[],shake:0,attackShake:null,vignette:0,enemyFlash:0,enemyHit:null,enemyChip:RT.hp,enemyDrain:0,enemyWait:0,enemyBarFlash:0,teamShown:RT.teamHP,teamChip:RT.teamHP,teamHold:0,teamBarHit:0,teamFly:0,teamFlyFlash:null,heals:[],teamFlash:null,lastHit:null,banners:[],cutin:null,cutinSeen:{},flashes:[],splash:{},toasts:[],flings:0,statusT:0,focus:RT.focusMax,slow:false,gaugeT:0,streak:0,flash:0,kick:null,userPaused:false});board.classList.remove('slow');document.getElementById('pause')?.setAttribute('aria-pressed','false');
- s.tutor=stageLayout?.id==='tutorial'||!tutorSeen()?{pull:false,bump:false,zone:false}:null;s.bumperHits=FEEL.bumpers.map(()=>0);s.finale=null;s.finaleCount=0;s.horns=Object.fromEntries(FEEL.horns.map(d=>[d.id,{hp:RT.hp*FEEL.hornHP,broken:false}]));s.banned=[];s.stagger=0;s.shield={angle:FEEL.shieldStart,cracks:0,down:0,seen:false,up:1};s.hornBits=[];Object.assign(s,{hits:0,hitsIdle:0,hitsPeak:0,hitsPop:0,hitsLost:null,hitBreaks:{attack:0,timeout:0}});
+ Object.assign(s,{phase:'play',won:false,time:0,hp:RT.hp,teamHP:RT.teamHP,enemyT:RT.firstAttack,attackIndex:0,warn:null,attackFx:null,tally:null,comboT:0,combos:0,payoff:null,heart:null,hitStop:0,reactions:{},particles:[],rings:[],popups:[],bolts:[],synHits:[],synArcs:[],synFields:[],bubbles:{},supportRings:[],teamEffects:[],shake:0,attackShake:null,vignette:0,enemyFlash:0,enemyHit:null,enemyChip:RT.hp,enemyDrain:0,enemyWait:0,enemyBarFlash:0,teamShown:RT.teamHP,teamChip:RT.teamHP,teamHold:0,teamBarHit:0,teamFly:0,teamFlyFlash:null,heals:[],teamFlash:null,lastHit:null,banners:[],cutin:null,cutinSeen:{},flashes:[],splash:{},toasts:[],flings:0,statusT:0,focus:RT.focusMax,slow:false,gaugeT:0,streak:0,flash:0,kick:null,userPaused:false});board.classList.remove('slow');document.getElementById('pause')?.setAttribute('aria-pressed','false');
+ s.tutor=stageLayout?.id==='tutorial'||!tutorSeen()?{pull:false,bump:false,zone:false}:null;s.bumperHits=FEEL.bumpers.map(()=>0);s.finale=null;s.finaleCount=0;s.shield={angle:FEEL.shieldStart,hp:GUARD.hp,cracks:0,down:0,seen:false,up:1};Object.assign(s,{hits:0,hitsIdle:0,hitsPeak:0,hitsPop:0,hitsLost:null,hitBreaks:{attack:0,timeout:0}});
  if(FEEL.allyIntroPerBattle)s.introduced={};s.specialCharge=Object.fromEntries(ids.map(id=>[id,0]));
  if(camera){window.LoftRumbleEncounters.apply(s,FEEL);camera.baseBumpers=structuredClone(FEEL.bumpers);s.bumperHits=FEEL.bumpers.map(()=>0);window.LoftRumbleEncounters.sync(s)}
  tutorial.reset();describe();health();teamText();status();roster();message(throwWords().start);window.LoftRumbleDemo?.present(s,false)}
-function describe(){if(camera?.predicting)return;for(const id of ids){const card=document.querySelector('[data-resident="'+id+'"]');card.querySelector('b').textContent=names[id];card.querySelector('em').textContent=traits[kind(id)].name}document.getElementById('reroll').hidden=!!s.demo;document.getElementById('reroll').disabled=s.flings>0}
+function describe(){if(camera?.predicting)return;for(const id of ids){const card=document.querySelector('[data-resident="'+id+'"]');card.querySelector('b').textContent=names[id];card.querySelector('em').textContent=traits[kind(id)].name}
+ for(const card of document.querySelectorAll('[data-resident]'))card.style.display=TEAM.showsCard(card.dataset.resident)?'':'none';   // a team of fewer than three shows only its heroes
+ document.getElementById('reroll').hidden=TEAM.rerollHidden(s.demo);document.getElementById('reroll').disabled=s.flings>0}
 /* A new fight is the only moment the music changes track; trait, layout and tutorial resets keep it. */
 function playAgain(){music.startFight();reset()}
 function reroll(){if(s.flings>0)return;const options=Object.keys(traits).filter(k=>k!==s.custom);s.custom=options[Math.floor(Math.random()*options.length)];reset();message(phrase(COPY.newTrait,{name:traits[s.custom].name}))}
@@ -291,7 +306,7 @@ function resize(){const edge=arena.offsetWidth-arena.clientWidth,main=stage.pare
 // A ready resident (stopped, ring full) launches at full trait speed; a charged special fires on this fling and spends the charge.
 // power (0 to 1) is the share of the trait's travel range: a sling is 1, a fling is set by the fling-power switch (drag-feedback-data.js, fling).
 function fling(id,angle,power=1){const b=s.bodies[id];if(!b||s.phase!=='play'||b.moving||b.charge<1||stunned(b))return false;camera?.onLaunch(names[id]);const t=profile(b),range=t.range*power;
- Object.assign(b,{moving:true,vx:Math.cos(angle)*t.speed,vy:Math.sin(angle)*t.speed,glide:{speed:t.speed,budget:range,left:range},walls:0,cool:0,inside:false,used:[],charge:0,boost:null,special:null,specialTriggered:false,trail:null,trailD:0,boostHit:false});
+ Object.assign(b,{moving:true,vx:Math.cos(angle)*t.speed,vy:Math.sin(angle)*t.speed,glide:{speed:t.speed,budget:range,left:range},walls:0,cool:0,inside:false,used:[],charge:0,boost:null,special:null,specialTriggered:false,trail:null,trailD:0,boostHit:false,fielded:false,fieldMult:1});
  if(!camera?.predicting)dragFeel.launch(b);s.flings++;window.LoftRumbleStats.credit(s.fightStats,{kind:'throw',by:id,special:s.specialCharge[id]>=1});if(s.flings===1)describe();if(s.tutor)s.tutor.pull=true;
  if(s.specialCharge[id]>=1){s.specialCharge[id]=0;b.special=kind(id);if(b.special==='springy'){b.vx*=A.overdrive;b.vy*=A.overdrive;b.glide.speed*=A.overdrive;b.glide.budget*=FEEL.overdriveRange;b.glide.left=b.glide.budget}
   collisionEffect(b.x,b.y,true);s.teamEffects.push({type:'wave',x:b.x,y:b.y,r:85,life:A.effectLife,label:specials[b.special]})}
@@ -335,7 +350,7 @@ function comboHit(){if(s.phase!=='play')return;s.hits++;s.hitsIdle=0;s.hitsPeak=
   s.popups.push({x:a.x,y:a.y+FEEL.comboPopGap+FEEL.popupBig/2,text:COPY.comboMiles[m],big:true,hud:true,align:a.align,color:'chip',bounce:!still(),life:C.popupLife})}
 function breakCombo(why){if(!s.hits)return;s.hitBreaks[why]=(s.hitBreaks[why]??0)+1;s.hitsLost={n:s.hits,life:FEEL.comboLostLife,shatter:why!=='timeout'};s.hits=0;s.hitsIdle=0}
 // Camera experiment only: the last factor is the combo payoff (camera-payoff.js). Without the experiment it is 1.
-function damage(b,weak){const hit=Math.round(profile(b).damage*(weak?C.weakMultiplier:1)*bounceMult(b.walls)*(b.boost?.mult??1)*(camera?window.LoftRumblePayoff.multiplier(s.hits):1));if(b.boost)s.tally??={total:0,parts:[]},s.tally.boost=b.boost;s.focus=Math.min(RT.focusMax,s.focus+RT.focusHit);
+function damage(b,weak){const hit=Math.round(profile(b).damage*(weak?C.weakMultiplier:1)*bounceMult(b.walls)*(b.boost?.mult??1)*(b.fieldMult??1)*(camera?window.LoftRumblePayoff.multiplier(s.hits):1));if(b.boost)s.tally??={total:0,parts:[]},s.tally.boost=b.boost;s.focus=Math.min(RT.focusMax,s.focus+RT.focusHit);
  if(camera?.predicting)camera.predictionHits[b.id]={weak};
  window.LoftRumbleStats.credit(s.fightStats,{kind:'hit',by:b.id,amount:Math.min(hit,s.hp),weak:weak?C.weakMultiplier:1,walls:bounceMult(b.walls)});
  s.hp=Math.max(0,s.hp-hit);b.pulse=.2;const e=enemy(),a=Math.atan2(b.y-e.y,b.x-e.x),cx=e.x+Math.cos(a)*C.enemyRadius,cy=e.y+Math.sin(a)*C.enemyRadius;s.lastHit={x:cx,y:cy};
@@ -344,7 +359,7 @@ function damage(b,weak){const hit=Math.round(profile(b).damage*(weak?C.weakMulti
 // Hits pile into one combo: the model (s.hp) drops at once; the total flies into the bar RT.comboWindow after the last hit.
 function addTally(source,amount,weak){s.tally??={total:0,parts:[]};s.tally.total+=amount;let part=s.tally.parts.find(p=>p.source===source);if(!part)s.tally.parts.push(part={source,amount:0,weak:0});part.amount+=amount;if(weak)part.weak++;s.comboT=RT.comboWindow}
 function collide(b){const e=enemy(),t=profile(b),dx=b.x-e.x,dy=b.y-e.y,distance=Math.hypot(dx,dy),reach=C.radius+C.enemyRadius;if(distance>=reach+2){b.inside=false;return}if(distance>reach)return;const nx=distance?dx/distance:-1,ny=distance?dy/distance:0,toward=b.vx*nx+b.vy*ny;if(toward>=0&&!b.inside)return;const angle=Math.atan2(dy,dx),delta=Math.atan2(Math.sin(angle-e.angle),Math.cos(angle-e.angle));
-  if(s.hp>0&&!b.inside&&b.cool<=0&&Math.hypot(b.vx,b.vy)>C.stopSpeed){if(shieldHit(b,angle))hornHit(angle,damage(b,Math.abs(delta)<C.weakArc));if(b.special&&!b.specialTriggered){b.specialTriggered=true;if(b.special==='heavy')abilityDamage(A.heavySpecial,specials.heavy,null,b.id,true);if(b.special==='piercing')abilityDamage(A.pierceSpecial,specials.piercing,null,b.id,true);if(b.special!=='springy')cues.onSpecialBonus(b.id,specialBonus[b.special]);tutorial.onSpecial()}b.cool=C.hitCooldown;b.inside=true}
+  if(s.hp>0&&!b.inside&&b.cool<=0&&Math.hypot(b.vx,b.vy)>C.stopSpeed){const guard=shieldHit(b,angle);if(guard.mult)damage(b,guard.weak||Math.abs(delta)<C.weakArc);if(b.special&&!b.specialTriggered){b.specialTriggered=true;if(b.special==='heavy')abilityDamage(A.heavySpecial,specials.heavy,null,b.id,true);if(b.special==='piercing')abilityDamage(A.pierceSpecial,specials.piercing,null,b.id,true);if(b.special!=='springy')cues.onSpecialBonus(b.id,specialBonus[b.special]);tutorial.onSpecial()}b.cool=C.hitCooldown;b.inside=true}
   if(t===traits.piercing)return;let cx=nx,cy=ny;
   // Reflect at the true contact point (back up along the velocity to the surface), so the fling follows the route preview.
   if(toward<0){const sp=Math.hypot(b.vx,b.vy),ux=b.vx/sp,uy=b.vy/sp,k=dx*ux+dy*uy,back=k+Math.sqrt(Math.max(0,k*k-(dx*dx+dy*dy-reach*reach)));
@@ -363,14 +378,48 @@ function activateAlly(m,o){if(stunned(m)||stunned(o))return;m.used.push(o.id);if
  if(!s.introduced[a.id]){s.introduced[a.id]=true;if(!cues.onAllyIntro(a.id))s.toasts.push({id:a.id,kind:a.kind,life:FEEL.toastLife})}s.splash[a.id]=FEEL.splashTime
 }
 // One ability effect at a point; its damage credits m (the resident whose launch set it off).
-function abilityAt(a,m){window.LoftRumbleStats.credit(s.fightStats,{kind:'activation',by:m.id,owner:a.id});const e=enemy(),label=abilities[a.kind],inRange=Math.hypot(e.x-a.x,e.y-a.y)<=A.shockRange+C.enemyRadius;
+function abilityAt(a,m){window.LoftRumbleStats.credit(s.fightStats,{kind:'activation',by:m.id,owner:a.id});const e=enemy(),sid=synergyOf(a),label=SYN.name(sid)??abilities[a.kind],inRange=Math.hypot(e.x-a.x,e.y-a.y)<=syn('shockwave').range+C.enemyRadius;
  // The look (hero-ability-fx.js, LM2) tags each effect with its kind, order and contact point; damage below never reads it.
  const look=(extra)=>{const fx=window.LoftRumbleHeroFx;s.fxSeq=(s.fxSeq??0)+1;return fx?fx.effect(a.kind,s.fxSeq,a,{x:(a.x+m.x)/2,y:(a.y+m.y)/2},extra):{x:a.x,y:a.y,life:A.effectLife,label:'',...extra}};
- if(a.kind==='springy'){for(let i=0;i<A.burstCount;i++)s.bolts.push({x:a.x,y:a.y,delay:i*.09,life:2,by:m.id,owner:a.id});s.teamEffects.push(look({type:'wave',r:60}))}
- if(a.kind==='heavy'){s.teamEffects.push(look({type:'wave',r:A.shockRange,label:inRange?'':COPY.missed}));if(inRange)abilityDamage(A.shockDamage,label,m.id,a.id)}
- if(a.kind==='piercing'){s.teamEffects.push(look({type:'beam',tx:e.x,ty:e.y}));abilityDamage(A.beamDamage,label,m.id,a.id)}}
+ if(sid==='seed-burst'){const n=syn(sid);for(let i=0;i<n.count;i++)s.bolts.push({x:a.x,y:a.y,delay:i*n.stagger,life:n.boltLife,by:m.id,owner:a.id});s.teamEffects.push(look({type:'wave',r:n.waveRadius}))}
+ if(sid==='shockwave'){s.teamEffects.push(look({type:'wave',r:syn(sid).range,label:inRange?'':COPY.missed}));if(inRange)abilityDamage(syn(sid).damage,label,m.id,a.id)}
+ if(sid==='piercing-beam'){s.teamEffects.push(look({type:'beam',tx:e.x,ty:e.y}));abilityDamage(syn(sid).damage,label,m.id,a.id)}
+ if(window.LoftRumbleSynergyEngine.handles.includes(sid))projectileSynergy(sid,a,m,look);
+ if(window.LoftRumbleSynergyField.handles.includes(sid))fieldSynergy(sid,a,m,look);
+ if(window.LoftRumbleSynergySupport.handles.includes(sid))supportSynergy(sid,a,m,look)}
+// Support synergies (ledger #462, A4). Mend heals the shared team pool; Bubble guard puts one bubble on the bumper (m), the hero who
+// made the contact. The bubble pays off in guardAmount below, the one seam every boss hit on the team passes through.
+function supportSynergy(sid,a,m,look){const P=window.LoftRumbleSynergySupport;
+ if(sid===P.ids.mend){const next=P.mend(s.teamHP,RT.teamHP,syn(sid)),gain=next-s.teamHP;s.teamHP=next;if(gain)flyToTeam('+'+gain,'good',{x:a.x,y:a.y},'','heal',gain);s.supportRings.push({x:a.x,y:a.y,life:window.LoftRumbleSynergyFx.ringLife})}
+ else s.bubbles=P.grantBubble(s.bubbles,m.id,syn(sid));
+ s.teamEffects.push(look({type:'wave',r:syn('seed-burst').waveRadius}))}
+// The boss hit `hitIds` for `amount` in all. Each hero holding a bubble absorbs its share of the hit (the bubble pops, no team damage);
+// the rest of the amount lands. Returns the amount that still lands on the team.
+function guardAmount(hitIds,amount){if(!hitIds.length||!amount)return amount;let open=0;
+ for(const id of hitIds){const r=window.LoftRumbleSynergySupport.absorb(s.bubbles,id);s.bubbles=r.bubbles;if(r.absorbed)s.supportRings.push({x:s.bodies[id].x,y:s.bodies[id].y,life:window.LoftRumbleSynergyFx.ringLife});else open++}
+ return Math.round(amount*open/hitIds.length)}
+// Field synergies (ledger #462, A3): a Poison cloud on the boss, a Power field where the hero activated. Numbers live in the registry.
+function fieldSynergy(sid,a,m,look){const e=enemy(),F=window.LoftRumbleSynergyField,field=F.place(sid,{x:a.x,y:a.y},{x:e.x,y:e.y});
+ s.synFields=F.add(s.synFields,{...field,by:m.id,owner:a.id,label:SYN.name(sid)});
+ s.teamEffects.push(look({type:'wave',r:syn('seed-burst').waveRadius}))}
+// Poison wears the boss down without a hit: no combo, no impact flash, just the health bar and the hero's credit.
+function poisonDamage(amount,label,by,owner){if(s.hp<=0)return;window.LoftRumbleStats.credit(s.fightStats,{kind:'ability',by,owner,amount:Math.min(amount,s.hp)});s.hp=Math.max(0,s.hp-amount);health()}
+// A hero flung through a live Power field keeps its bonus for the rest of that fling (touched once, no cooldown).
+function stepFields(dt){const F=window.LoftRumbleSynergyField,r=F.step(s.synFields,dt,RT.hp);s.synFields=r.fields;r.ticks.forEach((t,i)=>poisonDamage(t,r.sources[i].label,r.sources[i].by,r.sources[i].owner));
+ for(const id of ids){const b=s.bodies[id],bonus=b.moving&&!b.fielded?F.bonusFor(s.synFields,b):1;if(bonus>1){b.fielded=true;b.fieldMult=bonus}}}
+// Projectile synergies (ledger #462, A2). A hero's synergy is its saved slot when the build is ready for it, else its trait's default.
+function synergyOf(a){const pick=s.synergy?.[a.id];return SYN.ready(pick)?pick:SYN.defaultFor(a.kind)}
+function projectileSynergy(sid,a,m,look){const e=enemy(),plan=window.LoftRumbleSynergyEngine.launch(sid,{x:a.x,y:a.y},{x:e.x,y:e.y,radius:C.enemyRadius},{w:s.w,h:s.h});
+ for(const seed of plan.seeds)s.bolts.push({...seed,by:m.id,owner:a.id,synergy:sid});
+ for(const hit of plan.hits)s.synHits.push({...hit,by:m.id,owner:a.id,label:SYN.name(sid)});
+ s.teamEffects.push(look({type:'wave',r:syn('seed-burst').waveRadius}))}
+function stepSynergies(dt){stepFields(dt);for(const h of s.synHits){h.delay-=dt;if(h.delay>0)continue;h.done=true;if(s.hp>0){abilityDamage(h.damage,h.label,h.by,h.owner);s.synArcs.push({from:h.from,via:h.via,to:h.to,seed:s.synArcs.length+h.damage,life:window.LoftRumbleSynergyFx.life})}}
+ s.synHits=s.synHits.filter(h=>!h.done);for(const arc of s.synArcs)arc.life-=dt;s.synArcs=s.synArcs.filter(arc=>arc.life>0);
+ for(const r of s.supportRings)r.life-=dt;s.supportRings=s.supportRings.filter(r=>r.life>0)}
 function checkAllies(m){if(s.hp<=0||Math.hypot(m.vx,m.vy)<=C.stopSpeed)return;for(const id of ids){const o=s.bodies[id];if(o===m||o.moving||m.used.includes(id))continue;if(Math.hypot(m.x-o.x,m.y-o.y)<C.radius+A.radius)activateAlly(m,o)}}
-function stepTeam(dt){for(const bolt of s.bolts){bolt.life-=dt;bolt.delay-=dt;if(bolt.delay>0||s.hp<=0)continue;const e=enemy(),dx=e.x-bolt.x,dy=e.y-bolt.y,d=Math.hypot(dx,dy);if(d<=C.enemyRadius+A.boltSpeed*dt){bolt.life=0;abilityDamage(A.burstDamage,abilities.springy,bolt.by,bolt.owner)}else{bolt.x+=dx/d*A.boltSpeed*dt;bolt.y+=dy/d*A.boltSpeed*dt}}s.bolts=s.bolts.filter(b=>b.life>0&&s.hp>0);for(const effect of s.teamEffects)effect.life-=dt;s.teamEffects=s.teamEffects.filter(e=>e.life>0)}
+function stepTeam(dt){stepSynergies(dt);const burst=syn('seed-burst');for(const bolt of s.bolts){bolt.life-=dt;bolt.delay-=dt;if(bolt.delay>0||s.hp<=0)continue;const e=enemy();
+ if(bolt.synergy){const target={x:e.x,y:e.y,radius:C.enemyRadius},eng=window.LoftRumbleSynergyEngine;if(eng.seedHits(bolt,target,dt)){bolt.life=0;abilityDamage(bolt.damage,SYN.name(bolt.synergy),bolt.by,bolt.owner)}else eng.moveSeed(bolt,dt);continue}
+ const dx=e.x-bolt.x,dy=e.y-bolt.y,d=Math.hypot(dx,dy);if(d<=C.enemyRadius+burst.speed*dt){bolt.life=0;abilityDamage(burst.damage,SYN.name('seed-burst'),bolt.by,bolt.owner)}else{bolt.x+=dx/d*burst.speed*dt;bolt.y+=dy/d*burst.speed*dt}}s.bolts=s.bolts.filter(b=>b.life>0&&s.hp>0);for(const effect of s.teamEffects)effect.life-=dt;s.teamEffects=s.teamEffects.filter(e=>e.life>0)}
 // A button whose label changes keeps the width of its widest label (hidden copies share its grid cell).
 function setLabel(button,text,all){button.replaceChildren(...[text,...all].map((t,i)=>{const span=document.createElement('span');span.textContent=t;if(i)span.setAttribute('aria-hidden','true');return span}))}
 // Contact tuning in seconds/CSS pixels. Recoil is visual; team anchors never move.
@@ -381,14 +430,14 @@ const soundKey=window.LoftRumbleDemoData.soundKey;
 let audio=null,soundOn=true;
 try{soundOn=localStorage.getItem(soundKey)!=='off'}catch{} // a muted player stays muted after a reload
 const music=window.LoftRumbleMusic.create();
-const musicButton=document.getElementById('music'),musicConfig=window.LoftRumbleMusicData;
+const musicButton=document.getElementById('music'),musicConfig=window.LoftRumbleMusicData,musicPicker=window.LoftRumbleMusic.picker(music,musicButton);
 let musicOn=true;
 try{musicOn=localStorage.getItem(musicConfig.preferenceKey)!=='off'}catch{}
 music.setEnabled(soundOn&&musicOn);
 // Each settings row keeps one label and shows its state once, in the switch. Music cannot play while Sound is off, so its row is
 // disabled then, and says why to assistive technology.
 // It stays in the Tab order (aria-disabled, not disabled) and shows a short hint, which is part of its accessible name.
-function showMusic(){musicButton.replaceChildren(DEMO.music);musicButton.setAttribute('aria-pressed',String(musicOn));musicButton.setAttribute('aria-disabled',String(!soundOn));
+function showMusic(){musicButton.replaceChildren(DEMO.music);musicButton.setAttribute('aria-pressed',String(musicOn));musicButton.setAttribute('aria-disabled',String(!soundOn));musicPicker.disabled=!soundOn||!musicOn;
   if(!soundOn){const hint=document.createElement('data');hint.className='settings-hint';hint.textContent=DEMO.musicHint;musicButton.append(hint)}} // data: no UA style. small shrinks it under the 13 px helper floor, and a span child takes the menu's grid-area 1/1 rule
 musicButton.onclick=async()=>{if(!soundOn)return;musicOn=!musicOn;try{localStorage.setItem(musicConfig.preferenceKey,musicOn?'on':'off')}catch{}music.setEnabled(soundOn&&musicOn);await startAudio();showMusic()};
 const soundButton=document.getElementById('sound');
@@ -418,7 +467,14 @@ function stepContact(dt){
     reaction.life-=dt;if(reaction.life<=0)delete s.reactions[id];
   }
 }
+function whiplashVisualFx(){
+  if(s.attackFx?.whiplash)return s.attackFx;
+  const tail=s.whipTail;if(!tail)return null;
+  return {...tail,whiplash:{...tail.whiplash,elapsed:s.clock-tail.clockBase}};
+}
 function contactPose(id){
+  const whipPose=window.LoftRumbleWhiplashRenderer?.residentPose(whiplashVisualFx(),id,s.bodies[id],reduced.matches);
+  if(whipPose)return whipPose;
   const reaction=s.reactions[id];
   if(!reaction||reduced.matches)return{x:0,y:0,sx:1,sy:1,rotation:0};
   const t=1-reaction.life/(reaction.max??CONTACT.life),envelope=(1-t)*(1-t),recoil=Math.sin(t*Math.PI*2)*envelope,distance=reaction.recoil??CONTACT.recoil;
@@ -505,12 +561,16 @@ function enemyImpact(hit,weak,nx,ny,x,y,stop=true){
 function heartSpot(){const spots=START.hearts.map(([x,y])=>({x:s.w*x,y:s.h*y})),gap=p=>Math.min(...TURN.order.map(id=>s.positions[id]).filter(Boolean).map(q=>Math.hypot(p.x-q.x,p.y-q.y)));return spots.reduce((a,b)=>gap(b)>gap(a)?b:a)}
 function teamCentre(){const list=Object.values(s.positions),n=list.length||1;return{x:list.reduce((t,p)=>t+p.x,0)/n,y:list.reduce((t,p)=>t+p.y,0)/n}}
 // ---- Enemy attack cycle: Pulse, Beam sweep, Slam ring. The warning (zone geometry) is fixed the turn before. ----
-// The rotation skips attacks a broken horn removed (round 19); Pulse is never removed.
+// The rotation is fixed: no attack is ever removed (owner 2026-11-18 removed horn breaking).
 const attackRotation=()=>s.demo?window.LoftRumbleDemo.rotation(s,FEEL.attacks):camera?window.LoftRumbleEncounters.rotation(s,FEEL.attacks):FEEL.attacks;
-const nextAttack=()=>{const rotation=attackRotation(),n=rotation.length;for(let i=0;i<n;i++){const d=rotation[(s.attackIndex+i)%n];if(!(s.banned||[]).includes(d.id))return d}return FEEL.attacks[0]};
+const nextAttack=()=>{const rotation=attackRotation();return rotation[s.attackIndex%rotation.length]};
 const slamRadius=()=>Math.max(FEEL.slamMin,FEEL.slamRadius*Math.min(s.w,s.h));
 function ensureWarn(){
   if(s.warn)return s.warn;const def=nextAttack(),e=enemy(),warn={def};
+  if(def.id===window.LoftRumbleWhiplashData.id){
+    warn.origin={x:e.x,y:e.y};warn.angle=e.facing??e.angle;warn.reach=window.LoftRumbleWhiplashModel.arenaReach(warn.origin,s.w,s.h);
+    warn.projection=window.LoftRumbleWhiplashModel.project(window.LoftRumbleWhiplashModel.initial({origin:warn.origin,facing:warn.angle,reach:warn.reach}));
+  }
   if(def.id==='beam'){const ids=TURN.order.filter(id=>s.positions[id]),p=s.positions[ids[Math.floor(random()*ids.length)]]??{x:0,y:s.h};
     warn.angle=Math.atan2(p.y-e.y,p.x-e.x)+(random()*2-1)*FEEL.beamJitter}
   window.LoftRumbleDemo?.trackWarning(s,warn,inZone);return s.warn=warn;
@@ -521,6 +581,8 @@ function dangerDock(){if(camera?.predicting)return;const d=dangerIds();for(const
 // A resident is in danger when its body touches the zone.
 function inZone(warn,p){
   if(!p)return false;const e=enemy(),dx=p.x-e.x,dy=p.y-e.y;
+  if(warn.def.id===window.LoftRumbleWhiplashData.id)return window.LoftRumbleWhiplashModel.contains(window.LoftRumbleWhiplashModel.initial({
+    origin:warn.origin??{x:e.x,y:e.y},facing:warn.angle,reach:warn.reach??window.LoftRumbleWhiplashModel.arenaReach(e,s.w,s.h)}),p,C.radius);
   if(warn.def.id==='pulse')return true;
   if(warn.def.id==='slam')return Math.hypot(dx,dy)<=slamRadius()+C.radius;
   return Math.abs(-Math.sin(warn.angle)*dx+Math.cos(warn.angle)*dy)<=FEEL.beamHalf+C.radius;
@@ -553,14 +615,43 @@ const livePos=id=>s.bodies[id];
 // Enemy glow envelope: rises over the name flash, holds through the attack, falls actTail after impact.
 function actLevel(){const fx=s.attackFx;if(!fx)return 0;const t=fx.t,start=-RT.nameFlash;if(t<impactAt())return clamp((t-start)/RT.nameFlash,0,1);return Math.max(0,1-(t-impactAt())/FEEL.actTail)}
 // The zone (and the Pulse warning) shows for the last RT.telegraph seconds; it is fixed when first shown.
-function currentWarn(){if(s.attackFx&&!s.attackFx.hit)return s.attackFx.warn;if(s.phase==='over'||s.hp<=0||s.enemyT>RT.telegraph)return null;return ensureWarn()}
-function fireAttack(){const warn=ensureWarn();if(!s.demo&&s.tutor&&FEEL.dangerAttacks.includes(warn.def.id)){s.tutor.zone=true;tutorCheck()}s.attackIndex=attackRotation().indexOf(warn.def)+1;s.warn=null;s.attackFx={t:-RT.nameFlash,warn,hits:[],amount:0,hit:false,rumbled:false};return s.attackFx}
+function currentWarn(){if(s.phase==='over'||s.hp<=0)return null;if(s.attackFx&&(s.attackFx.whiplash?!s.attackFx.resolved:!s.attackFx.hit))return s.attackFx.warn;if(s.enemyT>RT.telegraph)return null;return ensureWarn()}
+function fireAttack(){if(s.phase==='over'||s.paused||s.userPaused||s.cinematic)return null;
+  if(s.attackFx)return s.attackFx;const warn=ensureWarn();if(!s.demo&&s.tutor&&FEEL.dangerAttacks.includes(warn.def.id)){s.tutor.zone=true;tutorCheck()}s.attackIndex=attackRotation().indexOf(warn.slot??warn.def)+1;s.warn=null;s.attackFx={t:-RT.nameFlash,warn,hits:[],amount:0,hit:false,rumbled:false};
+  if(warn.def.id===window.LoftRumbleWhiplashData.id){s.attackFx.contacts={};s.attackFx.whiplash=window.LoftRumbleWhiplashModel.initial({origin:warn.origin,facing:warn.angle,reach:warn.reach,rig:{radius:C.enemyRadius,upright:camera?.shallow?camera.uprightScale:1,foot:window.LoftRumbleBossFightData?.storybook.bossFoot,bounds:{width:s.w,height:s.h}}});}return s.attackFx}
+// R4: first swept painted contact, per resident. No global stop, stun, shake or physics writes.
+function whiplashImpact(contact){
+  const fx=s.attackFx;if(!fx?.whiplash||fx.contacts[contact.id]||s.phase==='over'||s.teamHP<=0)return;
+  fx.contacts[contact.id]={...contact,shownAt:fx.whiplash.elapsed};fx.hits.push(contact.id);fx.hit=true;
+  const amount=tutorial.harmless()?0:guardAmount([contact.id],window.LoftRumbleWhiplashData.totalDamage/window.LoftRumbleWhiplashData.rosterSize);
+  fx.amount+=amount;s.teamHP=Math.max(0,s.teamHP-amount);
+  const event={...fx,hits:[contact.id],amount};cues.onImpact(event,false);tutorial.onImpact(event);
+  if(s.hits&&!camera)breakCombo('attack');
+  flyToTeam(amount?'-'+amount:window.LoftRumbleCuesData.copy.protectedFly,amount?'danger':'primary',contact.point,'',amount?'hurt':null);
+  if(s.teamHP<=0)finishBattle(false);else if(!s.heart)s.heart=heartSpot();
+}
+function whiplashStep(fx,dt,previous){
+  const from=fx.whiplash.elapsed,output=window.LoftRumbleWhiplashModel.next(fx.whiplash,{type:window.LoftRumbleWhiplashData.events.tick,dt,running:true});
+  fx.whiplash=output.state;fx.t=fx.whiplash.elapsed-RT.nameFlash;fx.warn.projection=window.LoftRumbleWhiplashModel.project(fx.whiplash);
+  const contacts=window.LoftRumbleWhiplashContact.contacts(fx.whiplash,from,fx.whiplash.elapsed,previous??s.bodies,s.bodies,C.radius,fx.hits);
+  for(const contact of contacts){whiplashImpact(contact);if(s.phase==='over')return;}
+  const end=fx.whiplash.config.prepare+fx.whiplash.config.telegraph+fx.whiplash.config.strike;
+  if(!fx.resolved&&fx.whiplash.elapsed>=end){fx.resolved=true;
+    const escaped=!!window.LoftRumbleDemo?.observeImpact(s,fx.warn,fx.hits);if(escaped)tutorCheck();
+    if(!fx.hits.length){fx.hit=true;cues.onImpact(fx,escaped);tutorial.onImpact(fx);}
+  }
+  if(fx.whiplash.phase===window.LoftRumbleWhiplashData.phases.done){
+    // Presentation alone survives cleanup, on the existing eligible FX clock.
+    s.whipTail={...fx,clockBase:s.clock-fx.whiplash.elapsed};s.attackFx=null;
+  }
+}
 // Damage is decided at impact from where residents are then, so a fling out of the zone during the telegraph dodges it.
 function attackImpact(){
-  const fx=s.attackFx,e=enemy(),def=fx.warn.def;fx.hit=true;
-  fx.hits=ids.filter(id=>inZone(fx.warn,s.bodies[id]));fx.amount=def.id==='pulse'?RT.pulseDamage:fx.hits.length*(def.id==='beam'?RT.beamHit:RT.slamHit);
+  const fx=s.attackFx;if(!fx||fx.whiplash||fx.hit||s.phase==='over'||s.paused||s.userPaused||s.cinematic)return;
+  const e=fx.warn.origin??enemy(),def=fx.warn.def;fx.hit=true;
+  fx.hits=ids.filter(id=>inZone(fx.warn,s.bodies[id]));fx.amount=def.id===window.LoftRumbleWhiplashData.id?fx.hits.length*window.LoftRumbleWhiplashData.totalDamage/window.LoftRumbleWhiplashData.rosterSize:def.id==='pulse'?RT.pulseDamage:fx.hits.length*(def.id==='beam'?RT.beamHit:RT.slamHit);
   const calm=tutorial.harmless(); // Training: the attack costs no health, the stun still lands
-  if(calm)fx.amount=0;
+  if(calm)fx.amount=0;else fx.amount=guardAmount(fx.hits,fx.amount);
   s.teamHP=Math.max(0,s.teamHP-fx.amount);
   const escaped=!!window.LoftRumbleDemo?.observeImpact(s,fx.warn,fx.hits);if(escaped)tutorCheck();cues.onImpact(fx,escaped);tutorial.onImpact(fx);
   if(def.id!=='pulse'&&s.hits){if(fx.hits.length){if(!camera)breakCombo('attack')}else{const a=hitsAnchor();s.popups.push({x:a.x,y:a.y+FEEL.comboPopGap,text:COPY.comboSaved,hud:true,align:a.align,color:'good',life:C.popupLife})}}
@@ -579,7 +670,7 @@ function attackImpact(){
 // Camera experiment only (camera-punish.js): Root snap landed on `hit`, the residents resting in its ring. Same price as one Beam hit
 // each, and the combo breaks the same way. The camera session has already knocked them clear.
 function punishImpact(hit){
-  const e=enemy(),amount=tutorial.harmless()?0:hit.length*RT.beamHit; // Training: the Root snap still knocks residents clear, but costs nothing
+  const e=enemy(),amount=tutorial.harmless()?0:guardAmount(hit,hit.length*RT.beamHit); // Training: the Root snap still knocks residents clear, but costs nothing
   s.teamHP=Math.max(0,s.teamHP-amount);cues.onRoot(hit,amount);
   if(s.hits)breakCombo('punish');
   s.hitStop=Math.max(s.hitStop,FEEL.attackStop);s.shake=FEEL.shakeAttack;s.vignette=FEEL.vignetteLife;vibrate(FEEL.vibrateAttack);
@@ -606,37 +697,29 @@ function startFinale(){if(s.finale||s.phase!=='play'||s.finaleCount)return;s.fin
   s.rings.push({x:e.x,y:e.y,life:FEEL.shockLife*2,max:FEEL.shockLife*2,colour:'warning',big:FEEL.shockRadius*2});vibrate(FEEL.finaleVibrate);if(!calm)s.shake=Math.max(s.shake,FEEL.finaleShake);
   s.hitStop=0;cancelHold();if(s.tally&&s.tally.total)showPayoff()} // the slow-mo replaces the hit-stop, which would otherwise stretch 1/finaleSlow times
 function endFinale(){if(s.phase!=='play'||!s.finale)return;s.finale=null;if(s.tally&&s.tally.total)showPayoff();if(s.phase==='play')finishBattle(true)}
-// Horns: a contact hit at a horn's angle also damages that horn; at 0 it breaks.
-const hornMax=()=>RT.hp*FEEL.hornHP,hornTip=def=>{const e=enemy(),r=C.enemyRadius+FEEL.hornLength;return{x:e.x+Math.cos(def.angle)*r,y:e.y+Math.sin(def.angle)*r}};
-function hornHit(angle,amount){for(const def of FEEL.horns){const h=s.horns[def.id];if(h.broken||!(amount>0))continue;
-  if(Math.abs(Math.atan2(Math.sin(angle-def.angle),Math.cos(angle-def.angle)))>FEEL.hornArc)continue;h.hp=Math.max(0,h.hp-amount);if(h.hp===0)breakHorn(def)}}
-function breakHorn(def){const h=s.horns[def.id];h.broken=true;if(def.removes!=='pulse'&&!s.banned.includes(def.removes))s.banned.push(def.removes);
-  if(s.warn&&s.banned.includes(s.warn.def.id))s.warn=null;s.stagger=FEEL.staggerTime;const t=hornTip(def),e=enemy(),calm=still();
-  burst(t.x,t.y,FEEL.hornSparks,FEEL.wallSparkSpeed,'muted-foreground');s.hornBits.push({x:t.x,y:t.y,vx:Math.cos(def.angle)*FEEL.hornBitSpeed,vy:Math.sin(def.angle)*FEEL.hornBitSpeed,a:def.angle,va:FEEL.hornBitSpin*Math.sign(Math.cos(def.angle)),life:FEEL.hornBitLife});
-  s.popups.push({x:e.x,y:e.y+C.enemyRadius+FEEL.popupSize*1.5,text:COPY.hornBroken[def.removes],grow:1,color:'danger',bounce:!calm,life:C.popupLife*2,max:C.popupLife*2});
-  vibrate(FEEL.hornVibrate);if(!calm)s.shake=Math.max(s.shake,FEEL.hornShake)}
-// Horn shape in enemy-local space: a triangle from the body edge; cracked shows a zigzag; broken is a short stump.
-function drawHorns(R){for(const def of FEEL.horns){const h=s.horns[def.id],a=def.angle,len=FEEL.hornLength*(h.broken?FEEL.hornStump:1),base=R*.9,tip=R+len;
-  if(artwork?.horn(ctx,def,h.broken,R,FEEL.hornLength,FEEL.hornStump))continue;
+// Horn shape in enemy-local space: a plain triangle from the body edge (painted art when available).
+function drawHorns(R){for(const def of FEEL.horns){const a=def.angle,len=FEEL.hornLength,base=R*.9,tip=R+len;
+  if(artwork?.horn(ctx,def,R,len))continue;
   ctx.fillStyle=colors.foreground;ctx.strokeStyle=colors.border;ctx.lineWidth=2;ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(Math.cos(a-FEEL.hornBase)*base,Math.sin(a-FEEL.hornBase)*base);
-  ctx.lineTo(Math.cos(a)*tip,Math.sin(a)*tip);ctx.lineTo(Math.cos(a+FEEL.hornBase)*base,Math.sin(a+FEEL.hornBase)*base);ctx.closePath();ctx.fill();ctx.stroke();
-  if(!h.broken&&h.hp<=hornMax()*FEEL.hornCrack){const px=-Math.sin(a),py=Math.cos(a),pts=[R+1,R+len*.35,R+len*.6,R+len*.8];ctx.strokeStyle=colors.card;ctx.lineWidth=1.5;ctx.beginPath();
-    pts.forEach((r,i)=>{const o=(i%2?3:-2);ctx[i?'lineTo':'moveTo'](Math.cos(a)*r+px*o,Math.sin(a)*r+py*o)});ctx.stroke()}}}
-// The snapped-off horn tumbles away; dizzy dots circle the boss while it staggers (static under reduced motion).
-function drawHornBits(){for(const b of s.hornBits){ctx.save();ctx.globalAlpha=Math.min(1,b.life/FEEL.hornBitLife*2);ctx.translate(b.x,b.y);ctx.rotate(b.a);ctx.fillStyle=colors.foreground;ctx.strokeStyle=colors.border;ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(FEEL.hornLength*.6,0);ctx.lineTo(-FEEL.hornLength*.4,-FEEL.hornLength*.35);ctx.lineTo(-FEEL.hornLength*.4,FEEL.hornLength*.35);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}
-  if(s.stagger>0&&s.hp>0){const e=enemy(),spin=still()?0:s.clock*FEEL.dizzySpin;for(let i=0;i<FEEL.dizzyDots;i++){const a=spin+i*Math.PI*2/FEEL.dizzyDots;circle(e.x+Math.cos(a)*C.enemyRadius*.6,e.y-C.enemyRadius-FEEL.dizzySize*2+Math.sin(a)*FEEL.dizzySize,FEEL.dizzySize,colors.warning)}}}
+  ctx.lineTo(Math.cos(a)*tip,Math.sin(a)*tip);ctx.lineTo(Math.cos(a+FEEL.hornBase)*base,Math.sin(a+FEEL.hornBase)*base);ctx.closePath();ctx.fill();ctx.stroke()}}
 // Shield plate: returns false when the plate stops the hit (Springy). First touch queues the shield toast.
-const onShield=angle=>{const sh=s.shield;return!(sh.down>0)&&Math.abs(Math.atan2(Math.sin(angle-sh.angle),Math.cos(angle-sh.angle)))<=FEEL.shieldArc/2};
+const plateAngle=()=>{const sh=s.shield;return sh.angle=enemy().angle??sh.angle}; // the plate sits on the weak spot
+const guardZone=angle=>GUARD_RULES.guardZone(s.shield,angle-plateAngle(),FEEL.shieldArc/2,C.weakArc);
+const onShield=angle=>guardZone(angle)===GUARD_RULES.GUARD_ZONES.plate;
 function shieldSpark(angle,text,colour){const e=enemy(),r=C.enemyRadius+FEEL.shieldGap,x=e.x+Math.cos(angle)*r,y=e.y+Math.sin(angle)*r;burst(x,y,FEEL.shieldSparks,FEEL.wallSparkSpeed,colour,FEEL.wallSparkSpread,angle,2);
   const o=FEEL.popupSize*FEEL.shieldPop;s.popups.push({x:x+Math.cos(angle)*o,y:y+Math.sin(angle)*o,text,color:colour,life:C.popupLife*.8,max:C.popupLife*.8})}
-function shieldHit(b,angle){if(!onShield(angle))return true;const sh=s.shield,t=kind(b.id);
+// A contact hit against the guard: {mult (0: no damage), weak (counts as a weak-spot hit, usual x3)}. Owner rules round 4
+// (2026-11-18, shield health): Chomper or heavy takes a third of the shield's HP ("Crack!"), anyone else a twelfth (a
+// shield damage chip in the shield colour), piercing passes through to the weak spot. Either at 0 HP breaks it.
+// First plate touch queues the shield toast. A pierce shows no spark: the weak-spot cue on the damage popup is its cue.
+function shieldHit(b,angle){const sh=s.shield,plate=onShield(angle),t=kind(b.id),out=GUARD_RULES.guardHit(sh,guardZone(angle),GUARD,{trait:t,chomper:s.teamActive?t==='heavy':b.id==='chomper',inWeak:Math.abs(Math.atan2(Math.sin(angle-sh.angle),Math.cos(angle-sh.angle)))<C.weakArc,lifted:!!s.attackFx&&plateLift().lifted});Object.assign(sh,out.shield);
+  if(!plate)return out;
   if(!sh.seen){sh.seen=true;s.toasts.push({id:b.id,kind:t,title:COPY.shieldToast.title,sub:COPY.shieldToast.sub,life:FEEL.toastLife})}
-  if(t==='piercing'){shieldSpark(angle,COPY.pierce,'perfect');return true}
-  if(t==='heavy'){sh.cracks++;if(sh.cracks>=FEEL.shieldCracks){sh.cracks=0;sh.down=FEEL.shieldReform;const e=enemy(),r=C.enemyRadius+FEEL.shieldGap;
-      burst(e.x+Math.cos(angle)*r,e.y+Math.sin(angle)*r,FEEL.shieldShards,FEEL.finaleShardSpeed,'warning',Math.PI*2,0,FEEL.finaleShardSize*.7);shieldSpark(angle,COPY.shattered,'danger');if(!still())s.shake=Math.max(s.shake,FEEL.shieldBreakShake)}
-    else shieldSpark(angle,COPY.crack,'muted-foreground');return true}
-  shieldSpark(angle,COPY.blocked,'muted-foreground');b.cool=C.hitCooldown;b.inside=true;return false}
+  if(out.event===GUARD_RULES.GUARD_EVENTS.break){const e=enemy(),r=C.enemyRadius+FEEL.shieldGap;
+    burst(e.x+Math.cos(angle)*r,e.y+Math.sin(angle)*r,FEEL.shieldShards,FEEL.finaleShardSpeed,'warning',Math.PI*2,0,FEEL.finaleShardSize*.7);shieldSpark(angle,COPY.shattered,'danger');if(!still())s.shake=Math.max(s.shake,FEEL.shieldBreakShake)}
+  else if(out.event===GUARD_RULES.GUARD_EVENTS.crack){shieldSpark(angle,COPY.crack,'warning');sh.hitT=FEEL.barkHitLife}
+  else if(out.event===GUARD_RULES.GUARD_EVENTS.chip){shieldSpark(angle,phrase(COPY.shieldChip,{points:out.chip}),'chip');sh.hitT=FEEL.barkHitLife}
+  return out}
 // Living-magic boss look (LM3, boss-fight.js): one shield depth layer, 'rear' under the boss and 'front' over it. False until its art loads.
 // LM3b: the boss's ground shadow and the Slam landing (crack 'ground', debris 'behind' and 'front'). False until their art loads.
 const bossLook=()=>({fx:s.attackFx,feel:FEEL,timing:RT,clock:s.clock,enemy:enemy(),radius:C.enemyRadius,upright:camera?.shallow?camera.uprightScale:1,reduced:still(),arena:{w:s.w,h:s.h},enabled:!!camera&&window.LoftRumbleStorybook.enabled(camera),image:name=>artwork?.available(name)});
@@ -644,7 +727,21 @@ const bossSlamLook=layer=>!!window.LoftRumbleBossFight?.slam(ctx,{...bossLook(),
 const bossShadowLook=()=>!!window.LoftRumbleBossFight?.shadow(ctx,bossLook());
 const bossShieldLook=layer=>window.LoftRumbleBossFight?.shield(ctx,{layer,shield:s.shield,enemy:enemy(),plate:C.enemyRadius+FEEL.shieldGap,arc:FEEL.shieldArc,feel:FEEL,clock:s.clock,upright:camera?.shallow?camera.uprightScale:1,reduced:still(),alive:s.hp>0,tint:{ring:colors.warning,edge:colors.foreground,flash:colors.flash,rim:colors['seed-glow']},image:name=>artwork?.available(name)});
 // The plate: a thick metal arc outside the body with a sheen sliding along it and a tick per crack; it fades back in when it reforms.
-function drawShield(){const sh=s.shield;if(bossShieldLook('front'))return;if(sh.down>0||s.hp<=0)return;if(artwork?.shield(ctx,sh,enemy(),C.enemyRadius+FEEL.shieldGap))return;const e=enemy(),r=C.enemyRadius+FEEL.shieldGap,a0=sh.angle-FEEL.shieldArc/2,a1=sh.angle+FEEL.shieldArc/2;ctx.save();ctx.globalAlpha=sh.up;ctx.lineCap='round';
+// Round 2 (#439): a front-facing bark shield drawn in code (bark-shield.js) straight over the weak spot; the break flash and
+// shards still come from boss-fight.js. Without bark-shield.js the older plate draws.
+function drawBark(sh){const e=enemy(),r=C.enemyRadius;
+  return window.LoftRumbleBarkShield?.draw(ctx,{x:e.x+Math.cos(sh.angle)*r,y:e.y+Math.sin(sh.angle)*r,size:r*FEEL.barkSize,cracks:sh.cracks,
+    grow:GUARD_RULES.regrowScale(sh.up,GUARD),alpha:sh.up,hit:(sh.hitT??0)/FEEL.barkHitLife,reduced:still(),colors})}
+// Round 3 (owner 2026-11-18: the code-drawn shield looked wrong): the painted front arc over the weak spot (boss-fight.js guardPlate).
+function drawPainted(sh){const hit=sh.hitT??0,jolt=still()||!(hit>0)?0:FEEL.paintedJolt*Math.max(0,1-hit/FEEL.barkHitLife);
+  return !!window.LoftRumbleBossFight?.guardPlate?.(ctx,{shield:sh,enemy:enemy(),radius:C.enemyRadius,arc:FEEL.shieldArc,feel:FEEL,
+    grow:GUARD_RULES.regrowScale(sh.up,GUARD),jolt,lift:plateLift().share,top:C.hudTop,shade:colors.background,image:name=>artwork?.available(name)})}
+// Lift opening (owner 2026-11-18, #445): the plate rises off the weak spot with the attack envelope that raises the body.
+const plateLift=()=>GUARD_RULES.guardLift(actLevel(),GUARD,still());
+// Round 5 (owner 2026-11-18): the shield's health shows in the HUD under the boss bar (rumble-hud.js shieldBar), not on
+// the arena: an empty bar while broken, refilling with the regrow; none once the boss is down.
+const hudShield=()=>{if(!(s.hp>0))return null;const bar=GUARD_RULES.shieldBar(s.shield,GUARD);return {fill:bar?bar.fill:0,label:COPY.shieldLabel}};
+function drawShield(){const sh=s.shield;if(!(sh.down>0)&&s.hp>0&&drawPainted(sh))return;if(!(sh.down>0)&&s.hp>0&&drawBark(sh))return;if(bossShieldLook('front'))return;if(sh.down>0||s.hp<=0)return;if(artwork?.shield(ctx,sh,enemy(),C.enemyRadius+FEEL.shieldGap))return;const e=enemy(),r=C.enemyRadius+FEEL.shieldGap,a0=sh.angle-FEEL.shieldArc/2,a1=sh.angle+FEEL.shieldArc/2;ctx.save();ctx.globalAlpha=sh.up;ctx.lineCap='round';
   ctx.strokeStyle=colors.foreground;ctx.lineWidth=FEEL.shieldWidth+3;ctx.beginPath();ctx.arc(e.x,e.y,r,a0,a1);ctx.stroke();
   ctx.strokeStyle=colors['muted-foreground'];ctx.lineWidth=FEEL.shieldWidth;ctx.beginPath();ctx.arc(e.x,e.y,r,a0,a1);ctx.stroke();
   const k=still()?.5:(s.clock*FEEL.shieldSheenSpeed)%1,c=a0+(a1-a0)*k,half=FEEL.shieldArc*FEEL.shieldSheen/2;ctx.strokeStyle=colors.card;ctx.lineWidth=FEEL.shieldWidth*.4;ctx.beginPath();ctx.arc(e.x,e.y,r-1,Math.max(a0,c-half),Math.min(a1,c+half));ctx.stroke();
@@ -652,7 +749,7 @@ function drawShield(){const sh=s.shield;if(bossShieldLook('front'))return;if(sh.
   ctx.restore()}
 function finishBattle(won){if(s.phase==='over')return;
   const presentation=window.LoftRumbleFinishModel.capture({s,C,FEEL,RT,ids,camera,contactPose,artSize,splashScale,enemy,bumperSpots,colors,artwork,skin:document.documentElement.dataset.arenaSkin});
-  s.battleEnd=window.LoftRumbleBattleEnd.terminal(s.battleEnd,performance.now(),{won,hp:s.hp,maxHP:RT.hp,presentation});if(s.demo)s.banners=[];if(s.tutor&&!s.demo)tutorDone();s.phase='over';s.won=won;cancelHold();s.bolts=[];for(const id of ids)stop(s.bodies[id]);
+  s.battleEnd=window.LoftRumbleBattleEnd.terminal(s.battleEnd,performance.now(),{won,hp:s.hp,maxHP:RT.hp,presentation});if(s.demo)s.banners=[];if(s.tutor&&!s.demo)tutorDone();s.phase='over';s.won=won;s.warn=null;s.attackFx=null;cancelHold();s.bolts=[];s.synHits=[];s.synArcs=[];s.synFields=[];s.bubbles={};s.supportRings=[];for(const id of ids)stop(s.bodies[id]);
   message(won?phrase(COPY.won,{time:clockText(s.time)})+'!':phrase(COPY.lost,{time:clockText(s.time)})+'. '+COPY.again+'.');status();roster()}
 function status(){if(camera?.predicting)return;document.getElementById('turn-label').textContent=phrase(COPY.battle,{time:clockText(s.time)});
   document.getElementById('attack-count').textContent=s.phase==='over'?COPY.battleOver:phrase(COPY.attackIn,{attack:nextAttack().name,seconds:Math.max(0,Math.ceil(s.enemyT))})}
@@ -732,18 +829,21 @@ function bumpBodies(){const moving=ids.map(id=>s.bodies[id]).filter(b=>b.moving&
     a.vx-=rel*nx;a.vy-=rel*ny;b.vx+=rel*nx;b.vy+=rel*ny;const push=(min-d)/2;a.x-=nx*push;a.y-=ny*push;b.x+=nx*push;b.y+=ny*push;
     a.pulse=b.pulse=CONTACT.squash;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
     collisionEffect(mx,my,true);burst(mx,my,RT.bumpSparks,FEEL.hitSparkSpeed,'chip');s.shake=Math.max(s.shake,RT.bumpShake)}}
-function stepFx(dt){if(s.phase==='over')return;
+function stepFx(dt,previous){if(s.phase==='over'||s.paused||s.userPaused||s.cinematic||!Number.isFinite(dt)||dt<0)return;
   if(camera)window.LoftRumbleAttackImpact.tick(s,dt);
   s.flash=Math.max(0,(s.flash||0)-dt);for(const f of s.flashes)f.life-=dt;s.flashes=s.flashes.filter(f=>f.life>0);if(s.kick&&(s.kick.life-=dt)<=0)s.kick=null;
   for(const id of ids){const b=s.bodies[id];if(!b.moving&&b.angle){const up=Math.round(b.angle/(2*Math.PI))*2*Math.PI,d=b.angle-up;b.angle-=Math.sign(d)*Math.min(Math.abs(d),FEEL.settleSpin*dt);if(b.angle===up)b.angle=0}
     if(b.squash&&(b.squash.life-=dt)<=0)b.squash=null;b.counter=Math.max(0,b.counter-dt);b.pulse=Math.max(0,b.pulse-dt);b.ping=Math.max(0,(b.ping||0)-dt)}
   const banner=s.banners[0];if(banner&&(banner.life-=dt)<=0)s.banners.shift();for(const id in s.splash)if((s.splash[id]-=dt)<=0)delete s.splash[id];
   s.clock+=dt;s.shake*=Math.exp(-dt/FEEL.shakeDecay);if(s.shake<.2)s.shake=0;
+  if(s.whipTail&&s.clock-s.whipTail.clockBase>=Math.max(0,...Object.values(s.whipTail.contacts).map(c=>c.shownAt))+LoftRumbleWhiplashLook.hitAccentLife)s.whipTail=null;
   s.vignette=Math.max(0,s.vignette-dt);s.enemyFlash=Math.max(0,s.enemyFlash-dt);
   s.enemyBarFlash=Math.max(0,s.enemyBarFlash-dt);s.teamBarHit=Math.max(0,s.teamBarHit-dt);
   if(s.enemyHit&&(s.enemyHit.life-=dt)<=0)s.enemyHit=null;
   const fx=s.attackFx;
-  if(fx){fx.t+=dt;if(!fx.rumbled&&fx.t>=0){fx.rumbled=true;tone(FEEL.rumbleFreq,'triangle',FEEL.windup,FEEL.rumbleGain,FEEL.rumbleFreq/2)}
+  if(fx?.whiplash){
+    whiplashStep(fx,dt,previous);if(s.phase==='over')return;
+  }else if(fx){fx.t+=dt;if(!fx.rumbled&&fx.t>=0){fx.rumbled=true;tone(FEEL.rumbleFreq,'triangle',FEEL.windup,FEEL.rumbleGain,FEEL.rumbleFreq/2)}
     if(!fx.hit&&fx.t>=FEEL.windup+FEEL.travel)attackImpact();if(s.phase==='over')return;if(fx.t>=FEEL.attackResponse+FEEL.vignetteLife)s.attackFx=null}
   if(s.payoff&&(s.payoff.life-=dt)<=0)s.payoff=null;
   // Combo window: it runs in real time (hit-stop included), so the total lands a steady beat after the last hit.
@@ -757,25 +857,26 @@ function stepFx(dt){if(s.phase==='over')return;
   if(s.enemyDrain&&!s.enemyWait){s.enemyChip-=s.enemyDrain*dt;if(s.enemyChip<=s.hp){s.enemyDrain=0;if(s.hp<=0){const e=enemy();burst(e.x,e.y,FEEL.weakParticles*2,FEEL.weakSparkSpeed,'warning');s.shake=Math.max(s.shake,FEEL.shakeWeak)}}}
   s.enemyChip=Math.max(s.enemyChip,s.hp);
 }
-function stepShield(sh,dt){sh.angle+=dt*2*Math.PI/FEEL.shieldTurn;if(sh.down>0){sh.down=Math.max(0,sh.down-dt);if(!sh.down)sh.up=0}else sh.up=Math.min(1,sh.up+dt/FEEL.shieldFade);}
-function step(dt){if(s.phase==='over')return;const stopped=s.hitStop>0;stepContact(dt);stepFx(dt);if(s.phase==='over')return;if(s.finale&&(s.finale.t+=dt/finaleRate())>=FEEL.finaleTime)endFinale();if(stopped||s.phase==='over')return;camera?.beforeStep(dt);
+function stepShield(sh,dt){Object.assign(sh,GUARD_RULES.guardStep(sh,{dt,angle:enemy().angle},GUARD));if(sh.hitT>0)sh.hitT=Math.max(0,sh.hitT-dt)} // exposed timer, regrow; the plate follows the weak spot
+function step(dt){if(s.phase==='over'||s.paused||s.userPaused||s.cinematic||!Number.isFinite(dt)||dt<0)return;const stopped=s.hitStop>0,whip=s.attackFx?.whiplash,previous=whip?Object.fromEntries(ids.map(id=>[id,{x:s.bodies[id].x,y:s.bodies[id].y}])):null;stepContact(dt);if(!whip)stepFx(dt);if(s.phase==='over')return;if(s.finale&&(s.finale.t+=dt/finaleRate())>=FEEL.finaleTime)endFinale();if(stopped||s.phase==='over'){if(whip)stepFx(dt);return;}camera?.beforeStep(dt);
   if(s.phase==='play'&&!s.finale&&(!s.demo||s.flings>0)){s.time+=dt;
-    if(s.demo&&!camera?.predicting&&!camera?.fixture&&window.LoftRumbleDemo.advance(s,RT)){message(window.LoftRumbleDemoData.copy.enrage)}if(!camera?.fixture)stepShield(s.shield,dt);if(s.stagger>0)s.stagger=Math.max(0,s.stagger-dt);else s.enemyT-=dt;if(s.hits&&(s.hitsIdle+=dt)>=FEEL.comboTimeout)breakCombo('timeout');if(s.enemyT<=0&&!s.attackFx){fireAttack();s.enemyT+=s.demo?window.LoftRumbleDemo.interval(s,RT):RT.attackEvery}
+    if(s.demo&&!camera?.predicting&&!camera?.fixture&&window.LoftRumbleDemo.advance(s,RT)){message(window.LoftRumbleDemoData.copy.enrage)}if(!camera?.fixture)stepShield(s.shield,dt);s.enemyT-=dt;if(s.hits&&(s.hitsIdle+=dt)>=FEEL.comboTimeout)breakCombo('timeout');if(s.enemyT<=0&&!s.attackFx){fireAttack();s.enemyT+=s.demo?window.LoftRumbleDemo.interval(s,RT):RT.attackEvery}
     camera?.punish(dt);if(s.phase==='over')return;
     for(const id of ids){const b=s.bodies[id],was=b.charge;if(stunned(b)){if(window.LoftRumbleStun.tick(b,dt))readyPing(id);continue}b.charge=FEEL.recharge?Math.min(1,b.charge+dt/RT.recharge[kind(id)]):b.moving?0:1;if(was<1&&b.charge>=1)readyPing(id)}}
-  for(const id of ids)moveBody(s.bodies[id],dt);bumpBodies();stepTeam(dt);camera?.afterStep();
+  for(const id of ids)moveBody(s.bodies[id],dt);bumpBodies();stepTeam(dt);camera?.afterStep();if(whip){stepFx(dt,previous);if(s.phase==='over')return;}
   for(const p of s.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt}s.particles=s.particles.filter(p=>p.life>0);for(const ring of s.rings)ring.life-=dt;s.rings=s.rings.filter(r=>r.life>0);
-  for(const popup of s.popups){popup.life-=dt;popup.y+=(popup.vy??-FEEL.popupRise)*dt}s.popups=s.popups.filter(p=>p.life>0);s.bumperHits=s.bumperHits.map(t=>Math.max(0,t-dt));for(const b of s.hornBits){b.life-=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.vy+=FEEL.hornBitFall*dt;b.a+=b.va*dt}s.hornBits=s.hornBits.filter(b=>b.life>0);s.hitsPop=Math.max(0,s.hitsPop-dt);if(s.hitsLost&&(s.hitsLost.life-=dt)<=0)s.hitsLost=null;
+  for(const popup of s.popups){popup.life-=dt;popup.y+=(popup.vy??-FEEL.popupRise)*dt}s.popups=s.popups.filter(p=>p.life>0);s.bumperHits=s.bumperHits.map(t=>Math.max(0,t-dt));s.hitsPop=Math.max(0,s.hitsPop-dt);if(s.hitsLost&&(s.hitsLost.life-=dt)<=0)s.hitsLost=null;
   if((s.statusT-=dt)<=0){s.statusT=RT.statusStep;status();roster()}tutorial.step(dt)}
 // ---- Drawing ----
 function drawBanners(font){const b=s.banners[0];if(b)drawBand(b.text,b.colour,windowAlpha(b.max-b.life,0,b.max),font)}
 // A quick attack-name flash in the attack's colour; play never pauses for it.
-function drawEnemyName(font){const fx=s.attackFx;if(!fx||fx.t>=0)return;const def=fx.warn.def,k=(fx.t+RT.nameFlash)/RT.nameFlash,pop=still()?1:1+.25*Math.max(0,1-k*4);
+function drawEnemyName(font){const fx=s.attackFx;if(!fx||fx.whiplash||fx.t>=0)return;const def=fx.warn.def,k=(fx.t+RT.nameFlash)/RT.nameFlash,pop=still()?1:1+.25*Math.max(0,1-k*4);
   const e=enemy(),text=def.name.toUpperCase()+'!',y=e.y+C.enemyRadius+FEEL.nameFont;ctx.globalAlpha=windowAlpha(fx.t,-RT.nameFlash,0);ctx.save();ctx.translate(s.w/2,y);ctx.scale(pop,pop);
   ctx.textAlign='center';ctx.lineJoin='round';ctx.font=FEEL.textWeight+' '+FEEL.nameFont+'px '+font;const fit=Math.min(1,(s.w-FEEL.barInset*2)/ctx.measureText(text).width);ctx.scale(fit,fit);
   ctx.strokeStyle=colors.card;ctx.lineWidth=6;ctx.fillStyle=colors[def.colour];ctx.strokeText(text,0,0);ctx.fillText(text,0,0);ctx.restore();ctx.globalAlpha=1}
 function drawIntent(font,e){
  if(s.phase==='over'||s.hp<=0)return;
+ if((s.attackFx?.warn??currentWarn())?.def.id===window.LoftRumbleWhiplashData.id||(!s.attackFx&&!currentWarn()&&nextAttack().id===window.LoftRumbleWhiplashData.id))return;
  if(camera){const warn=currentWarn(),def=warn?warn.def:nextAttack();window.LoftRumbleIntent.draw(ctx,{anchor:e,width:s.w,top:C.hudTop,bottom:s.h-C.hudBottom,enemyRadius:C.enemyRadius,attack:def,remaining:s.enemyT,interval:RT.attackEvery,warning:!!warn,acting:!!s.attackFx&&!s.attackFx.hit,reduced:still(),clock:s.clock,colors,icon:attackIcon});return;}
  ctx.save();
  const warn=currentWarn(),def=warn?warn.def:nextAttack(),col=colors[def.colour],threat=!!warn,H=FEEL.intentH,P=FEEL.intentPad,icon=H-P;
@@ -880,6 +981,8 @@ function drawBodies(font,onlyId=null,extras=true,ground=true){if(extras)drawFlas
     if(b.squash&&!still()){const k=FEEL.wallSquash*b.squash.life/FEEL.wallSquashLife,a=Math.atan2(b.squash.ny,b.squash.nx);ctx.rotate(a);ctx.scale(1-k,1+k*.6);ctx.rotate(-a)}
     const held=s.held===id,stretch=held?grabPose.stretch:b.pulse,k=grabPose.scale*splashScale(id)*(FEEL.artBalance[id]??1)*(held&&s.perfectPulse>0?1+FEEL.perfectPulse*s.perfectPulse/FEEL.perfectPulseLife:1);
     ctx.rotate(b.angle+pose.rotation);ctx.scale((1+stretch)*pose.sx*k,(1-stretch*.5)*pose.sy*k);
+    const whipFlash=window.LoftRumbleWhiplashRenderer?.hitFlash(whiplashVisualFx(),id,still())??0; // owner 2026-11-18: white anime flash, one frame with reduced motion
+    if(whipFlash)ctx.filter=LoftRumbleWhiplashLook.flashFilter;
     if(window.LoftRumbleBattleMaterials)window.LoftRumbleBattleMaterials.resident(ctx,im,artSize(),document.documentElement.dataset.arenaSkin);else if(im.complete&&im.naturalWidth)ctx.drawImage(im,-artSize()/2,-artSize()/2,artSize(),artSize());ctx.restore();ctx.globalAlpha=1;
     if(danger.includes(id)){if(still()){ctx.strokeStyle=colors.danger;ctx.lineWidth=3;ctx.beginPath();ctx.arc(b.x,b.y,R+2,0,Math.PI*2);ctx.stroke()}
       else{ctx.globalAlpha=FEEL.dangerAlpha*(.5+.5*Math.sin(s.clock*FEEL.dangerBlink));circle(b.x,b.y,R,colors.danger);ctx.globalAlpha=1}}
@@ -889,6 +992,9 @@ function drawBodies(font,onlyId=null,extras=true,ground=true){if(extras)drawFlas
 function drawBodyEffects(font){
   if(camera&&!cues.drawsStun())for(const id of ids)window.LoftRumbleStun.draw(ctx,s.bodies[id],{clock:s.time,reduced:still(),upright:camera.shallow?camera.uprightScale:1,colour:colors.warning});
   const art=window.LoftRumbleHeroFx?.draw(ctx,{effects:s.teamEffects,bolts:s.bolts,enemy:enemy(),enemyRadius:C.enemyRadius,image:name=>artwork?.available(name),colour:key=>colors[key],reduced:still(),upright:camera?.shallow?camera.uprightScale:1,danger:!!currentWarn()});
+  window.LoftRumbleSynergyFx.drawFields(ctx,{fields:s.synFields,colours:{glow:colors.primary,core:colors.foreground},still:still(),time:s.time});
+  window.LoftRumbleSynergyFx.drawSupport(ctx,{bubbles:Object.keys(s.bubbles).map(id=>s.bodies[id]).filter(Boolean),rings:s.supportRings,colours:{glow:colors.primary,core:colors.foreground},still:still(),time:s.time});
+  window.LoftRumbleSynergyFx.draw(ctx,{arcs:s.synArcs,colours:{glow:colors.primary,core:colors.foreground}}); // synergy bolts, field cues only
   if(!art)for(const bolt of s.bolts){if(bolt.delay<=0){circle(bolt.x,bolt.y,7,colors.primary);circle(bolt.x,bolt.y,3,colors.foreground)}}
   for(const f of s.teamEffects){const age=1-f.life/(f.max??A.effectLife);if(art&&f.fx){if(f.label){ctx.globalAlpha=1-age;ctx.fillStyle=colors.primary;ctx.font=FEEL.textWeight+' 13px '+font;ctx.textAlign='center';ctx.fillText(f.label,clamp(f.x,65,s.w-65),f.y-38-age*15);ctx.globalAlpha=1}continue}ctx.globalAlpha=1-age;ctx.strokeStyle=colors.primary;ctx.lineWidth=f.type==='beam'?10*(1-age)+2:3;ctx.beginPath();if(f.type==='beam'){ctx.moveTo(f.x,f.y);ctx.lineTo(f.tx,f.ty)}else ctx.arc(f.x,f.y,10+age*f.r,0,Math.PI*2);ctx.stroke();ctx.fillStyle=colors.primary;ctx.font=FEEL.textWeight+' 13px '+font;ctx.textAlign='center';ctx.fillText(f.label,clamp(f.x,65,s.w-65),f.y-38-age*15);ctx.globalAlpha=1}
   // Ability names go last, over the beam and crescents, so an effect never covers its own name.
@@ -922,7 +1028,7 @@ function drawParticles(){
  for(const p of s.particles){ctx.globalAlpha=Math.max(0,p.life/(p.max??C.particleLife));circle(p.x,p.y,p.size??(p.wall?2:3),colors[p.color]??(p.wall?colors.primary:colors.warning))}ctx.globalAlpha=1;for(const ring of s.rings){const age=1-ring.life/(ring.max??C.ringLife);ctx.globalAlpha=1-age;ctx.strokeStyle=colors[ring.colour]??(ring.wall?colors.primary:colors.warning);ctx.lineWidth=ring.big?1+FEEL.shockWidth*(1-age):ring.weak?4:2;ctx.beginPath();ctx.arc(ring.x,ring.y,5+age*(ring.big??(ring.weak?45:25)),0,Math.PI*2);ctx.stroke()}ctx.globalAlpha=1;
 }
 function draw(){
- const font=getComputedStyle(arena).fontFamily,quake=still()?0:s.shake;
+ const font=getComputedStyle(arena).fontFamily,whipShake=whiplashVisualFx(),quake=still()?0:Math.max(s.shake,whipShake?.whiplash?window.LoftRumbleWhiplashFx.shake(whipShake.contacts,whipShake.whiplash.elapsed,false):0);
  ctx.clearRect(0,0,s.w,s.h);if((camera&&window.LoftRumbleStorybook.background(camera))||artPaint('bg-arena',s.w/2,s.h/2,s.w,s.h,true)){if(lmBars()){/* LM6b: the arena shows behind the slim frames */}else if(window.LoftRumbleBattleMaterials)window.LoftRumbleBattleMaterials.hud(ctx,s.w,s.h,C.hudTop,C.hudBottom);else{ctx.fillStyle=colors.card;ctx.fillRect(0,0,s.w,C.hudTop);ctx.fillRect(0,s.h-C.hudBottom,s.w,C.hudBottom)}}ctx.save();
   ctx.beginPath();ctx.rect(0,C.hudTop,s.w,s.h-C.hudTop-C.hudBottom);ctx.clip(); // the play area: zones and effects never spill into the HUD strips
   if(window.LoftRumbleBattleEnd.presenting(s.battleEnd)){
@@ -934,7 +1040,7 @@ function draw(){
  const attackKick=camera?window.LoftRumbleAttackImpact.offset(s,still()):null;if(attackKick)ctx.translate(attackKick.x,attackKick.y);
  if(s.kick&&!still()){const k=FEEL.kickDist*s.kick.life/FEEL.kickLife;ctx.translate(s.kick.x*k,s.kick.y*k)}
  if(camera?.active)window.LoftRumbleCameraRenderer.draw(camera,font);else{
- drawWarn();drawHeart();drawBumpers();drawAttack();drawEnemy();drawShield();drawHornBits();
+ drawWarn();drawHeart();drawBumpers();drawAttack();drawEnemy();drawShield();
  drawParticles();
  artwork?.effects(ctx,s,C,FEEL,enemy(),still());drawBodies(font);if(s.phase==='play')aim(font);}
  ctx.restore();
@@ -975,7 +1081,7 @@ function dismissBattleDialog(panel,close){
   panel.addEventListener('pointercancel',()=>{pressedOutside=false});
   panel.addEventListener('keydown',event=>{
     if(event.key!=='Tab'||!panel.matches(':modal'))return;
-    const controls=[...panel.querySelectorAll('button:not([disabled]),a[href]')].filter(control=>control.getClientRects().length);
+    const controls=[...panel.querySelectorAll('button:not([disabled]),select:not([disabled]),a[href]')].filter(control=>control.getClientRects().length);
     const first=controls[0],last=controls.at(-1);
     if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}
     else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}
@@ -1055,7 +1161,7 @@ function drawBars(font){
   ctx.restore()}
   // Boss bar, top strip: the enemy's name and HP over a full-width bar, same health colours, pending segment and low pulse.
   const b=bossBar(),share2=s.hp/RT.hp,fill2=healthFill(share2);
-  if(!hud?.boss(ctx,{width:s.w,top:C.hudTop,name:s.hp>0?COPY.boss:COPY.bossDown,font,image:lmArt,
+  if(!hud?.boss(ctx,{width:s.w,top:C.hudTop,name:s.hp>0?COPY.boss:COPY.bossDown,font,image:lmArt,shield:hudShield(),
     bar:{value:s.hp,chip:s.enemyChip,max:RT.hp,flash:Math.max(.8*s.enemyBarFlash/FEEL.barFlash,lowPulse(share2)),wash:s.enemyBarFlash?colors.flash:colors.danger}})){
   ctx.font=FEEL.textWeight+' '+FEEL.bossLabelFont+'px '+font;ctx.fillStyle=colors.foreground;ctx.textAlign='left';ctx.fillText(s.hp>0?COPY.boss:COPY.bossDown,b.x,b.y-4);ctx.textAlign='right';ctx.fillText(phrase(COPY.hp,{hp:s.hp}),b.x+b.w,b.y-4);
   artwork?.bar(ctx,'ui-bar-boss',b);drawBar(b.x,b.y,b.w,b.h,s.hp,s.enemyChip,RT.hp,fill2,Math.max(.8*s.enemyBarFlash/FEEL.barFlash,lowPulse(share2)),s.enemyBarFlash?colors.flash:colors.danger)}
@@ -1067,6 +1173,18 @@ function drawBars(font){
 const enemyVisible=()=>s.hp>0||s.enemyChip>0||!!s.finale;
 function drawEnemy(ground=true){
   if(!enemyVisible())return;
+  const whip=s.attackFx?.whiplash,projection=whip?s.attackFx.warn.projection:s.warn?.projection;
+  if(projection&&window.LoftRumbleWhiplashRenderer){
+    bossShadowLook();bossShieldLook('rear');
+    const whipLook={projection,reduced:still(),radius:C.enemyRadius,bounds:{width:s.w,height:s.h},upright:camera?.shallow?camera.uprightScale:1};
+    window.LoftRumbleWhiplashRenderer.trail?.(ctx,whipLook);
+    ctx.save();ctx.translate(projection.origin.x,projection.origin.y);drawHorns(C.enemyRadius);ctx.restore();
+    if(window.LoftRumbleWhiplashRenderer.body(ctx,{projection,elapsed:whip?.elapsed??0,reduced:still(),radius:C.enemyRadius,bounds:{width:s.w,height:s.h},upright:camera?.shallow?camera.uprightScale:1,feel:FEEL,timing:RT,image:name=>artwork?.available(name)})){
+      const e=enemy(),R=C.enemyRadius;
+      ctx.save();ctx.translate(e.x,e.y);
+      artPaint('boss-weakspot',Math.cos(e.angle)*R,Math.sin(e.angle)*R,artwork?.metrics.weakspotSize);ctx.restore();return;
+    }
+  }
   const e=enemy(),R=C.enemyRadius,fx=s.attackFx,warn=currentWarn(),threat=!!warn,winding=fx&&!fx.hit&&fx.t>=0,col=warn?colors[warn.def.colour]:colors.danger,kind=fx?fx.warn.def.id:'';let ox=0,oy=0,grow=0;
   if(fx&&fx.t>=0&&!still()){const c=teamCentre(),dx=c.x-e.x,dy=c.y-e.y,d=Math.hypot(dx,dy)||1;
     if(kind==='slam'){if(fx.t<FEEL.windup){const k=fx.t/FEEL.windup;oy=-FEEL.slamHop*Math.sin(k*Math.PI/2);grow=FEEL.windupGrow*k}else if(!fx.hit){const k=(fx.t-FEEL.windup)/FEEL.travel;oy=-FEEL.slamHop*(1-k*k);grow=FEEL.windupGrow*(1-k)}}
@@ -1076,11 +1194,11 @@ function drawEnemy(ground=true){
   const act=actLevel(),lift=still()?0:FEEL.riseHeight*act;
   if(ground)window.LoftRumbleColosseumRelief?.ground(ctx,e.x+ox,e.y+oy,R,document.documentElement.dataset.arenaSkin);
   if(act>0){const ac=colors[fx.warn.def.colour],pulse=still()?1:.75+.25*Math.sin(s.clock*FEEL.telegraphPulse*1.5);ctx.globalAlpha=.35*act*pulse;circle(e.x+ox,e.y+oy-lift,R+6+FEEL.riseGlow*act,ac);ctx.globalAlpha=1}
-  bossShadowLook();bossShieldLook('rear');
+  bossShadowLook();if(!window.LoftRumbleBarkShield)bossShieldLook('rear');
   ctx.save();ctx.translate(e.x+ox,e.y+oy-lift);
   if(s.finale){const k=Math.min(1,s.finale.t/FEEL.finaleTime);ctx.globalAlpha=1-k;if(!still())ctx.scale(1+FEEL.finalePop*k,1+FEEL.finalePop*k)} // finale: the enemy pops and fades
   if(s.enemyHit&&!still()){const h=s.enemyHit,k=FEEL.enemySquash*h.k*h.life/FEEL.enemySquashLife,a=Math.atan2(h.ny,h.nx);ctx.rotate(a);ctx.scale(1-k,1+k*.5);ctx.rotate(-a)}
-  ctx.scale(1+grow,1+grow);if(s.stagger>0&&!still())ctx.rotate(Math.sin(s.clock*FEEL.staggerWobble)*FEEL.staggerTilt);drawHorns(R);
+  ctx.scale(1+grow,1+grow);drawHorns(R);
   const cue=camera?window.LoftRumbleTelegraph.read({warn,fx,remaining:s.enemyT,timing:RT,feel:FEEL}):null;
   if(threat&&!cue){const level=winding?Math.min(1,fx.t/FEEL.windup):still()?.5:.5+.5*Math.sin(s.clock*FEEL.telegraphPulse);
     ctx.globalAlpha=.2+.55*level;ctx.strokeStyle=col;ctx.lineWidth=3+level*5;ctx.beginPath();ctx.arc(0,0,R+7+level*FEEL.telegraphGlow,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}
@@ -1088,11 +1206,12 @@ function drawEnemy(ground=true){
   const bossArt=name=>artwork?.available(name),upright=camera?.shallow?camera.uprightScale:1;
   ctx.save();const rigged=window.LoftRumbleBossFight?.body(ctx,{fx,feel:FEEL,timing:RT,clock:s.clock,radius:R,upright,reduced:still(),fade:camera?.bossFade??1,enabled:!!camera&&window.LoftRumbleStorybook.enabled(camera),image:bossArt});
   if(camera&&!rigged)window.LoftRumbleTelegraph.pose(ctx,cue,R,still());
-  const skinned=rigged||paintBody(s.stagger>0?'boss-stagger':s.enemyFlash>0?'boss-hurt':'boss-body',0,0,R*(artwork?.metrics.bossSize??2),R*(artwork?.metrics.bossSize??2))||paintBody('boss-body',0,0,R*(artwork?.metrics.bossSize??2));
+  const skinned=rigged||paintBody(s.enemyFlash>0?'boss-hurt':'boss-body',0,0,R*(artwork?.metrics.bossSize??2),R*(artwork?.metrics.bossSize??2))||paintBody('boss-body',0,0,R*(artwork?.metrics.bossSize??2));
   if(!skinned){circle(0,0,R+5,threat?col:colors.border);circle(0,0,R,colors.secondary)}
   ctx.restore();if(!window.LoftRumbleBossFight?.sources(ctx,{cue,fx,feel:FEEL,radius:R,upright,image:bossArt})&&camera)window.LoftRumbleTelegraph.source(ctx,cue,R,colors);
-  ctx.strokeStyle=colors.warning;ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,0,R+2,e.angle-C.weakArc,e.angle+C.weakArc);ctx.stroke();
-  const wx=Math.cos(e.angle)*R,wy=Math.sin(e.angle)*R;if(!artPaint('boss-weakspot',wx,wy,artwork?.metrics.weakspotSize)){circle(wx,wy,10,colors.warning);circle(wx,wy,5,colors.foreground);circle(wx,wy,2,colors.warning)}
+  const wx=Math.cos(e.angle)*R,wy=Math.sin(e.angle)*R;
+  // Round 6 (owner 2026-11-18, 'Why the heck is that yellow thing?'): no gold glow; the exposed weak spot shows only its painted art.
+  if(!artPaint('boss-weakspot',wx,wy,artwork?.metrics.weakspotSize)){circle(wx,wy,10,colors.warning);circle(wx,wy,5,colors.foreground);circle(wx,wy,2,colors.warning)}
   if(!skinned){
   const ex=R*.28,ey=-R*.14;circle(-ex,ey,4,colors.foreground);circle(ex,ey,4,colors.foreground);
   ctx.strokeStyle=colors.foreground;ctx.lineWidth=2;ctx.beginPath();
@@ -1105,7 +1224,9 @@ function drawEnemy(ground=true){
 // The boss Beam is on screen from the end of its windup until its fade ends (FIRE, then FADE).
 const beamLive=()=>{const fx=s.attackFx;return !!fx&&fx.warn.def.id==='beam'&&fx.t>=FEEL.windup&&fx.t-FEEL.windup-FEEL.travel<FEEL.beamFade};
 function drawAttack(){
+  const whip=whiplashVisualFx();if(whip)LoftRumbleWhiplashRenderer.impact(ctx,whip.warn.projection,whip.hits,s.bodies,whip,still());
   const fx=s.attackFx;if(!fx||fx.t<0)return;
+  if(fx.whiplash)return;
   const e=enemy(),def=fx.warn.def,col=colors[def.colour],impact=FEEL.windup+FEEL.travel,after=fx.t-impact,L=Math.hypot(s.w,s.h);
   if(def.id==='pulse'){if(fx.t<FEEL.windup)return;const k=Math.min(1,(fx.t-FEEL.windup)/FEEL.travel),ease=k*k;
     if(!fx.hit){for(const p of Object.values(s.positions)){for(let i=FEEL.orbTrail;i>=0;i--){const q=Math.max(0,ease-i*.06);ctx.globalAlpha=1-i/(FEEL.orbTrail+1);circle(e.x+(p.x-e.x)*q,e.y+(p.y-e.y)*q,FEEL.orbRadius*(1-i*.18),col)}}ctx.globalAlpha=1}
@@ -1148,7 +1269,9 @@ function drawChevrons(warn,charge){
 // Warning turn: positional attacks draw their zone, and residents inside it get a ring in the attack's colour.
 function drawWarn(){
   if(camera)drawRootSnap();
-  const warn=currentWarn();if(!warn||warn.def.id==='pulse')return;
+  const warn=currentWarn(),projection=s.attackFx?.whiplash?s.attackFx.warn.projection:s.warn?.projection;
+  if(projection){window.LoftRumbleWhiplashRenderer?.warning(ctx,projection,colors['boss-beam']);return;}
+  if(!warn||warn.def.id==='pulse')return;
   if(camera)window.LoftRumbleTelegraph.ground(ctx,window.LoftRumbleTelegraph.read({warn,fx:s.attackFx,remaining:s.enemyT,timing:RT,feel:FEEL}),enemy(),C.enemyRadius,colors,still());
   const e=enemy(),col=colors[warn.def.colour],fx=s.attackFx,charge=fx&&fx.t>=0?Math.min(1,fx.t/FEEL.windup):0,beat=still()?0:FEEL.zonePulse*Math.sin(s.clock*FEEL.telegraphPulse),L=Math.hypot(s.w,s.h);
   ctx.save();ctx.globalAlpha=FEEL.zoneAlpha+beat+charge*.15;ctx.fillStyle=col;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([8,7]);
@@ -1242,12 +1365,19 @@ function drawCutin(font){
 // Slides up and back down (fades under reduced motion). Up to toastMax share the row, oldest on the left; more wait their turn.
 function drawToasts(font){const w=FEEL.toastW,calm=still(),ease=v=>1-(1-v)**3,floor=s.h-C.hudBottom;ctx.save();ctx.beginPath();ctx.rect(0,C.hudTop,s.w,floor-C.hudTop);ctx.clip();
  s.toasts.slice(0,FEEL.toastMax).forEach(t=>{if(t.x===undefined)return;const x=t.x,age=FEEL.toastLife-t.life,v=Math.min(1,age/FEEL.toastSlide,t.life/FEEL.toastSlide),
-   y=floor-FEEL.toastGap-FEEL.toastH+(calm?0:(1-ease(v))*(FEEL.toastH+FEEL.toastGap));
-  ctx.globalAlpha=calm?v:Math.min(1,v*2);ctx.fillStyle=colors.card;ctx.strokeStyle=colors.primary;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x,y,w,FEEL.toastH,FEEL.toastRadius);ctx.fill();ctx.stroke();
-  const pad=(FEEL.toastH-FEEL.toastArt)/2,im=images[t.id];if(im.complete&&im.naturalWidth)ctx.drawImage(im,x+pad,y+pad,FEEL.toastArt,FEEL.toastArt);
-  const tx=x+pad*2+FEEL.toastArt;ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle=colors.primary;const room=x+w-pad-tx,fit=(text,size,weight)=>{ctx.font=weight+size+'px '+font;const k=Math.min(1,room/ctx.measureText(text).width);if(k<1)ctx.font=weight+Math.floor(size*k)+'px '+font;ctx.fillText(text,tx,ty)};let ty=y+FEEL.toastH/2-2;
+   pad=(FEEL.toastH-FEEL.toastArt)/2,room=w-pad*3-FEEL.toastArt,sub=toastLines(t.sub??COPY.ability[t.kind],room,font),line=FEEL.toastSub+FEEL.toastLeading,h=FEEL.toastH+(sub.length-1)*line,
+   y=floor-FEEL.toastGap-h+(calm?0:(1-ease(v))*(h+FEEL.toastGap));
+  ctx.globalAlpha=calm?v:Math.min(1,v*2);ctx.fillStyle=colors.card;ctx.strokeStyle=colors.primary;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x,y,w,h,FEEL.toastRadius);ctx.fill();ctx.stroke();
+  const im=images[t.id];if(im.complete&&im.naturalWidth)ctx.drawImage(im,x+pad,y+(h-FEEL.toastArt)/2,FEEL.toastArt,FEEL.toastArt);
+  const tx=x+pad*2+FEEL.toastArt;ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle=colors.primary;const fit=(text,size,weight)=>{ctx.font=weight+size+'px '+font;const k=Math.min(1,room/ctx.measureText(text).width);if(k<1)ctx.font=weight+Math.floor(size*k)+'px '+font;ctx.fillText(text,tx,ty)};let ty=y+FEEL.toastH/2-2;
   fit(t.title??abilities[t.kind]+'!',FEEL.toastName,FEEL.textWeight+' ');
-  ctx.fillStyle=colors.foreground;ty=y+FEEL.toastH/2+FEEL.toastSub+1;fit(t.sub??COPY.ability[t.kind],FEEL.toastSub,'');ctx.globalAlpha=1});ctx.restore()}
+  ctx.fillStyle=colors.foreground;sub.forEach((text,i)=>{ty=y+FEEL.toastH/2+FEEL.toastSub+1+i*line;fit(text,FEEL.toastSub,'')});ctx.globalAlpha=1});ctx.restore()}
+// A toast's second line, split greedily into at most toastLines lines that fit `room` at the tagline size; the last line
+// keeps the rest (fit shrinks it only if one word overflows). Short taglines stay one line.
+function toastLines(text,room,font){ctx.font=FEEL.toastSub+'px '+font;const lines=[''];
+  for(const word of text.split(' ')){const next=lines[lines.length-1]?lines[lines.length-1]+' '+word:word;
+    if(ctx.measureText(next).width<=room||!lines[lines.length-1]||lines.length>=FEEL.toastLines)lines[lines.length-1]=next;else lines.push(word)}
+  return lines}
 // Tutorial step: a toast-style card above the bottom strip (above any ally toasts), until its step is done.
 function drawTutor(font){const text=tutorText();if(!text)return;ctx.font=FEEL.textWeight+' '+FEEL.toastName+'px '+font;const pad=(FEEL.toastH-FEEL.toastArt)/2*2,w=ctx.measureText(text).width+pad*2,x=(s.w-w)/2,
   y=s.h-C.hudBottom-FEEL.toastGap-FEEL.toastH-(s.toasts.length?FEEL.toastH+FEEL.toastGap:0);
@@ -1277,7 +1407,7 @@ document.getElementById('hint-close').onclick=()=>{document.getElementById('port
 function resizeScene(){resize();draw()}
 if(window.LoftRumbleArenaSkins)addEventListener(window.LoftRumbleArenaSkins.changeEvent,draw);
 if(window.LoftRumbleStageLayouts)addEventListener(window.LoftRumbleStageLayouts.changeEvent,()=>{reset();showMenu(false);draw()});
-new ResizeObserver(resizeScene).observe(stage);addEventListener('resize',resizeScene);resize();s.custom=Object.keys(traits)[Math.floor(Math.random()*Object.keys(traits).length)];reset();if(new URLSearchParams(location.search).get('camera')!=='0'&&document.documentElement.dataset.camera!=='0')camera=window.LoftRumbleCameraExperiment.create({s,C,FEEL,RT,ids,cancelHold,punishImpact,ctx,artwork,artPaint,artSize,baseEnemy,enemy,reset,roster,draw,step,stepShield,fling,collide,bumperSpots,contactPose,splashScale,still,drawWarn,drawHeart,drawBumpers,drawAttack,drawEnemy,drawShield,drawHornBits,drawParticles,drawBodies,drawBodyEffects,drawFlashes,aim,burst,tone,colors,withAlpha});if(camera){window.LoftRumbleEncounters.install({s,reset,draw,close:()=>showMenu(false)});window.LoftRumbleDemo.install({s,names,reset,again:playAgain,draw,ready:artwork?.ready});
+new ResizeObserver(resizeScene).observe(stage);addEventListener('resize',resizeScene);resize();s.custom=Object.keys(traits)[Math.floor(Math.random()*Object.keys(traits).length)];reset();if(new URLSearchParams(location.search).get('camera')!=='0'&&document.documentElement.dataset.camera!=='0')camera=window.LoftRumbleCameraExperiment.create({s,C,FEEL,RT,ids,cancelHold,punishImpact,ctx,artwork,artPaint,artSize,baseEnemy,enemy,reset,roster,draw,step,stepShield,fling,collide,bumperSpots,contactPose,splashScale,still,drawWarn,drawHeart,drawBumpers,drawAttack,drawEnemy,drawShield,drawParticles,drawBodies,drawBodyEffects,drawFlashes,aim,burst,tone,colors,withAlpha});if(camera){window.LoftRumbleEncounters.install({s,reset,draw,close:()=>showMenu(false)});window.LoftRumbleDemo.install({s,names,reset,again:playAgain,draw,ready:artwork?.ready,keep:TEAM.active});
   if(s.demo)tutorial.install({s,RT,ids,roster,reset,stop,cancelHold,enemy,attacks:FEEL.attacks,camera:()=>camera,view:window.LoftRumbleTutorialView??window.LoftRumbleTutorialPlain,closeMenus:()=>{showHelp(false);showMenu(false)},throwStyle:()=>throwPref.get(),hudTop:C.hudTop});
   if(s.demo&&!tutorial.installed())document.getElementById('replay-tutorial').remove()} // no Training without ?training, so no Replay either
 showThrowStyle(); // after the demo install, which builds the help panel this writes

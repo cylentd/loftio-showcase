@@ -47,7 +47,6 @@
       ctx.globalAlpha=Math.max(0,1-age);ctx.strokeStyle=p.colors[ring.colour]??p.colors.warning;
       ctx.lineWidth=2;ctx.beginPath();ctx.arc(ring.x,ring.y,1+age*(ring.big??K.ringSize),0,Math.PI*2);ctx.stroke();}
     ctx.globalAlpha=fade;
-    for(const bit of p.hornBits){ctx.fillStyle=p.colors.foreground;circle(ctx,bit.x+(bit.vx??0)*dt,bit.y+(bit.vy??0)*dt,K.particleSize);}
     ctx.globalAlpha=1;
   }
   function beams(ctx,p,time,artwork){

@@ -19,9 +19,9 @@
     }));
     const targets=camera?.enemies()??[{...o.enemy(),radius:C.enemyRadius}];
     return {version:1,bodies,particles:s.particles,rings:s.rings,bolts:s.bolts,
-      teamEffects:s.teamEffects,hornBits:s.hornBits,heart:s.heart,
+      teamEffects:s.teamEffects,heart:s.heart,
       boss:{targets,fx:s.attackFx,reaction:s.enemyHit,clock:s.clock,shield:s.shield,
-        finale:s.finale,stagger:s.stagger,flash:s.enemyFlash},
+        finale:s.finale,flash:s.enemyFlash},
       beams:beamCapture(s.attackFx,targets[0],o),
       bumpers:o.bumperSpots().map((p,i)=>({...p,hit:s.bumperHits[i]/FEEL.bumperFlash})),
       bounds:{left:C.radius+C.padding,right:s.w-C.radius-C.padding,

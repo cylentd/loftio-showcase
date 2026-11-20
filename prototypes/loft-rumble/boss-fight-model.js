@@ -1,6 +1,7 @@
-// Bramble in the live fight (LM3): pure geometry and state for the rig, the rotating shield and the two-way beam.
-// No drawing, no DOM. Numbers: boss-fight-data.js; rig parts and poses: boss-rig-data.js and boss-rig-model.js.
-// It reads the fight's attack effect and shield and never changes them, so damage, colliders and timings stay put.
+// Bramble in the live fight (LM3): pure geometry and state for the rig, the shield that guards the weak spot and the
+// two-way beam. No drawing, no DOM. Numbers: boss-fight-data.js; rig parts and poses: boss-rig-data.js and boss-rig-model.js.
+// The look functions read the fight's attack effect and shield and never change them; the guard rules (guardZone,
+// guardHit, guardStep) return the shield's next state for the page to store.
 // Spec: docs/design/LOFT-RUMBLE-LIVING-MAGIC.md ("Boss animation construction", "Boss attacks and defense").
 (function(root){
   'use strict';
@@ -90,13 +91,69 @@
     if(reduced||state.phase!=='cracked'||state.t>=S.crackLife)return 0;
     return S.crackShake*(1-state.t/S.crackLife)*Math.cos(TURN*S.crackShakeHz*state.t);
   }
-  // The break sprite: where the plate was when it broke (the angle keeps turning while it is down), or null.
+  // The break sprite: on the plate, which sits on the weak spot (owner 2026-11-18), or null.
   function breakPoint(shield,feel,plate,life){
     const since=feel.shieldReform-shield.down;
     if(!(shield.down>0)||since<0||since>=life)return null;
-    const at=shield.angle-since*TURN/feel.shieldTurn;
-    return {gx:Math.cos(at)*plate,gy:Math.sin(at)*plate,k:since/life};
+    return {gx:Math.cos(shield.angle)*plate,gy:Math.sin(shield.angle)*plate,k:since/life};
   }
+
+  // ---- Guard rules (owner decision 2026-11-18, #426): the plate sits on the weak spot and moves with it ----
+  // shield: {angle (the weak spot's), hp, cracks (look stage from hp), down (exposed s left; >0 = broken), up (regrow 0..1)}.
+  // Pure: each returns a new shield. Reduced motion never changes a rule, so the optional 4th/2nd-arg flag is unused.
+  // delta: a contact hit's angle from the weak spot. plateHalf: half the plate's arc; weakHalf: the weak arc's half-width.
+  const GUARD_ZONES=Object.freeze({plate:'plate',weak:'weak',body:'body'});
+  function guardZone(shield,delta,plateHalf,weakHalf){
+    const d=Math.abs(wrap(delta));
+    if(!(shield.down>0)&&d<=plateHalf)return GUARD_ZONES.plate;
+    return d<weakHalf?GUARD_ZONES.weak:GUARD_ZONES.body;
+  }
+  // Owner rules (2026-11-18), round 4 shield health: who: {trait, chomper}. On the plate, Chomper or a heavy trait takes
+  // heavyShare of the shield's HP and anyone else otherShare, both for 0 boss damage; at 0 HP it breaks. A piercing trait
+  // passes through to the weak spot under it (inside the weak arc only; elsewhere on the plate it is a plain x1) and takes no HP. The broken weak spot takes the usual weak multiplier only.
+  // mult: 0 (no damage) or 1 (the usual hit); weak: counts as a weak-spot hit (the page applies its usual x3); chip: the
+  // shield HP the hit took. The optional reduced flag in who never changes a rule.
+  const CRACKER_TRAIT='heavy',PASS_TRAIT='piercing',CRACK_STAGES=2;
+  const GUARD_EVENTS=Object.freeze({crack:'crack',chip:'chip',break:'break',pierce:'pierce',slide:'slide',exposed:'exposed',opening:'opening'});
+  // The look stage for a shield HP: 0 intact, 1 cracked, 2 cracked and darkened (owner thresholds 2026-11-18).
+  const crackStage=(hp,G)=>hp<=G.hp*G.darkShare?CRACK_STAGES:hp<=G.hp*G.crackedShare?1:0;
+  const hitPoints=(G,share)=>Math.round(G.hp*share);
+  // Lift opening (owner 2026-11-18, #445): act is the page's attack envelope (actLevel, the value that raises the body).
+  // share: the plate's rise, 0 down to 1 at the apex (eases up as act rises, settles as it falls). lifted: a weak-arc hit
+  // is an opening. Reduced motion: no lift, so no opening.
+  function guardLift(act,G,reduced){
+    if(reduced)return {lifted:false,share:0};
+    const a=clamp01(act);
+    return {lifted:a>=G.liftOpenAt,share:Math.sin(a*Math.PI/2)};
+  }
+  function guardHit(shield,zone,G,who={}){
+    // The plate is up off the weak spot (who.lifted): a weak-arc hit reaches it for anyone and takes no shield HP.
+    if(zone==='plate'&&who.lifted&&who.inWeak)return {event:'opening',mult:1,weak:true,chip:0,shield};
+    if(zone==='plate'){
+      const heavy=who.chomper||who.trait===CRACKER_TRAIT;
+      // Piercing reaches the weak spot only inside the weak arc (who.inWeak); on the rest of the plate it does the usual x1
+      // and takes no HP, same as with no shield (owner 2026-11-18: x3 through the shield, never stronger than broken).
+      if(!heavy&&who.trait===PASS_TRAIT)return who.inWeak?{event:'pierce',mult:1,weak:true,chip:0,shield}:{event:'slide',mult:1,weak:false,chip:0,shield};
+      const chip=hitPoints(G,heavy?G.heavyShare:G.otherShare),hp=Math.max(0,shield.hp-chip);
+      if(!hp)return {event:'break',mult:0,weak:false,chip,shield:{...shield,hp:0,cracks:0,down:G.exposedSeconds}};
+      return {event:heavy?'crack':'chip',mult:0,weak:false,chip,shield:{...shield,hp,cracks:crackStage(hp,G)}};
+    }
+    if(zone==='weak'&&shield.down>0)return {event:'exposed',mult:1,weak:true,chip:0,shield};
+    return {event:zone,mult:1,weak:zone==='weak',chip:0,shield};
+  }
+  // angle: the weak spot's angle this step (the plate follows it). paused: nothing moves. The regrown plate is back with
+  // full HP the moment the window ends; its bar refills with the regrow (shieldBar).
+  function guardStep(shield,{dt,angle,paused},G){
+    if(paused)return shield;
+    const next={...shield,angle:angle??shield.angle};
+    if(shield.down>0){next.down=Math.max(0,shield.down-dt);if(!next.down)Object.assign(next,{up:0,hp:G.hp,cracks:0});}
+    else next.up=Math.min(1,shield.up+dt/G.regrowSeconds);
+    return next;
+  }
+  // The shield health bar: {fill 0..1} (HP share, refilling with the regrow), or null while broken.
+  const shieldBar=(shield,G)=>shield.down>0?null:{fill:clamp01(shield.hp/G.hp)*clamp01(shield.up)};
+  // The regrowing plate's width share: regrowStart widening to 1 with an ease-out.
+  const regrowScale=(up,G)=>G.regrowStart+(1-G.regrowStart)*(1-(1-clamp01(up))**2);
   function shards(shield,feel,plate,reduced,F){
     const S=F.shield.shards,p=breakPoint(shield,feel,plate,reduced?S.reducedLife:S.life);if(!p)return null;
     const k=p.k,fade=k<S.hold?0:(k-S.hold)/(1-S.hold);
@@ -233,6 +290,6 @@
   }
 
   root.LoftRumbleBossFightModel=Object.freeze({rigBase,rigState,pose,shieldViews,shieldLook,squashBox,shieldTexture,shieldBox,
-    SHIELD_PHASES,shieldInitial,shieldNext,crackShake,shards,breakFlash,beamSegments,beamSources,
+    SHIELD_PHASES,shieldInitial,shieldNext,crackShake,shards,breakFlash,GUARD_ZONES,GUARD_EVENTS,CRACK_STAGES,guardZone,guardHit,guardLift,guardStep,crackStage,shieldBar,regrowScale,beamSegments,beamSources,
     wallReach,laneChevrons,beamLook,beamParticles,beamEnds,slamSince,slamZone,slamCrack,slamDebris,groundShadow});
 })(typeof window!=='undefined'?window:globalThis);

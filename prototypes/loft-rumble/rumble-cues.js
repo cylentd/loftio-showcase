@@ -92,11 +92,11 @@
   // Dangers carry `at`, the seconds to their impact (0 once it lands), `clear` when they threaten nobody (which ranks
   // them below every danger that names a resident), `ids`, the residents they will hit, and `name`, the attack's name.
   function dangerCues(){
-    const s=host.s,fx=s.attackFx,pending=fx&&!fx.hit,out=[];
+    const s=host.s,fx=s.attackFx,pending=fx&&(fx.whiplash?!fx.resolved:!fx.hit),out=[];
     if(s.phase!=='play'||s.hp<=0)return out;
     const warn=pending?fx.warn:s.warn&&s.enemyT<=host.RT.telegraph?s.warn:null;
     if(warn){
-      const team=warn.def.id==='pulse',members=host.ids.filter(id=>host.inZone(warn,s.bodies[id]));
+      const team=warn.def.id==='pulse',members=host.ids.filter(id=>(!fx?.whiplash||!fx.hits.includes(id))&&host.inZone(warn,s.bodies[id]));
       const seconds=Math.max(0,s.enemyT).toFixed(data.countdownDigits),values={attack:warn.def.name,names:list(members),seconds};
       const template=team?(pending?copy.cue.dangerTeamNow:copy.cue.dangerTeam)
         :!members.length?(pending?null:copy.cue.dangerClear):pending?copy.cue.dangerNow:copy.cue.danger;
@@ -139,7 +139,12 @@
     });
     const shown=moment&&{...moment,...(moment.at?lift(data.field.wordLift)(host.place(moment.at)):{}),
       ability:moment.kind==='cutin'?host.abilities[host.kind(moment.id)]:undefined};
-    return {attack:dangers[0]?{id:dangers[0].name,name:dangers[0].name}:null,targets,stunned:stuns,ready:ready(),moment:shown};
+    const whip=s.attackFx?.whiplash,whipPending=s.warn?.def.id===root.LoftRumbleWhiplashData?.id;
+    const hiddenName=whip?s.attackFx.warn.def.name:whipPending?s.warn.def.name:null;
+    const other=dangers.find(danger=>danger.name!==hiddenName);
+    const attack=whip?.phase==='strike'?{id:s.attackFx.warn.def.name,name:s.attackFx.warn.def.name}:
+      other?{id:other.name,name:other.name}:null;
+    return {attack,targets,stunned:stuns,ready:ready(),moment:shown};
   }
 
   function render(){
