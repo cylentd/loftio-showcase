@@ -131,6 +131,7 @@
   // Swarm counter (ledger #487 U3): Hunt reads kills/goal, Hold reads the time left as m:ss, rounded up so it shows 0:00
   // only at the win. progress: swarm-model.js progress(state) {mode, kills, goal, remaining, frac}.
   function counterText(progress){
+    if(progress.mode==='bench'||progress.mode==='defense')return String(progress.kills); // no goal or clock: it counts defeats
     if(progress.mode==='hunt')return Math.min(progress.kills,progress.goal)+'/'+progress.goal;
     const left=Math.max(0,Math.ceil(progress.remaining)),perMinute=D.swarm.secondsPerMinute;
     return Math.floor(left/perMinute)+':'+String(left%perMinute).padStart(2,'0');
@@ -139,6 +140,7 @@
   // The counter takes the boss plate's place in a swarm fight: the same frame, the channel filled to frac in the team's
   // colour, and the counter text where the boss name sits. No words.
   function counter(ctx,{width,top,progress,font,image}){
+    if(progress.mode==='defense')return defenseCounter(ctx,{width,top,progress,font});
     const frame=image(D.art.bossFrame);
     if(!frame)return false;
     const L=M.bossLayout(width,D,screenScale(),top);
@@ -153,6 +155,34 @@
     return true;
   }
 
+  // Swarm Defense (D2): kills are the score, so the count stands alone and large at top centre over the scrim, one dot per
+  // wave under it (held amber, current cream and larger, to come dark, each on an ink ring), and during a lull a
+  // "Wave 3" cue with its countdown below. Code geometry and live text only, so it needs no art and never waits for it.
+  function defenseCounter(ctx,{width,top,progress,font}){
+    const P=colours(),F=D.swarm.defense,L=M.defenseLayout(width,progress.waves,D,screenScale());
+    const reduced=!!root.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const text=counterText(progress),dots=M.waveDots(progress),cue=M.lullCue(progress,D,reduced);
+    scrim(ctx,width,top);
+    label(ctx,text,L.count.x,L.count.y,L.count.size,font,'center');
+    dots.forEach((state,index)=>{
+      const {x,y}=L.dots[index],r=state==='current'?F.currentR:F.dotR;
+      ctx.fillStyle=P.ink;ctx.beginPath();ctx.arc(x,y,r+F.dotEdge,0,Math.PI*2);ctx.fill();
+      if(state==='next'){ctx.fillStyle=P.cream;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()} // a cream rim: an empty slot
+      ctx.fillStyle=P[F.dots[state]];ctx.beginPath();ctx.arc(x,y,state==='next'?r-F.dotRing:r,0,Math.PI*2);ctx.fill();
+    });
+    let shownCue=null;
+    if(cue){
+      const word=F.copy.wave.replace('{n}',String(cue.wave)),count=String(cue.count);
+      label(ctx,word,L.count.x,F.cueY,typeSize(F.cueFont,D.type.body),font,'center');
+      ctx.save();ctx.translate(L.count.x,F.cueY+F.cueGap);ctx.scale(cue.scale,cue.scale);
+      label(ctx,count,0,0,typeSize(F.cueCountFont,D.type.body),font,'center');
+      ctx.restore();
+      shownCue={text:word,count};
+    }
+    shown.counter={text,dots,cue:shownCue};
+    return true;
+  }
+
   function team(ctx,{width,height,strip,bar,shake=0,font,image}){
     const frame=image(D.art.teamFrame);
     if(!frame)return false;
@@ -163,7 +193,7 @@
     const filled=channel(ctx,L.channel,bar,colours().team,image(D.art.fill));
     const seed=image(D.art.seed);
     if(seed)ctx.drawImage(seed,L.seed.x,L.seed.y,L.seed.w,L.seed.h);
-    const text=bar.value+'/'+bar.max;
+    const text=Math.ceil(bar.value)+'/'+bar.max;   // whole points; up, so a living crystal never reads 0
     ctx.textBaseline='middle';
     label(ctx,text,L.number.x,L.number.y,typeSize(D.team.numberFont),font,'right');
     ctx.textBaseline='alphabetic';
@@ -172,8 +202,12 @@
     return true;
   }
 
+  // Measured once per font and size: setting ctx.font and measuring every frame cost a font resolve each time.
+  const readouts=new Map();
   function readoutWidth(ctx,max,font){
-    ctx.save();ctx.font=D.type.weight+' '+typeSize(D.team.numberFont)+'px '+font;const w=ctx.measureText(max+'/'+max).width;ctx.restore();return w;
+    const css=D.type.weight+' '+typeSize(D.team.numberFont)+'px '+font,key=css+'|'+max;
+    if(readouts.has(key))return readouts.get(key);
+    ctx.save();ctx.font=css;const w=ctx.measureText(max+'/'+max).width;ctx.restore();readouts.set(key,w);return w;
   }
 
   // The two health channels, for damage and heal words that fly into a bar. Null while the frame art is missing.
@@ -238,9 +272,13 @@
       const source=output.toDataURL('image/png');cropped.set(img,source);img.src=source;
     }catch{ /* A cross-origin image without pixel access still uses object-fit: contain. */ }
   }
-  function fitName(el){
+  // sized: the roster changed size, so widths must be read again. Otherwise only a changed name is refitted, because a
+  // charge tick rewrites the card's text every frame and a width read there forces a layout.
+  function fitName(el,sized){
+    const was=fitted.get(el);
+    if(!sized&&was&&was.startsWith(el.textContent+'|'))return;
     const key=el.textContent+'|'+el.clientWidth;
-    if(fitted.get(el)===key)return;
+    if(was===key)return;
     el.style.fontSize='';
     let size=parseFloat(getComputedStyle(el).fontSize);
     while(el.scrollWidth>el.clientWidth&&size>D.nameFit.min){size=Math.max(D.nameFit.min,size-D.nameFit.step);el.style.fontSize=size+'px'}
@@ -268,9 +306,9 @@
     meter.style.setProperty('--hud-energy-paint','url("'+canvas.toDataURL('image/png')+'")');
     meter.dataset.energyPaint='';energyPaints.set(meter,key);
   }
-  function fitNames(){
-    for(const el of document.querySelectorAll('.roster .card b'))fitName(el);
-    for(const card of document.querySelectorAll('.roster .card'))energyPaint(card);
+  function fitNames(sized=true){
+    for(const el of document.querySelectorAll('.roster .card b'))fitName(el,sized);
+    for(const card of document.querySelectorAll('.roster .card'))if(sized||!card.querySelector('.dock-meter[data-energy-paint]'))energyPaint(card);
   }
   function portraits(art){
     for(const [id,name] of Object.entries(D.portraits)){
@@ -286,7 +324,7 @@
     fitNames();
     roster.addEventListener('load',event=>fitCustom(event.target),true);
     for(const img of roster.querySelectorAll('[data-own-art] img'))fitCustom(img);
-    new MutationObserver(fitNames).observe(roster,{subtree:true,childList:true,characterData:true});
+    new MutationObserver(()=>fitNames(false)).observe(roster,{subtree:true,childList:true,characterData:true});
     if(root.ResizeObserver)new ResizeObserver(fitNames).observe(roster);
     const art=root.LoftRumbleArt;
     art?.ready?.then(()=>{

@@ -30,6 +30,7 @@
   --hud-energy-turns: 360deg;
   --hud-energy-repeat: 180deg;
   --hud-energy-band: 70deg;
+  --hud-energy-reach: 3; /* the light's square side in card heights: covers the frame's far corner at any turn */
   --hud-energy-light: var(--rumble-charge-light);
   --hud-energy-base: var(--rumble-shadow);
   --hud-energy-state: brightness(1);
@@ -298,11 +299,6 @@
   inherits: false;
   initial-value: 0deg;
 }
-@property --hud-travel {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
 .loft-art[data-rumble-demo] .roster .dock-meter {
   --hud-sweep-x: calc(var(--hud-u) * (var(--hud-frame-margin-left) + var(--hud-frame-vines) / 2));
   --hud-sweep-y: calc(var(--hud-u) * var(--hud-frame-margin-top) + var(--hud-card-height) / 2);
@@ -320,37 +316,71 @@
     calc(var(--hud-u) * var(--hud-slice-bottom)) calc(var(--hud-u) * var(--hud-slice-left));
   border-radius: 0;
   border-image: var(--art-lm-hero-frame-ready-v2) var(--hud-slice-top) var(--hud-slice-right) var(--hud-slice-bottom) var(--hud-slice-left) fill / 1 / 0 stretch;
-  filter: var(--hud-charge-finish);
+  filter: var(--hud-charge-finish) var(--hud-energy-state);
   background: none;
-  overflow: visible;
+  /* The travelling light's square overhangs the frame; clip it to the frame's outer edge so it adds no scroll overflow. */
+  overflow: clip;
+  overflow-clip-margin: max(calc(var(--hud-u) * var(--hud-slice-top)), calc(var(--hud-u) * var(--hud-slice-right)),
+    calc(var(--hud-u) * var(--hud-slice-bottom)), calc(var(--hud-u) * var(--hud-slice-left)));
   mask-image:
     radial-gradient(circle at 50% calc(100% - var(--hud-socket-from-bottom)), transparent var(--hud-socket-dark), var(--hud-ink) var(--hud-socket-dark)),
     radial-gradient(circle at calc(100% - var(--hud-spiral-from-right)) var(--hud-spiral-from-top), transparent var(--hud-spiral-dark), var(--hud-ink) var(--hud-spiral-dark)),
     conic-gradient(from 180deg at var(--hud-sweep-x) var(--hud-sweep-y), var(--hud-ink) max(0deg, calc(var(--sweep) - var(--hud-energy-feather))), transparent var(--sweep));
   mask-composite: intersect;
   transition: --sweep var(--hud-sweep-ease);
-  animation: hud-energy-travel var(--hud-energy-period) linear infinite;
-}
-@keyframes hud-energy-travel {
-  0%, 100% { filter: var(--hud-charge-finish) var(--hud-energy-state); }
-  50% { filter: var(--hud-charge-finish) brightness(var(--hud-energy-crest)) var(--hud-energy-state); }
-  to { --hud-travel: var(--hud-energy-turns); }
 }
 .loft-art[data-rumble-demo] .roster .dock-meter::before,
 .loft-art[data-rumble-demo] .roster .dock-meter::after { display: none; }
-/* Light is composited under the paint's fixed alpha, then clipped by charge and readiness. */
+/* Light is composited under the paint's fixed alpha, then clipped by charge and readiness. The meter's mask and filter
+   group its two layers, so they light and grey with it. Both move on the compositor only (#507: animating the meter's
+   filter and a registered angle in its gradient cost ~52 ms of style recalc a frame on a throttled phone). */
 .loft-art[data-rumble-demo] .roster .dock-meter[data-energy-paint] {
   border-image: none;
-  background: repeating-conic-gradient(from calc(180deg + var(--hud-travel)) at var(--hud-sweep-x) var(--hud-sweep-y),
-    transparent, var(--hud-energy-light) calc(var(--hud-energy-band) / 2), transparent var(--hud-energy-band), transparent var(--hud-energy-repeat)),
-    var(--hud-energy-paint), var(--hud-energy-base);
+  background: var(--hud-energy-paint), var(--hud-energy-base);
   background-origin: border-box; background-clip: border-box; background-size: 100% 100%;
-  background-blend-mode: screen, normal;
   mask-image: var(--hud-energy-paint),
     radial-gradient(circle at 50% calc(100% - var(--hud-socket-from-bottom)), transparent var(--hud-socket-dark), var(--hud-ink) var(--hud-socket-dark)),
     radial-gradient(circle at calc(100% - var(--hud-spiral-from-right)) var(--hud-spiral-from-top), transparent var(--hud-spiral-dark), var(--hud-ink) var(--hud-spiral-dark)),
     conic-gradient(from 180deg at var(--hud-sweep-x) var(--hud-sweep-y), var(--hud-ink) max(0deg, calc(var(--sweep) - var(--hud-energy-feather))), transparent var(--sweep));
   mask-size: 100% 100%;
+}
+/* The travelling light: a square conic band centred on the sweep point, turned whole. Its centre is in border-box terms,
+   and an absolute child is placed from the padding box, so the left and top border widths come off. */
+.loft-art[data-rumble-demo] .roster .dock-meter[data-energy-paint]::before {
+  content: '';
+  display: block;
+  position: absolute;
+  left: calc(var(--hud-sweep-x) - var(--hud-u) * var(--hud-slice-left));
+  top: calc(var(--hud-sweep-y) - var(--hud-u) * var(--hud-slice-top));
+  width: calc(var(--hud-card-height) * var(--hud-energy-reach));
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: repeating-conic-gradient(from 180deg,
+    transparent, var(--hud-energy-light) calc(var(--hud-energy-band) / 2), transparent var(--hud-energy-band), transparent var(--hud-energy-repeat));
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: hud-energy-travel var(--hud-energy-period) linear infinite;
+}
+/* The gentle crest: the same paint added over itself at (crest - 1) is brightness(crest), as opacity. */
+.loft-art[data-rumble-demo] .roster .dock-meter[data-energy-paint]::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: calc(var(--hud-u) * -1 * var(--hud-slice-top)) calc(var(--hud-u) * -1 * var(--hud-slice-right))
+    calc(var(--hud-u) * -1 * var(--hud-slice-bottom)) calc(var(--hud-u) * -1 * var(--hud-slice-left));
+  background: var(--hud-energy-paint) 0 0 / 100% 100%;
+  mix-blend-mode: plus-lighter;
+  opacity: 0;
+  pointer-events: none;
+  animation: hud-energy-crest var(--hud-energy-period) linear infinite;
+}
+@keyframes hud-energy-travel {
+  from { rotate: 0deg; }
+  to { rotate: var(--hud-energy-turns); }
+}
+@keyframes hud-energy-crest {
+  0%, 100% { opacity: 0; }
+  50% { opacity: calc(var(--hud-energy-crest) - 1); }
 }
 /* Ready: the whole frame, socket and spiral included (the card's ::after has swapped to the ready art and its glow). */
 .loft-art[data-rumble-demo] .roster .card.ready .dock-meter { mask-image: none; }
@@ -375,7 +405,8 @@
   .loft-art[data-rumble-demo] .roster .card.ready::after { animation: none; }
   .loft-art[data-rumble-demo] .roster .card .portrait img { transition: none; }
   .loft-art[data-rumble-demo] .roster .dock-meter { transition: none; animation: none; }
-  .loft-art[data-rumble-demo] .roster .dock-meter::after { display: none; animation: none; }
+  .loft-art[data-rumble-demo] .roster .dock-meter[data-energy-paint]::before,
+  .loft-art[data-rumble-demo] .roster .dock-meter[data-energy-paint]::after { display: none; animation: none; }
   .loft-art[data-rumble-demo] .roster .dock-meter[data-energy-paint] { background-image: var(--hud-energy-paint); }
 }
 

@@ -18,8 +18,11 @@
   function info(session){
     const {s,ids,C}=session.game;
     const entries=[...session.enemies().map(target=>({id:target.id,y:bounds(session,target).groundY,target})),...ids.map(id=>({id,y:s.bodies[id].y}))];
-    const order=session.shallow?session.projection.sort(entries):entries;
-    const hiders=id=>session.shallow?session.enemies().filter(target=>session.projection.occluded({...s.bodies[id],radius:C.radius},occluders(session,target))).map(target=>target.id):[];
+    // Swarm monsters (type 'monster') always draw before the residents, so a monster never covers a resident's face, and never
+    // count as hiding one (polish 2026-11-20). The Bramble boss keeps the ground-line sort.
+    const under=item=>item.target?.type==='monster',sorted=session.shallow?session.projection.sort(entries):entries;
+    const order=[...sorted.filter(under),...sorted.filter(item=>!under(item))];
+    const hiders=id=>session.shallow?session.enemies().filter(target=>target.type!=='monster').filter(target=>session.projection.occluded({...s.bodies[id],radius:C.radius},occluders(session,target))).map(target=>target.id):[];
     // The ring follows any hidden resident. The boss fades only for one that has stopped there: the player tracks a passing one by
     // its motion, and a boss that blinks on every pass reads as a glitch (owner review 2026-11-09).
     const silhouettes=ids.filter(id=>hiders(id).length),faded=[...new Set(silhouettes.filter(id=>!s.bodies[id].moving).flatMap(hiders))];

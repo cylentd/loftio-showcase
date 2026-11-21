@@ -59,20 +59,36 @@
       danger.textContent = data.dock.danger;
       card.append(meter, charge, danger);
     }
-    const percent = Math.round(view.specialCharge * data.dock.percent);
+    card.querySelector('.dock-meter').setAttribute('aria-label', view.name + ' special charge');
+    charge(card, view.specialCharge);
+    if (view.motion === 'stunned') status.textContent = data.dock.stunned + ' ' + view.stunRemaining.toFixed(1) + data.dock.seconds;
+  }
+
+  // The card's width over height, read once per card size: a read after the frame's style writes forces a layout.
+  const aspects = new WeakMap();
+  const sized = typeof ResizeObserver === 'function'
+    ? new ResizeObserver((entries) => { for (const entry of entries) aspects.delete(entry.target); }) : null;
+  function aspect(card) {
+    if (aspects.has(card)) return aspects.get(card);
+    const value = card.clientHeight > 0 ? card.clientWidth / card.clientHeight : data.dock.cardAspect;
+    if (sized) { aspects.set(card, value); sized.observe(card); }
+    return value;
+  }
+
+  // A charge-only change: the meter and its readout (the page sets the card's --charge). No glyph or label is rebuilt.
+  function charge(card, specialCharge) {
     const meter = card.querySelector('.dock-meter');
-    meter.setAttribute('aria-label', view.name + ' special charge');
+    if (!meter) return;
+    const percent = Math.round(specialCharge * data.dock.percent);
     meter.setAttribute('aria-valuenow', String(percent));
     card.querySelector('.dock-charge').textContent = percent === data.dock.percent
       ? data.dock.special : data.dock.special + ' ' + percent + '%';
     meter.title = percent === data.dock.percent ? data.dock.ready : data.dock.special + ' ' + percent + '%';
     // The border lights clockwise from the rune socket as the special charges (owner direction, 2026-11-15): the ready
     // frame shows through a conic mask up to this angle, placed so the lit front moves at one speed round the card.
-    const aspect = card.clientHeight > 0 ? card.clientWidth / card.clientHeight : data.dock.cardAspect;
-    const sweep = window.LoftRumbleHudModel?.chargeSweep(view.specialCharge, aspect);
+    const sweep = window.LoftRumbleHudModel?.chargeSweep(specialCharge, aspect(card));
     if (sweep !== undefined) meter.style.setProperty('--sweep', sweep + 'deg');
-    if (view.motion === 'stunned') status.textContent = data.dock.stunned + ' ' + view.stunRemaining.toFixed(1) + data.dock.seconds;
   }
 
-  window.LoftRumbleHeroCards = Object.freeze({ update });
+  window.LoftRumbleHeroCards = Object.freeze({ update, charge });
 })();

@@ -76,7 +76,7 @@
       for (const target of this.enemies()) {
         body.inside = contacts[target.id] ?? false;
         const run = () => this.withEnemy(target, () => this.game.collide(body));
-        if (root.LoftRumbleSwarmRuntime) root.LoftRumbleSwarmRuntime.collide(this, target, run); else run(); // a swarm routes the hit to this monster
+        if (root.LoftRumbleSwarmRuntime) root.LoftRumbleSwarmRuntime.collide(this, target, run, body); else run(); // a swarm routes the hit to this monster
         contacts[target.id] = body.inside;
       }
       body.inside = original;

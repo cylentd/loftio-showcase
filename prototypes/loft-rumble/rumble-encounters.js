@@ -27,9 +27,11 @@
     const order=current(state).rotation;
     return order?order.map(id=>attacks.find(attack=>attack.id===id)):attacks;
   }
+  // A swarm mode with its own bumper layout (encounter data swarm.<mode>.bumpers) wins over the encounter's.
+  const swarmBumpers=state=>data.swarm[state.swarm?.model?.mode]?.bumpers;
   function apply(state,feel){
-    const entry=current(state);
-    if(entry.bumpers)feel.bumpers=structuredClone(entry.bumpers);
+    const entry=current(state),bumpers=swarmBumpers(state)??entry.bumpers;
+    if(bumpers)feel.bumpers=structuredClone(bumpers);
     for(const [id,point] of Object.entries(entry.starts??{}))Object.assign(state.bodies[id],{x:state.w*point[0],y:state.h*point[1]});
     if(entry.id!==data.defaultId)state.tutor=null;
   }
@@ -72,7 +74,7 @@
     });
     label.append(caption,select,note);menu.prepend(label);reset();draw();
   }
-  // ?stage=swarm-hunt|swarm-hold -> the swarm mode, or null (the default encounter runs). While the swarm is not live the stage
+  // ?stage=swarm-hunt|swarm-hold|swarm-defense -> the swarm mode, or null (the default encounter runs). While the swarm is not live the stage
   // is honoured only with the lab (the caller passes LoftRumbleLabPolicy.allowed). An unknown value is null, never an error.
   function stageMode(search,{live,lab}){
     const value=new URLSearchParams(search).get(data.swarm.param);

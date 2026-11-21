@@ -194,24 +194,30 @@
   }
   // A swarm fight reaches here without the demo install while it is lab-only (SWARM_LIVE false): build the results kit once
   // and wire its replay to the page's again().
+  // The page's reset() presents at boot with no `again`, so the kit is built before one exists: the click reads the latest one.
+  let swarmAgain;
   function swarmKit(again){
+    swarmAgain=again??swarmAgain;
     if(document.getElementById('demo-summary'))return;
     buildResults();
-    document.getElementById('demo-replay').addEventListener('click',()=>again?.());
+    document.getElementById('demo-replay').addEventListener('click',()=>swarmAgain?.());
   }
   function present(state,ready,again){
     if(!active(state)&&!state.swarm)return;
     if(!active(state))swarmKit(again);
     const panel=document.getElementById('demo-results'),wasHidden=panel.hidden;
-    panel.hidden=!ready;
-    for(const chrome of document.querySelectorAll('.top,.roster'))chrome.inert=ready;
-    if(state.demo)document.getElementById('stage-label').textContent=state.demo.enraged?copy.enragedBoss:copy.boss;
+    // Called every frame: write only on change, so an unchanged panel costs no style invalidation.
+    if(wasHidden!==!ready)panel.hidden=!ready;
+    for(const chrome of document.querySelectorAll('.top,.roster'))if(chrome.inert!==ready)chrome.inert=ready;
+    const stageLabel=state.demo&&document.getElementById('stage-label'),stageText=state.demo?.enraged?copy.enragedBoss:copy.boss;
+    if(stageLabel&&stageLabel.textContent!==stageText)stageLabel.textContent=stageText;
     if(!ready)return;
     const result=state.battleEnd.result,swarm=state.swarm?swarmEnd(state.swarm.model):null; // a swarm fight shows its own facts (swarmEnd), no damage list
     panel.dataset.outcome=swarm?swarm.outcome:result.won?'victory':'defeat';panel.toggleAttribute('data-swarm',!!swarm); // swarm-only layout (rumble-demo.css)
     document.getElementById('demo-result-title').textContent=swarm?swarm.title:result.won?copy.victory:copy.defeat;
     document.getElementById('demo-result-hint').textContent=swarm?'':result.won?copy.winHint:copy.lossHint;
     panel.querySelector('#demo-damage').hidden=!!swarm;
+    if(swarm)panel.dataset.swarmMode=swarm.mode;else delete panel.dataset.swarmMode; // defense styles its kill count (rumble-demo.css)
     if(swarm){panel.querySelector('.results-boss').replaceChildren();fillSummary(document.getElementById('demo-summary'),swarm.facts)}
     else renderSummary(state);
     if(wasHidden&&!swarm)renderDamage(state,renderStage(state));
@@ -312,10 +318,21 @@
   function swarmEnd(state){
     const result=swarmResult(state),words=copy.swarm;
     const kills={key:'kills',label:words.kills,value:String(result.kills)},time={key:'time',label:words.time,value:clock(result.seconds)};
+    const outcome=result.won?'victory':'defeat';
+    if(result.mode==='defense')return defenseEnd(state,result,kills,outcome);
     // Hold is won by time, so the time held leads; Hunt is won by kills (U6: a Hold loss led with "Kills 0").
-    return {outcome:result.won?'victory':'defeat',title:result.won?words.won:words.lost,facts:result.mode==='hold'?[time,kills]:[kills,time]};
+    return {mode:result.mode,outcome,title:result.won?words.won:words.lost,facts:result.mode==='hold'?[time,kills]:[kills,time]};
   }
-  root.LoftRumbleDemo=Object.freeze({active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install,nameResident,
+  // Defense (D2): kills are the score and lead; then the waves held (progress().held: those whose every monster has died; all of them on a win);
+  // and the bites the crystal took, read from the model's progress() so the card and the HUD agree.
+  function defenseEnd(state,result,kills,outcome){
+    const words=copy.swarm,p=root.LoftRumbleSwarm.progress(state),held=p.held;
+    return {mode:'defense',outcome,title:result.won?words.won:words.defense.lost,facts:[kills,
+      {key:'waves',label:words.defense.waves,value:held+'/'+p.waves},
+      {key:'bites',label:words.defense.bites,value:String(p.bites)}]};
+  }
+  // clock is the one battle-time formatter (D5): it floors the elapsed seconds, and the page's header and end card call it.
+  root.LoftRumbleDemo=Object.freeze({clock,active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install,nameResident,
     swarm:Object.freeze({swarmResult,swarmEnd}),
     results:Object.freeze({facts,actions,looks,placements})});
 })(globalThis);

@@ -5,7 +5,7 @@
 (function(root){
   'use strict';
   let rail=null,alertList=null,newsList=null,alertShown='',newsShown='';
-  let layer=null,attackChip=null,momentNode=null,momentKey='',options=null;
+  let layer=null,attackChip=null,momentNode=null,momentKey='',options=null,shownTop=null;
   const art={},ratio={},pins=new Map(),spirals=new Map();
   const make=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!=null)node.textContent=text;return node};
   const url=path=>'url("'+path+'")';
@@ -32,7 +32,7 @@
     layer=make('div','rumble-field');layer.setAttribute('aria-hidden','true');
     attackChip=make('p','rumble-attack-name');attackChip.hidden=true;layer.append(attackChip);
     const arena=document.getElementById('arena');arena.append(layer,rail);
-    alertShown='';newsShown='';momentKey='';momentNode=null;pins.clear();spirals.clear();
+    alertShown='';newsShown='';momentKey='';shownTop=null;momentNode=null;pins.clear();spirals.clear();
     preload(config.art,config.cells);
   }
 
@@ -80,9 +80,10 @@
       let ring=card.querySelector('.rumble-stun-ring');
       if(!ring){ring=make('span','rumble-stun-ring');ring.setAttribute('aria-hidden','true');card.append(ring)}
       const ready=field.ready.includes(id),stun=field.stunned.find(item=>item.id===id);
-      ring.hidden=!stun;
+      if(ring.hidden!==!stun)ring.hidden=!stun;
       card.classList.toggle('rumble-special-ready',ready);
-      if(stun)ring.style.setProperty('--stun-left',stun.left.toFixed(3));
+      const left=stun?.left.toFixed(3);
+      if(stun&&ring.style.getPropertyValue('--stun-left')!==left)ring.style.setProperty('--stun-left',left);
     }
   }
 
@@ -111,7 +112,7 @@
 
   function render({alert,news,top,field}){
     if(!rail)return;
-    rail.style.setProperty('--cue-top',top+'px');layer.style.setProperty('--cue-top',top+'px');
+    if(top!==shownTop){shownTop=top;rail.style.setProperty('--cue-top',top+'px');layer.style.setProperty('--cue-top',top+'px')}
     alertShown=renderList(alertList,alert,alertShown);
     newsShown=renderList(newsList,news,newsShown);
     renderAttack(field.attack);

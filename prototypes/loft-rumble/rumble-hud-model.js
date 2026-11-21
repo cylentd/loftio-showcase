@@ -72,5 +72,31 @@
     return degrees<0?degrees+FULL_TURN:degrees;
   }
 
-  root.LoftRumbleHudModel=Object.freeze({fillWidth,bossLayout,shieldLayout,teamLayout,comboLayout,milestoneScale,textSize,chargeSweep});
+  // Swarm Defense counter (D2): the kill count centred at the top, one dot per wave centred under it. `bottom` is the
+  // lowest drawn point, the current dot's outline, which must stay above the monsters' TOP_INSET.
+  function defenseLayout(width,waves,D,scale=1){
+    const F=D.swarm.defense,centre=width*HALF,span=(waves-1)*F.dotGap;
+    const dots=Array.from({length:waves},(_,index)=>({x:centre-span*HALF+index*F.dotGap,y:F.dotY}));
+    return {count:{x:centre,y:F.countBaseline,size:textSize(F.countFont,scale,D.type.body)},dots,
+      bottom:F.dotY+F.currentR+F.dotEdge};
+  }
+
+  // The first `held` waves are held (progress.held: every monster of the wave has died). The named wave and any earlier wave still
+  // holding live monsters are current (running, or coming in a lull); the rest are to come. The count cannot say which earlier wave is
+  // the live one, so the held waves are read as the first ones.
+  function waveDots(progress){
+    return Array.from({length:progress.waves},(_,index)=>index<progress.held&&index+1<progress.wave?'done':index+1<=progress.wave?'current':'next');
+  }
+
+  // The lull cue: the coming wave and the whole seconds left, rounded up so it never shows 0. The count pops on each new
+  // second and eases back over popShare of it; reduced motion keeps it still. Null while a wave runs.
+  function lullCue(progress,D,reduced){
+    if(!(progress.lullLeft>0))return null;
+    const F=D.swarm.defense,count=Math.ceil(progress.lullLeft),into=count-progress.lullLeft; // 0 on the tick, toward 1 after
+    const k=reduced?0:clamp01(1-into/F.popShare);
+    return {wave:progress.wave,count,scale:1+F.pop*k*k};
+  }
+
+  root.LoftRumbleHudModel=Object.freeze({fillWidth,bossLayout,shieldLayout,teamLayout,comboLayout,milestoneScale,textSize,chargeSweep,
+    defenseLayout,waveDots,lullCue});
 })(globalThis);

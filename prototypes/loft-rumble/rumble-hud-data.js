@@ -5,6 +5,9 @@
 (function(root){
   'use strict';
   root.LoftRumbleHudData=Object.freeze({
+    // The arena canvas's backing store stops at 2 device pixels per CSS pixel (#507). A 3x phone filled 9 bitmap pixels per
+    // CSS pixel, and the cap cut the frame's 95th percentile from 183 to 67 ms (390x844, CPU 4x, 2026-11-20).
+    maxCanvasDpr:2,
     art:Object.freeze({
       bossFrame:'lm-hud-boss-frame',teamFrame:'lm-hud-team-frame',fill:'lm-hud-health-fill',
       combo:'lm-hud-combo-ornament',seed:'lm-hud-spiral-seed',
@@ -69,28 +72,19 @@
       cream:'--hud-cream',ink:'--hud-ink',boss:'--hud-boss-fill',team:'--hud-team-fill',pending:'--hud-pending',
       bossEnergy:'--hud-boss-energy',teamEnergy:'--hud-team-energy',
       scrim:'--hud-scrim',flash:'--hud-flash',low:'--danger',
-      shield:'--hud-shield-fill',shieldTrack:'--hud-shield-track',
+      shield:'--hud-shield-fill',shieldTrack:'--hud-shield-track',ready:'--hud-ready',
     }),
     // Swarm stage (ledger #487 U3): monsters, their small bar, spawn rune, spit ring and the boss-plate counter.
     // Drawing in swarm-view.js; the counter in rumble-hud.js. Lengths are arena units. Marked LOOK: picks for the
     // owner's look round, not measured.
     swarm:Object.freeze({
+      // The monsters and their bar are code-drawn (swarm-monster-art.js; sizes in LoftRumbleSwarmData.ART), so only the two
+      // painted effects have art keys.
       art:Object.freeze({
-        // Art keys for LOFT-RUMBLE-ASSET-PROMPTS.md batch 6 (lm_enemy_*), named as file stems like every other key.
-        monsters:Object.freeze({capling:'lm-enemy-capling',mossback:'lm-enemy-mossback',sporemoth:'lm-enemy-sporemoth'}),
-        bar:'lm-enemy-bar',barFill:'lm-enemy-bar-fill', // lm_enemy_bar's two rows, cut into two files when prepared
         puff:'fx-leaf-puff',seed:'fx-seed-projectile',   // existing effects reused (brief #487 U3)
       }),
-      // Draw sizes from the batch 6 table; anchor from each prompt's "Prepare" line: feet = bottom centre at the ground
-      // contact (the bottom of the hit circle), centre = body centre on the monster's position (the flyer).
-      sprites:Object.freeze({
-        capling:Object.freeze({w:52,h:52,anchor:'feet'}),
-        mossback:Object.freeze({w:48,h:38,anchor:'feet'}),
-        sporemoth:Object.freeze({w:64,h:56,anchor:'centre'}),
-      }),
-      // lm_enemy_bar: bar 48 x 7, fill 44 x 4 (batch 6 table), so the fill is that share of the bar each way; gap above
-      // the sprite's top. LOOK: gap.
-      bar:Object.freeze({w:48,h:7,fillShare:44/48,fillHeight:4/7,gap:3}),
+      // The small health bar sits this far above the monster's silhouette. LOOK: gap.
+      bar:Object.freeze({gap:5}),      // art round 2 (2026-11-20): 3 read as touching the sporemoth's antennae
       // Spawn rune, code geometry like the danger rings. Radius as a share of the monster's r; it grows from `from` to
       // full over SPAWN_RUNE_S (LoftRumbleSwarmData). spin in radians per second, never under reduced motion. LOOK: all.
       // U5 browser pass: 1.6 from .4 width 2 was a 7-17 px hairline gone before the eye found it on a 390 px phone.
@@ -109,7 +103,67 @@
       // The counter fills with the team's own colour: progress toward the win is the team's, not the boss's. LOOK
       counterMax:100,     // the counter bar's scale; frac 0..1 maps onto it so the shared channel draws it
       secondsPerMinute:60,
+      // Defense (D2, owner pick 2026-11-20): kills are the score, so the count stands alone and large at top centre, with one
+      // dot per wave under it and no plate. Everything stays inside the 50-unit top strip (topStrip), above the highest
+      // monster centre (LoftRumbleSwarmData.TOP_INSET, sporemoth 54). LOOK: all sizes, the owner's look round.
+      defense:Object.freeze({
+        countFont:30,countBaseline:31,   // cap height ~0.7 of the font, so the digits run from about y 10 to 31
+        // Centre row, radii, centre-to-centre gap, ink outline width. Round 1 on a 390 px phone: radius 3.5 read as specks.
+        // dotRing: the cream rim of a wave still to come, so the dark slot reads over antlers and caps too.
+        dotY:41,dotR:4.5,currentR:6,dotGap:19,dotEdge:1.5,dotRing:1.5,
+        // Lull cue: "Wave 3" over the seconds left, centred at cueY, below the counter and above where a wave walks in.
+        // pop: extra scale on each new second, easing out over popShare of that second; never under reduced motion.
+        cueY:150,cueFont:20,cueCountFont:34,cueGap:30,pop:.3,popShare:.25,
+        copy:Object.freeze({wave:'Wave {n}'}),
+        // Dot colour per state, as keys of `tokens` above: held waves in amber, the current one cream, waves to come dark.
+        dots:Object.freeze({done:'ready',current:'cream',next:'shieldTrack'}),
+      }),
       tokens:Object.freeze({rune:'--rumble-amber',telegraph:'--danger',telegraphCase:'--rumble-danger-deep',ink:'--hud-ink'}),
+      // The defense crystal's look (C3 design, ledger #501, owner "build crystal" 2026-11-20; drawing in swarm-view.js). Where and
+      // how big come from state.crystal (arena units, set by the model from LoftRumbleSwarmData.CRYSTAL); this is only the look.
+      // Shapes are in units of the crystal's r, +y down, origin at its centre. LOOK: every number, the owner's look round.
+      crystal:Object.freeze({
+        // Colour roles, CSS custom properties defined in the page's :root. A cool aqua gem: the arena is warm sand, the monsters
+        // red, bark and lilac, the heroes' rings green, plum and blue, so the thing to protect is the only cyan on the field.
+        tokens:Object.freeze({light:'--crystal-light',face:'--crystal-face',deep:'--crystal-deep',ink:'--crystal-ink',
+          crack:'--crystal-crack',flash:'--crystal-flash',shadow:'--crystal-shadow'}),
+        // Crack stage by HP share: above `cracked` whole, above `badly` cracked, else badly cracked (the design's HP thirds).
+        cracked:2/3,badly:1/3,
+        // Drawn at drawScale x the model's r, like the monsters' ART.drawScale: at 1 the gem was about 40 px across on a 390 px
+        // phone, smaller than one capling (browser pass 2026-11-20). Drawing only: biters still stop at the model's r.
+        drawScale:1.35,
+        flashS:.18,flashAlpha:.85,  // a bite's white flash over the gem, seconds of fight clock (a pause holds it) and its peak opacity
+        inkPx:2.4,                  // outline width in canvas px, as the monsters' rimPx (LoftRumbleSwarmData.ART)
+        crackCasePx:3.6,crackPx:1.6, // a crack is a dark casing with a pale core, so it reads on the light and the deep facets alike
+        shadow:Object.freeze({y:.74,rx:1.15,ry:.3,alpha:.4}), // the contact shadow on the sand under the cluster
+        // One gem: a pointed shard with a top bevel and two side facets split at the ridge (x 0). Side shards reuse it.
+        gem:Object.freeze({tip:[0,-1.1],shoulder:[.46,-.58],hip:[.46,.42],base:[0,.74],bevel:[0,-.4]}),
+        // Side shards behind the main one: offset, turn (radians), scale. Stage 2 breaks the right one to a stub.
+        sides:[{at:[-.56,.34],turn:-.5,scale:.56},{at:[.6,.3],turn:.55,scale:.64}],
+        stub:[[-.46,-.08],[-.12,-.3],[.18,-.06],[.46,-.24],[.46,.42],[0,.74],[-.46,.42]], // the broken right shard, gem units
+        // Stage 2 snaps the main shard's tip to this jagged crown, between the two shoulders. Browser pass 2026-11-20: in a full
+        // surround the biters in front hide the lower half, so every stage must read from the top half.
+        snapped:[[-.2,-.86],[-.06,-.7],[.12,-.93]],
+        // Crack polylines on the main shard, gem units, weighted to the top half for the same reason. Stage 1 draws the first;
+        // stage 2 draws all.
+        cracks:[
+          [[-.46,-.45],[-.2,-.5],[-.1,-.3],[.15,-.33],[.3,-.1]],
+          [[.46,-.2],[.22,-.05],[.28,.18]],
+          [[-.46,.1],[-.22,.22],[-.12,.5]],
+          [[-.18,-.8],[-.08,-.62],[.06,-.52]],
+        ],
+      }),
+      // A hero's ring in swarm mode (C3, #507): a pool of light on the ground at the hero's feet in its dock surface colour (the
+      // dock card's --hero-surface, read by the page), so the owner finds his hero in a crowd. Drawn on the ground layer, so the
+      // hero and the monsters beside it stand on it. Owner 2026-11-20: the earlier disc behind the body "looks bad".
+      // Units are shares of the hero's body radius r. footY: the centre's drop below the body centre, to the art's feet.
+      // rx: half-width; squash: height over width, the foreshortened ground. glow: steps nested ellipses, each at alpha, so
+      // the light builds to the centre and fades outward. rim: a thin brighter line at `at` of the glow's size.
+      // colour: which dock colour each part takes. The surfaces are near white (rumble-tokens.css), so the glow takes the ink,
+      // the only tone that tells Sprout, Chomper and Puff apart on the sand; the rim takes the pale surface, the bright edge.
+      // breathe: with full motion the light swells by amp of its alpha once per periodS; reduced motion holds it still.
+      heroRing:Object.freeze({footY:.78,rx:1.15,squash:.36,glow:Object.freeze({steps:5,alpha:.13,colour:'ink'}),
+        rim:Object.freeze({at:.94,width:2,alpha:.9,colour:'surface'}),breathe:Object.freeze({periodS:2.8,amp:.18})}),
     }),
     // Canonical portraits for the three dock slots. The third slot is the demo's resident (rumble-demo-data.js, Puff); a
     // card with its own art (data-own-art) keeps it, so player-made residents use the same frame and pipeline.
