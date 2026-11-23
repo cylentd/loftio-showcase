@@ -18,7 +18,7 @@ import { flyIn, type FlightClock, type FlightFrame, type Rect } from './flight';
 import { arrow, bookDom, finishMotion, swingCover, turnPages } from './book';
 import { STORYBOOK, STORYBOOK_LOAD } from './constants';
 import { STORYBOOK_COPY } from './copy';
-import { packPages, spreadCount, spreadPages, storybookCards } from './pages';
+import { collectionCards, packPages, spreadCount, spreadPages, type PageCardData } from './pages';
 import { pageView, type PageView } from './pages-view';
 import { coverCue, nextStorybook, type StorybookEvent, type StorybookState } from './state';
 import { tabFade } from './tab-fade';
@@ -33,6 +33,7 @@ export type StorybookDeps = {
   tray: HTMLElement | null;
   /** Bundled art and optional look overrides, or null for code-drawn surfaces. */
   art: Parameters<typeof loadArtInOrder>[1] | null;
+  readMadeCards?: () => readonly BinderCard[];
   /** S6: the entrance's clock (flight.ts). Unset: the browser's frames; null: no flight, the book lands at once. */
   clock?: FlightClock | null;
 };
@@ -75,9 +76,6 @@ function flightPainter(ui: ReturnType<typeof pageChrome>) {
   return { paint, clear };
 }
 
-/** The 3x3 pages, in card order. Spreads come from spreadPages, so a resize only regroups them. */
-const PAGES = packPages(storybookCards(), STORYBOOK.slotsPerPage, STORYBOOK.perViewPhone).pages;
-
 function pageChrome() {
   const root = el('section', `storybook ${ROOM_MODAL_CLASS}`);
   root.setAttribute('role', 'dialog');
@@ -117,10 +115,16 @@ function quietRoom(root: HTMLElement, tray: HTMLElement | null): () => void {
 }
 
 /** What the book shows: G15's state, the pages built so far, the picker's look, and drawing them. */
-function bookView(deps: StorybookDeps, openZoom: (id: string, side: string, button: HTMLButtonElement) => void) {
+function bookView(deps: StorybookDeps, openZoom: (card: PageCardData, button: HTMLButtonElement) => void) {
   const ui = pageChrome();
   const core = {
     ui, state: { kind: 'closed' } as StorybookState, look: initialBoard(deps.reduced),
+    pages: [] as PageCardData[][],
+    resetPages: () => {
+      for (const held of core.views.values()) held.dispose();
+      core.views.clear();
+      core.pages = packPages(collectionCards(deps.readMadeCards?.() ?? []), STORYBOOK.slotsPerPage, STORYBOOK.perViewPhone).pages;
+    },
     /** The tab last scrolled into view on the phone's strip: a repaint scrolls only when the pick changed. */
     revealed: null as string | null,
     send: (event: StorybookEvent) => { const before = core.state; core.state = nextStorybook(before, event); return core.state !== before; },
@@ -133,7 +137,7 @@ function bookView(deps: StorybookDeps, openZoom: (id: string, side: string, butt
     perView: () => deps.layout.matches ? STORYBOOK.perViewPhone : STORYBOOK.perViewDesktop,
     views: new Map<number, PageView>(),
     spread: () => { const s = core.state; return s.kind === 'open' || s.kind === 'closing' ? s.spread : s.kind === 'turning' ? s.to : 0; },
-    inView: () => spreadPages(core.spread(), core.perView(), PAGES.length).map(page => page === null ? null : view(page).root),
+    inView: () => spreadPages(core.spread(), core.perView(), core.pages.length).map(page => page === null ? null : view(page).root),
     paint: () => {
       ui.root.dataset.holo = core.look.tab;
       paintPicker(core.look, picker);
@@ -144,14 +148,14 @@ function bookView(deps: StorybookDeps, openZoom: (id: string, side: string, butt
       }
     },
     show: () => {
-      const per = core.perView(), at = core.spread(), pages = spreadPages(at, per, PAGES.length).filter((page): page is number => page !== null);
+      const per = core.perView(), at = core.spread(), pages = spreadPages(at, per, core.pages.length).filter((page): page is number => page !== null);
       ui.root.dataset.view = per > 1 ? 'spread' : 'page';
       core.mark(core.state.kind);
       core.inView().forEach((page, side) => ui.ui.sides[side]!.replaceChildren(...(page ? [page] : [])));
       if (per === 1) ui.ui.sides[1]!.replaceChildren();
-      ui.counter.textContent = STORYBOOK_COPY.pages(pages[0]! + 1, pages[pages.length - 1]! + 1, PAGES.length);
+      ui.counter.textContent = STORYBOOK_COPY.pages(pages[0]! + 1, pages[pages.length - 1]! + 1, core.pages.length);
       ui.prev.disabled = core.state.kind !== 'open' || at === 0;
-      ui.next.disabled = core.state.kind !== 'open' || at === spreadCount(PAGES.length, per) - 1;
+      ui.next.disabled = core.state.kind !== 'open' || at === spreadCount(core.pages.length, per) - 1;
       // A button that disables itself drops focus to the page body; hand it to a live control in the book instead.
       if ((document.activeElement as HTMLButtonElement | null)?.disabled) core.rest();
       core.paint();
@@ -161,7 +165,7 @@ function bookView(deps: StorybookDeps, openZoom: (id: string, side: string, butt
   };
   const view = (page: number) => {
     let held = core.views.get(page);
-    if (!held) { held = pageView(PAGES[page]!, page, STORYBOOK.slotsPerPage, deps.face, openZoom); core.views.set(page, held); }
+    if (!held) { held = pageView(core.pages[page]!, page, STORYBOOK.slotsPerPage, deps.face, openZoom); core.views.set(page, held); }
     return held;
   };
   const picker = holoPicker((action: BoardAction) => { core.look = boardStep(core.look, action, deps.reduced); core.paint(); }, 'storybook-picker', false);
@@ -170,6 +174,17 @@ function bookView(deps: StorybookDeps, openZoom: (id: string, side: string, butt
   return Object.assign(core, { stopFade: fade.stop });
 }
 type Core = ReturnType<typeof bookView>;
+
+function showArriving(core: Core, art: StorybookDeps['art']): void {
+  const { ui } = core;
+  if (art) {
+    if (!coverDecoded(art)) ui.root.dataset.coverHold = '';
+    void loadArtInOrder(ui.root, art);
+  }
+  core.show();
+  core.mark('arriving');
+  ui.ui.front.focus({ focusVisible: false } as FocusOptions);
+}
 
 /** S6: the closed book's entrance over G15 `opening`, shown as `arriving` until it lands. */
 function bookEntrance(core: Core, deps: StorybookDeps) {
@@ -209,13 +224,13 @@ function bookMoves(core: Core, deps: StorybookDeps, onKey: (event: Event) => voi
   const relayout = () => {
     if (core.state.kind === 'turning') { pendingResize = true; return; } // G15: a resize mid-turn applies after turned
     pendingResize = false;
-    core.send({ type: 'resize', was, perView: core.perView(), pages: PAGES.length });
+    core.send({ type: 'resize', was, perView: core.perView(), pages: core.pages.length });
     was = core.perView();
     core.show();
   };
   const turn = async (dir: 1 | -1) => {
     const old = core.inView();
-    if (!core.send({ type: 'turn', dir, spreadCount: spreadCount(PAGES.length, core.perView()) })) return;
+    if (!core.send({ type: 'turn', dir, spreadCount: spreadCount(core.pages.length, core.perView()) })) return;
     core.mark(core.state.kind);
     await turnPages(ui.ui.sides, dir, old, core.inView(), deps.reduced);
     if (core.send({ type: 'turned' })) { if (pendingResize) relayout(); core.show(); }
@@ -226,16 +241,11 @@ function bookMoves(core: Core, deps: StorybookDeps, onKey: (event: Event) => voi
     if (core.state.kind !== 'closed') return;
     if (deps.art?.length) await coverOrTimeout(deps.art, STORYBOOK_LOAD.coverWaitMs); // fly the painted cover when it is near
     if (!core.send({ type: 'open' })) return;
+    core.resetPages();
     restore = quietRoom(ui.root, deps.tray);
     document.body.append(ui.root);
     document.addEventListener('keydown', onDocumentKey);
-    if (deps.art) {
-      if (!coverDecoded(deps.art)) ui.root.dataset.coverHold = ''; // fly the code-drawn cover, crossfade after landing
-      void loadArtInOrder(ui.root, deps.art);
-    }
-    core.show();
-    core.mark('arriving');
-    ui.ui.front.focus({ focusVisible: false } as FocusOptions); // the cover is the page's one control: no ring until a key moves focus
+    showArriving(core, deps.art);
     await fly(origin);
   };
   const swingOpen = async () => {
@@ -264,7 +274,7 @@ function bookMoves(core: Core, deps: StorybookDeps, onKey: (event: Event) => voi
 
 /** The page. `open` puts the closed book up; the cover, arrows, swipe and keys do the rest. */
 export function storybookPage(deps: StorybookDeps) {
-  const core = bookView(deps, (id, side, button) => openZoom(id, side, button));
+  const core = bookView(deps, (card, button) => openZoom(card, button));
   const onKey = (event: Event) => {
     const key = (event as KeyboardEvent).key;
     if (key !== 'Escape' && moves.arriving()) { event.preventDefault(); moves.skip(); return; } // any key lands the flight, nothing more
@@ -274,11 +284,11 @@ export function storybookPage(deps: StorybookDeps) {
   };
   const moves = bookMoves(core, deps, onKey), { ui } = core;
   /** The big card opens on the tapped side (Normal, Cozy or Action), with that side's art and option pressed. */
-  const openZoom = (id: string, side: string, button: HTMLButtonElement) => {
-    if (!core.send({ type: 'zoom', id })) return;
+  const openZoom = (card: PageCardData, button: HTMLButtonElement) => {
+    if (!core.send({ type: 'zoom', id: card.id })) return;
     core.paint();
-    deps.zoom.open(zoomCard(id), button, () => { core.send({ type: 'unzoom' }); core.paint(); },
-      { holo: seed => tabHolo(core.look.tab, seed), animate: core.look.animate, side });
+    deps.zoom.open('made' in card ? card.made : zoomCard(card.id), button, () => { core.send({ type: 'unzoom' }); core.paint(); },
+      { holo: seed => tabHolo(core.look.tab, seed), animate: core.look.animate, side: card.side });
   };
   const forward = () => void (core.state.kind === 'opening' ? moves.swingOpen() : moves.turn(1));
   ui.root.addEventListener('keydown', onKey);

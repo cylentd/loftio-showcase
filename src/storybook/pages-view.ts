@@ -4,24 +4,25 @@
 import { BINDER_COPY } from '../binder/binder-copy';
 import type { CardFace } from '../binder/binder-pocket';
 import { el } from '../holo-card/holo-card-faces';
+import { zoomSubjects } from '../holo-card/feature';
 import { originalSubject, type CardSubject } from '../holo-card/holo-card-subject';
-import type { StorybookCard } from './pages';
+import type { PageCardData } from './pages';
 
 export type PageCard = { id: string; side: string; face: CardFace };
 export type PageView = { root: HTMLElement; cards: PageCard[]; dispose(): void };
 
-export function pageView(list: StorybookCard[], index: number, slots: number, face: (subject: CardSubject) => CardFace,
-  onTap: (id: string, side: string, button: HTMLButtonElement) => void): PageView {
+export function pageView(list: PageCardData[], index: number, slots: number, face: (subject: CardSubject) => CardFace,
+  onTap: (card: PageCardData, button: HTMLButtonElement) => void): PageView {
   const root = el('section', 'storybook-page');
   root.dataset.page = String(index);
   const grid = el('div', 'storybook-grid');
   const cards = list.map(card => {
-    const subject = originalSubject(card.id, '', card.variant);
+    const subject = 'made' in card ? zoomSubjects(card.made).normal : originalSubject(card.id, '', card.variant);
     const made = face(subject);
     made.button.dataset.side = card.side;
     made.button.dataset.resident = card.id;
     made.button.setAttribute('aria-label', `${made.button.getAttribute('aria-label') ?? subject.name} ${BINDER_COPY[card.side as keyof typeof BINDER_COPY]}`);
-    made.button.addEventListener('click', event => { if (made.isTap(event as MouseEvent)) onTap(card.id, card.side, made.button); });
+    made.button.addEventListener('click', event => { if (made.isTap(event as MouseEvent)) onTap(card, made.button); });
     const slot = el('div', `storybook-card storybook-card-${card.side}`);
     slot.append(made.button);
     if (card.named) slot.append(el('p', 'storybook-name', subject.name));

@@ -1,4 +1,7 @@
 import type { Ticker } from 'pixi.js';
+import type { ResidentHooks } from '../residents/view';
+import { binderCards, cardSourceFor } from '../binder/binder-cards-model';
+import { cardArtFor } from '../holo-card/card-art';
 import { holoFace } from '../binder/binder-pocket';
 import { BINDER } from '../binder/constants';
 import { liveHoloZoom } from '../holo-card/feature';
@@ -24,7 +27,14 @@ type ShelfRoom = {
   app: { ticker: Pick<Ticker, 'add' | 'remove'> };
   look: Parameters<typeof placeShelf>[2] & { readonly frozen: boolean };
   shell: HTMLElement;
+  residents?: ResidentHooks;
 };
+
+function madeCards(residents: ResidentHooks | undefined) {
+  const kept = residents?.kept?.() ?? [];
+  return binderCards({ originals: [], kept: kept.map(({ record, name }) => cardSourceFor(record, cardArtFor(record), name)),
+    loft: new Set(kept.filter(resident => resident.inLoft).map(resident => resident.record.id)) }, () => null);
+}
 
 export function storybookEntry(search: string, surface: 'game' | 'showcase') {
   if (surface === 'showcase') return { autoOpen: false, artSearch: '' };
@@ -32,7 +42,7 @@ export function storybookEntry(search: string, surface: 'game' | 'showcase') {
   return { autoOpen: new URLSearchParams(search).get('storybook') !== SHELF.look, artSearch: search };
 }
 
-function mountStorybook({ app, look, shell }: ShelfRoom, surface: 'game' | 'showcase'): { ready: () => void; teardown: () => void } | void {
+function mountStorybook({ app, look, shell, residents }: ShelfRoom, surface: 'game' | 'showcase'): { ready: () => void; teardown: () => void } | void {
   const entry = storybookEntry(location.search, surface);
   if (!entry) return;
   const world = shell.querySelector('#world');
@@ -63,7 +73,7 @@ function mountStorybook({ app, look, shell }: ShelfRoom, surface: 'game' | 'show
     app.ticker.add(position);
     const tray = document.querySelector<HTMLElement>('.scene-actions');
     page = storybookPage({ reduced, layout: matchMedia(BINDER.phoneQuery), face: subject => holoFace(subject, true), zoom: liveHoloZoom,
-      trigger, tray, art });
+      trigger, tray, art, readMadeCards: () => madeCards(residents) });
     afterDialogs();
   };
   const teardown = () => {

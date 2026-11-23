@@ -35,6 +35,8 @@ import { bindSessionEvents } from './session-events';
 import { startNotingFresh } from './fresh-start-model';
 import { teardownAll } from '../teardown';
 import { browserRosterWiring } from './roster-wiring';
+import type { KeptResident } from './kept-residents';
+import { keptResidents } from './kept-residents';
 
 const NAMES = {
   local: { registry: 'loftio-residents-v1', tickets: 'loftio-build-tickets-v1', journal: 'loftio-builder-local-pending-v1' },
@@ -53,6 +55,7 @@ export type ResidentOptions = { initialTickets?: number; confirmLabel?: string; 
 export type ResidentHooks = {
   fresh: boolean; storageKey: string; preview: boolean; trigger: HTMLElement; openCreate: () => void; restored: Promise<boolean>;
   extension?: HTMLElement;
+  kept?: () => KeptResident[];
 };
 
 // A visible Turnstile challenge shows here, in the Create panel: the drawer is a modal dialog, so the page behind it is inert.
@@ -145,7 +148,8 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   builder.subscribe(render); render();
   const restored = restore(current, adapter, failure, openPreview);
   void restored.then(loaded => { if (loaded) roster.enable(); }); // a half-loaded room must never replace the snapshot
-  const hooks: ResidentHooks = { fresh, storageKey: names.registry, preview: preview !== null, trigger: chrome.trigger, openCreate: chrome.openCreate, restored, extension: chrome.drawer.content };
+  const hooks: ResidentHooks = { fresh, storageKey: names.registry, preview: preview !== null, trigger: chrome.trigger, openCreate: chrome.openCreate,
+    restored, extension: chrome.drawer.content, kept: () => keptResidents(builder.state().kept, registry.list()) };
   // Teardown, newest first: stop listening, end the form's timers, then stop the builder's live run. Its request
   // stays journaled, so the next visit's resume() collects it.
   const dispose = teardownAll([events, () => form.dispose(), () => builder.dispose()]);

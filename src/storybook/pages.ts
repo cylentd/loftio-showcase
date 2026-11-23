@@ -2,13 +2,19 @@
 // card, in card order), packed into 3x3 pages in list order, and the spread math for one page (phone) or two
 // (desktop) per view. A resident with more alts only adds cards to the list; its row wraps. Pure.
 import { ORIGINAL_SIDES } from '../binder/constants';
+import type { BinderCard } from '../binder/binder-cards-model';
 import { CARD_RESIDENTS, type OriginalId } from '../holo-card/holo-card-model';
 
 export type StorybookCard = { id: OriginalId; side: string; variant: string | null; named: boolean };
+export type PageCardData = StorybookCard | { id: string; side: 'normal'; named: true; made: BinderCard };
 
 /** Every card in the book, in order. `named`: the resident's first card, which carries its name under it. */
 export const storybookCards = (): StorybookCard[] =>
   CARD_RESIDENTS.flatMap(id => ORIGINAL_SIDES.map((side, i) => ({ id, side: side.key, variant: side.variant, named: i === 0 })));
+
+export const collectionCards = (made: readonly BinderCard[]): PageCardData[] => [
+  ...storybookCards(), ...made.map((card): PageCardData => ({ id: card.id, side: 'normal', named: true, made: card })),
+];
 
 export const spreadCount = (pages: number, perView: number): number => Math.ceil(pages / perView);
 
