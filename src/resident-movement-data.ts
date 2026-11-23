@@ -6,6 +6,11 @@ export const LANDING = { touchDown: 0.45, squashX: 0.1, squashY: 0.14 };
 export const SEATING_DEPTH = roomData({ chair: 658, table: 690, lounge: 620, ottoman: 645 }, { chair: 515, table: 525, lounge: 500, ottoman: 545 });
 export const CHAIR_SUPPORT = roomData({ headroom: 170 }, { headroom: 0 });
 export const SURFACE_SPLIT = roomData({ y: 570, x: 940 }, { y: 420, x: 650 });
+/** How far from a loft deck a release still lands on it, in world px. Desktop has a mouse, so none (0).
+ *  Portrait is a finger: `side` is the 44 css px minimum touch target (Apple HIG) over the portrait scale 0.625 (844 px window
+ *  over the 1350 px world) = 70. `below` adds the 35 px the feet ride under the finger when a resident is held by its body
+ *  (half its ~69 px drawn height at the loft: PORTRAIT_DEPTH height at y 330), so 105. Below SURFACE_SPLIT it is ground anyway. */
+export const LOFT_CATCH = roomData({ below: 0, side: 0 }, { below: 105, side: 70 });
 const desktopSurfaces = {
   window: { back: 685, front: 725, backLeft: 1400, backRight: 1830, frontLeft: 1380, frontRight: 1840 },
   "bed-left": { back: 332, front: 358, backLeft: 420, backRight: 610, frontLeft: 400, frontRight: 635 },

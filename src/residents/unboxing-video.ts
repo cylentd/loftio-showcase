@@ -1,4 +1,12 @@
 export type VideoPhase = 'ready' | 'loading' | 'playing' | 'retry' | 'revealed' | 'closed';
+type MediaHandlers = Record<'ended' | 'error' | 'playing', () => void>;
+/** Wires the media end, error and playing events; the returned function removes them. */
+function listenMedia(video: HTMLVideoElement, handlers: MediaHandlers) {
+  const names = Object.keys(handlers) as (keyof MediaHandlers)[];
+  for (const name of names) video.addEventListener(name, handlers[name]);
+  return () => { for (const name of names) video.removeEventListener(name, handlers[name]); };
+}
+
 export function revealVideo(video: HTMLVideoElement, enabled: () => boolean, changed: (phase: VideoPhase) => void, handoff?: () => Promise<void>) {
   let phase: VideoPhase = 'ready', attempt = 0;
   let frame: number | undefined;
@@ -30,9 +38,7 @@ export function revealVideo(video: HTMLVideoElement, enabled: () => boolean, cha
     if (phase !== 'playing' && phase !== 'loading') return;
     attempt += 1; cancelFrame(); video.pause(); set('retry');
   };
-  video.addEventListener('ended', ended);
-  video.addEventListener('error', failed);
-  video.addEventListener('playing', playing);
+  const unlisten = listenMedia(video, { ended, error: failed, playing });
   return {
     play() {
       if (phase !== 'ready' && phase !== 'retry') return;
@@ -54,8 +60,7 @@ export function revealVideo(video: HTMLVideoElement, enabled: () => boolean, cha
     dispose() {
       if (phase === 'closed') return;
       attempt += 1; cancelFrame(); set('closed'); video.pause(); video.muted = true;
-      video.removeEventListener('ended', ended); video.removeEventListener('error', failed);
-      video.removeEventListener('playing', playing);
+      unlisten();
       video.removeAttribute('src'); video.load();
     },
   };

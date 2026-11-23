@@ -27,20 +27,45 @@ function frameLoop(step: () => boolean) {
   };
 }
 
+/** The record button that opens the song list. */
+function makeDisc(): HTMLButtonElement {
+  const disc = document.createElement("button"); disc.type = "button"; disc.className = "now-playing-disc room-action";
+  disc.setAttribute("aria-label", MUSIC.chooseSong); disc.title = MUSIC.chooseSong;
+  disc.setAttribute("aria-haspopup", "menu"); disc.setAttribute("aria-controls", LIST_ID); disc.setAttribute("aria-expanded", "false");
+  disc.append(icon("note"));
+  return disc;
+}
+
+/** The manual-popover menu that holds the song rows. */
+function makeList(rows: HTMLElement[]): HTMLElement {
+  const list = document.createElement("div"); list.id = LIST_ID; list.className = "track-list";
+  list.setAttribute("role", "menu"); list.setAttribute("aria-label", MUSIC.songList); list.popover = "manual";
+  list.append(...rows);
+  return list;
+}
+
+/** The list's keyboard handler: arrows move, Enter or Space pick, Escape closes. */
+function listKeyHandler(picker: TrackPicker, pick: (index: number) => void, close: (returnFocus: boolean) => void, render: () => void) {
+  return (event: KeyboardEvent) => {
+    const action = picker.key(event.key);
+    if (action.kind === "none") return;
+    // Tab keeps its default: focus goes back to the disc first, so Tab carries on from there to the next control.
+    if (event.key !== "Tab") { event.preventDefault(); event.stopPropagation(); }
+    if (action.kind === "pick") pick(action.index);
+    else if (action.kind === "close") close(true);
+    else render();
+  };
+}
+
 /** The record beside the song title, as a button that opens the song list above it.
  *  Picking a song selects it in the one Playlist (Settings → Sound and the title follow from there) and calls `onPick`, which starts the music.
  *  The list is a manual popover, so it sits in the top layer above the room and this module decides when it closes. */
 export function makeTrackPicker<T extends Track>(playlist: Playlist<T>, onPick: () => void): { disc: HTMLButtonElement; list: HTMLElement } {
   const tracks = playlist.all;
   const picker = new TrackPicker(tracks.length);
-  const disc = document.createElement("button"); disc.type = "button"; disc.className = "now-playing-disc room-action";
-  disc.setAttribute("aria-label", MUSIC.chooseSong); disc.title = MUSIC.chooseSong;
-  disc.setAttribute("aria-haspopup", "menu"); disc.setAttribute("aria-controls", LIST_ID); disc.setAttribute("aria-expanded", "false");
-  disc.append(icon("note"));
-  const list = document.createElement("div"); list.id = LIST_ID; list.className = "track-list";
-  list.setAttribute("role", "menu"); list.setAttribute("aria-label", MUSIC.songList); list.popover = "manual";
+  const disc = makeDisc();
   const rows = tracks.map(songRow);
-  list.append(...rows);
+  const list = makeList(rows);
 
   const currentIndex = () => tracks.indexOf(playlist.current);
   const place = () => {
@@ -79,15 +104,7 @@ export function makeTrackPicker<T extends Track>(playlist: Playlist<T>, onPick: 
     if (picker.key(event.key).kind !== "open") return;
     event.preventDefault(); picker.show(currentIndex()); render();
   });
-  list.addEventListener("keydown", (event) => {
-    const action = picker.key(event.key);
-    if (action.kind === "none") return;
-    // Tab keeps its default: focus goes back to the disc first, so Tab carries on from there to the next control.
-    if (event.key !== "Tab") { event.preventDefault(); event.stopPropagation(); }
-    if (action.kind === "pick") pick(action.index);
-    else if (action.kind === "close") close(true);
-    else render();
-  });
+  list.addEventListener("keydown", listKeyHandler(picker, pick, close, render));
   rows.forEach((row, index) => row.addEventListener("click", () => pick(index)));
   // A press anywhere but the list or the disc closes it; the disc's own click already toggles.
   document.addEventListener("pointerdown", (event) => {

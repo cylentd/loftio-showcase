@@ -18,6 +18,7 @@ import { MAX_RESOLUTION } from "./tune";
 import { SceneSettings } from "./scene-settings";
 import { installSceneSettings } from "./scene-settings-view";
 import { installResidentControls } from "./resident-controls";
+import { installCarryScroll } from "./carry-scroll";
 import { FavoriteSpots } from "./favorite-spots";
 import { installPostcard } from "./postcard";
 import { installLighting } from "./lighting-view";
@@ -84,6 +85,7 @@ async function start(intro: ReturnType<typeof installIntro>, features: readonly 
     () => { if (!look.frozen) scene.puff.play("nod"); });
   const runtime = new Runtime(scene, look, overlay, params.has("busy"), settings);
   const residentControls = installResidentControls(scene, runtime, overlay, settings);
+  installCarryScroll(scroller, worldEl);
   const applySettings = () => {
     runtime.syncWander();
     runtime.update(0);

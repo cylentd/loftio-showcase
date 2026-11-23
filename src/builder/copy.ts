@@ -37,6 +37,7 @@ export const COPY = {
   preparation: 'Your image is saved. Retry preparing its preview without creating another image.',
   invalid: 'Choose a valid option in each field.',
   cap: 'The mock session limit has been reached. Reload to start a new free session.',
+  expressionTooLarge: 'The new look was too large to send. Your resident is kept as it is.',
   busy: 'A generation is already in progress.',
   safety: 'The image request was rejected. No automatic retry was made.',
   aborted: 'Generation cancelled.',

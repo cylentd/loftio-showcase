@@ -4,6 +4,17 @@ export const ANCILLARY_CHUNK_NAME = /^[a-z][A-Za-z]{3}$/;
 export const MAX_FILE_BYTES = 2 * 1024 * 1024;
 export const MAX_PNG_BYTES = 1024 * 1024;
 export const MAX_DIMENSION = 2048;
+// Viewing your own resident is not bound by the invitation caps above (VISITS.md, "Owned art"). The portrait is drawn with its longest
+// side at most this many pixels: the dialog shows it at screen size, so more pixels only cost memory. 1024 is the builder's image size.
+export const VIEW_MAX_SIDE = 1024;
+// The copy of an owned resident that can be SENT in a file tries these longest sides in order and keeps the first PNG at or under
+// MAX_PNG_BYTES. The first step is "as drawn" (nothing is enlarged); the rest halve the area about every step.
+export const INVITE_SIDES = [MAX_DIMENSION, 1024, 768, 512] as const;
+// Fetch and data-URL bounds for the owner's own art. The builder never stores more than IMAGE_MAX_BYTES (builder/constants.ts);
+// base64 text is 4/3 of the bytes, and storage-contract.ts allows twice the bytes as text.
+export const OWNED_MAX_BYTES = 16 * 1024 * 1024;
+// A data URL carries base64, 4 characters per 3 bytes: the longest payload that still decodes to at most OWNED_MAX_BYTES.
+export const OWNED_MAX_BASE64 = Math.ceil(OWNED_MAX_BYTES * 4 / 3);
 export const MAX_NAME = 40;
 export const MAX_GUESTS = 4;
 export const DATABASE = 'loftio-visits-v1';

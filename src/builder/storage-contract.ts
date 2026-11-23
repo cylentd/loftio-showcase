@@ -1,6 +1,7 @@
-import type { SavedCharacter } from './records.ts';
-import { readPngInfo } from './png.ts';
-import { IMAGE_MAX_BYTES, IMAGE_MAX_SIDE } from './constants.ts';
+import { parseLoadout } from '../loadout/loadout-model.ts';
+import { parseFollowUp } from './follow-up-model.ts';
+import { ALT_REFERENCES, validImage } from './records.ts';
+import type { AltReference, SavedAlt, SavedCharacter } from './records.ts';
 
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every(item => typeof item === 'string');
@@ -20,22 +21,8 @@ function validResolved(value: unknown) {
   return object(value.palette) && strings(value.palette.colors);
 }
 
-export function validImage(value: unknown) {
-  if (object(value) && value.mime === 'image/webp') {
-    const match = typeof value.url === 'string' && /^\/loftio-builder-api\/artifacts\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/preview\.webp$/.exec(value.url);
-    return !!match && value.schemaVersion === 2 && value.originalUrl === `/loftio-builder-api/artifacts/${match[1]}/original.png`
-      && value.hasAlphaChannel === true && Number.isInteger(value.bytes) && Number(value.bytes) > 0 && Number(value.bytes) <= IMAGE_MAX_BYTES
-      && [value.width, value.height].every(side => Number.isInteger(side) && Number(side) > 0 && Number(side) <= IMAGE_MAX_SIDE);
-  }
-  if (!object(value) || value.mime !== 'image/png' || typeof value.base64 !== 'string'
-    || value.base64.length > IMAGE_MAX_BYTES * 2 || typeof value.hasAlphaChannel !== 'boolean') return false;
-  try {
-    const bytes = Uint8Array.from(atob(value.base64), character => character.charCodeAt(0));
-    const info = readPngInfo(bytes);
-    return !!info && bytes.length <= IMAGE_MAX_BYTES && info.width === value.width && info.height === value.height
-      && info.width <= IMAGE_MAX_SIDE && info.height <= IMAGE_MAX_SIDE;
-  } catch { return false; }
-}
+// validImage lives in records.ts (a model file) so parseFollowUp can use it without a model importing a contract.
+export { validImage };
 
 export function validGeneration(value: unknown) {
   return object(value) && textFields(value, ['id', 'requestId', 'promptVersion', 'prompt', 'providerId', 'modelId', 'createdAt'])
@@ -52,7 +39,46 @@ function validCharacter(value: unknown) {
     && (value.identityNotes === null || typeof value.identityNotes === 'string');
 }
 
+// A bad loadout is dropped and nothing else about the record: the controller's load() backfills a missing one, and one
+// resident's loadout must never fail the whole list. Validity is the loadout model's call, not this file's.
+function readLoadout(record: SavedCharacter): SavedCharacter {
+  if (!('rumble' in record)) return record;
+  const { rumble, ...rest } = record;
+  const loadout = parseLoadout(rumble);
+  return loadout ? { ...rest, rumble: loadout } : rest;
+}
+
+// A bad expression slot is dropped alone, like a bad loadout: the resident then shows its idle only.
+function readExpression(record: SavedCharacter): SavedCharacter {
+  if (!('expression' in record)) return record;
+  const { expression, ...rest } = record;
+  const slot = parseFollowUp(expression);
+  return slot ? { ...rest, expression: slot } : rest;
+}
+
+/** A stored alt, or null when malformed (a bad kind, slot or references list). Never throws. */
+function parseAlt(value: unknown): SavedAlt | null {
+  try {
+    if (!object(value) || value.schemaVersion !== 1 || (value.kind !== 'A' && value.kind !== 'B')) return null;
+    const slot = parseFollowUp(value.slot);
+    if (!slot) return null;
+    const alt: SavedAlt = { schemaVersion: 1, kind: value.kind, slot };
+    if (value.references === undefined) return alt;
+    const refs = value.references;
+    if (!Array.isArray(refs) || !refs.every(ref => (ALT_REFERENCES as readonly unknown[]).includes(ref))) return null;
+    return { ...alt, references: refs as AltReference[] };
+  } catch { return null; }
+}
+
+// A bad alt is dropped alone, like a bad expression: the resident then shows no alt, and nothing else about it changes.
+function readAlt(record: SavedCharacter): SavedCharacter {
+  if (!('alt' in record)) return record;
+  const { alt, ...rest } = record;
+  const parsed = parseAlt(alt);
+  return parsed ? { ...rest, alt: parsed } : rest;
+}
+
 export function readSavedCharacters(input: unknown): SavedCharacter[] {
   if (!Array.isArray(input) || !input.every(validCharacter)) throw new Error('Invalid saved residents');
-  return input as SavedCharacter[];
+  return (input as SavedCharacter[]).map(record => readAlt(readExpression(readLoadout(record))));
 }

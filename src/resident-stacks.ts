@@ -39,7 +39,8 @@ export class ResidentStacks {
       if (r === resident || r.walking || r.climbing) return false;
       const pile = this.piles.find(p => p.members.includes(r));
       if (pile) return pile.members.at(-1) === r;
-      return r.holder === null && r.seatSupport.lift === 0 && r.pos.y >= PLACEMENT.back && r.pos.y <= PLACEMENT.front;
+      // A resident under a pointer is the hand's: a pile built on it would carry the whole pile away with the drag.
+      return r.holder === null && !r.touched && r.seatSupport.lift === 0 && r.pos.y >= PLACEMENT.back && r.pos.y <= PLACEMENT.front;
     });
   }
 

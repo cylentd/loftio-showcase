@@ -21,6 +21,8 @@ class ResidentControls {
   private grip: Grip<Held> = NONE;
   private send(event: GripEvent<Held>): Grip<Held> { return this.grip = next(this.grip, event); }
   private suppressClick: HTMLButtonElement | null = null;
+  /** The pointerdown that put a carried resident back, so the button it landed on may still take that finger. */
+  private takeover: { event: PointerEvent; resident: Resident } | null = null;
   private scene: Scene;
   private runtime: Runtime;
   private overlay: Overlay;
@@ -54,21 +56,17 @@ class ResidentControls {
     button.setAttribute("aria-describedby", "resident-help");
     button.setAttribute("aria-pressed", "false");
     button.addEventListener("pointerdown", (event) => {
-      if (this.secondContact(event)) return;
-      if (event.button !== 0 || !event.isPrimary || this.grip.kind !== "none") return;
+      this.secondContact(event);
+      // The finger that just put a carried resident back may be a second finger, so it is not primary: it still picks up
+      // another resident. On the resident it just put back it does nothing, as before.
+      const from = this.takeover?.event === event ? this.takeover.resident : null;
+      if (from === resident) return;
+      if (event.button !== 0 || (!event.isPrimary && !from) || this.grip.kind !== "none") return;
       button.dataset.input = "pointer";
       const client = { x: event.clientX, y: event.clientY };
       if (!this.drag.begin(resident.cast.id, event.pointerId, client, this.world(client), resident.pos)) return;
-      resident.touch(true); this.draw(resident);
-      if (event.pointerType === "touch") vibrate("touch", this.runtime.look.frozen);
-      const { caught, origin } = this.take(resident);
-      this.runtime.play?.sample(this.world(client), event.timeStamp, true);
-      this.suppressClick = null;
-      const grip = this.send({ type: "press", pointer: event.pointerId, caught, item: { resident, button, origin } });
-      if (grip.kind === "carried") this.pickUp(grip);
-      event.stopPropagation();
-      // A pointer that is already gone throws here; nothing would ever release the grip, so end it now.
-      try { button.setPointerCapture(event.pointerId); } catch { this.cancel(); }
+      // The hand grab now exists; whatever throws before the grip does must not leave it behind, or no later press could start.
+      try { this.press(event, resident, button, client); } catch (error) { this.abandon(event.pointerId, resident); throw error; }
     });
     button.addEventListener("pointermove", (event) => this.move(event));
     button.addEventListener("pointerup", (event) => this.finishPointer(event));
@@ -84,12 +82,34 @@ class ResidentControls {
     button.addEventListener("blur", () => { delete button.dataset.input; if (this.keyGrip(button)) this.cancel(); });
   }
 
-  /** A new contact while a pointer holds a resident cancels the hold; true when it did. */
-  private secondContact(event: PointerEvent): boolean {
-    const pointer = this.grip.kind === "none" ? null : this.grip.pointer;
-    if (pointer === null || event.pointerId === pointer) return false;
+  /** Everything a primary press does once its hand grab exists. What play can throw runs before the catch, so the catch is
+   *  the last thing that can change the resident and the grip follows it at once. */
+  private press(event: PointerEvent, resident: Resident, button: HTMLButtonElement, client: Point): void {
+    resident.touch(true); this.draw(resident);
+    if (event.pointerType === "touch") vibrate("touch", this.runtime.look.frozen);
+    this.runtime.play?.sample(this.world(client), event.timeStamp, true);
+    const { caught, origin } = this.take(resident);
+    this.suppressClick = null;
+    const grip = this.send({ type: "press", pointer: event.pointerId, caught, item: { resident, button, origin } });
+    if (grip.kind === "carried") this.pickUp(grip);
+    event.stopPropagation();
+    // A pointer that is already gone throws here; nothing would ever release the grip, so end it now.
+    try { button.setPointerCapture(event.pointerId); } catch { this.cancel(); }
+  }
+
+  /** A press that threw before it reached a grip: end the hand grab and the touch, or put a caught resident back. */
+  private abandon(pointer: number, resident: Resident): void {
+    if (this.grip.kind !== "none") { this.cancel(); return; }
+    this.drag.finish(pointer, true);
+    resident.touch(false);
+  }
+
+  /** A new contact while a pointer holds a resident cancels the hold. */
+  private secondContact(event: PointerEvent): void {
+    const grip = this.grip;
+    if (grip.kind === "none" || grip.pointer === null || event.pointerId === grip.pointer) return;
     this.cancel();
-    return true;
+    this.takeover = { event, resident: grip.item.resident };
   }
 
   /** The grip, when the keyboard carries the resident behind this button. */

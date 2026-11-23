@@ -6,6 +6,11 @@ var CAP_KEY_TTL_SECONDS = 172800;
 var IMAGE_SIZE = "1024x1024";
 var OPENAI_EDITS_URL = "https://api.openai.com/v1/images/edits";
 var TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+var OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+var NAME_PACK_TIMEOUT_MS = 15e3;
+var FOLLOW_UP_TOKEN_TTL_MS = 3e5;
+var FOLLOW_UP_STORE_MARGIN_MS = 5e3;
+var FOLLOW_UP_KEY_PREFIX = "loftio:follow-up:";
 var ONLINE_LIMITS = {
 	sessionCap: Number.MAX_SAFE_INTEGER,
 	maxConcurrent: 4,
@@ -15,6 +20,7 @@ var ENV = {
 	openaiKey: "OPENAI_API_KEY",
 	model: "LOFTIO_IMAGE_MODEL",
 	quality: "LOFTIO_IMAGE_QUALITY",
+	nameModel: "LOFTIO_NAME_MODEL",
 	redisUrl: "UPSTASH_REDIS_REST_URL",
 	redisToken: "UPSTASH_REDIS_REST_TOKEN",
 	redisUrlMarketplace: "KV_REST_API_URL",
@@ -113,6 +119,307 @@ var ProviderError = class extends Error {
 		this.kind = kind;
 	}
 };
+// game/src/loadout/loadout-data.ts
+/** Combat traits in their fixed order; a roll maps one draw over this list, so the order is part of the contract. */
+var TRAITS = [
+	"springy",
+	"heavy",
+	"piercing"
+];
+/**
+* The eleven synergies in a fixed order; a roll maps one draw over this list, so the order is part of the contract.
+* Kind and shines-vs per the design table (owner decisions 2026-11-19); the ratings are estimates until the trait sim measures them.
+*/
+var SYNERGIES = [
+	{
+		id: "seed-burst",
+		kind: "burst",
+		shinesVs: ["boss"]
+	},
+	{
+		id: "piercing-beam",
+		kind: "burst",
+		shinesVs: ["few", "crowd"]
+	},
+	{
+		id: "spread-shot",
+		kind: "burst",
+		shinesVs: ["few", "crowd"]
+	},
+	{
+		id: "shockwave",
+		kind: "burst",
+		shinesVs: ["crowd"]
+	},
+	{
+		id: "ricochet",
+		kind: "burst",
+		shinesVs: ["few", "crowd"]
+	},
+	{
+		id: "chain-lightning",
+		kind: "burst",
+		shinesVs: ["few", "crowd"]
+	},
+	{
+		id: "poison-cloud",
+		kind: "over-time",
+		shinesVs: ["boss"]
+	},
+	{
+		id: "power-field",
+		kind: "zone",
+		shinesVs: ["any"]
+	},
+	{
+		id: "booster",
+		kind: "boost",
+		shinesVs: ["any"]
+	},
+	{
+		id: "mend",
+		kind: "heal",
+		shinesVs: ["any"]
+	},
+	{
+		id: "bubble-guard",
+		kind: "guard",
+		shinesVs: ["any"]
+	}
+];
+/**
+* The ten specials in a fixed order (owner yes 2026-11-19). The design table rates synergies only; the shines-vs
+* values are the conductor's, set 2026-11-19, until the trait sim measures them.
+*/
+var SPECIALS = [
+	{
+		id: "meteor",
+		kind: "big-hit",
+		shinesVs: ["boss", "crowd"]
+	},
+	{
+		id: "stampede",
+		kind: "big-hit",
+		shinesVs: ["few", "crowd"]
+	},
+	{
+		id: "big-plush",
+		kind: "power-up",
+		shinesVs: ["boss"]
+	},
+	{
+		id: "overdrive",
+		kind: "power-up",
+		shinesVs: ["any"]
+	},
+	{
+		id: "triple-trouble",
+		kind: "power-up",
+		shinesVs: ["few", "crowd"]
+	},
+	{
+		id: "picnic",
+		kind: "team-boost",
+		shinesVs: ["any"]
+	},
+	{
+		id: "pep-rally",
+		kind: "team-boost",
+		shinesVs: ["boss"]
+	},
+	{
+		id: "bumpers",
+		kind: "chaos",
+		shinesVs: ["crowd"]
+	},
+	{
+		id: "freeze-frame",
+		kind: "chaos",
+		shinesVs: ["any"]
+	},
+	{
+		id: "gravity-well",
+		kind: "chaos",
+		shinesVs: ["crowd"]
+	}
+];
+new RegExp(`^[a-z0-9-]{1,32}$`);
+/** Letters, combining marks, digits, space, apostrophe, curly apostrophe and hyphen: no markup, no emoji, no format characters. */
+var NAME_PATTERN = /^[\p{L}\p{M}\p{Nd} '’-]+$/u;
+/** Characters a reader cannot see (Hangul filler, variation selectors, the combining grapheme joiner, zero-width marks): refused. */
+var NAME_INVISIBLE = /\p{Default_Ignorable_Code_Point}/u;
+/** A name must show at least one letter or digit: spaces, apostrophes and hyphens alone are not a name. */
+var NAME_VISIBLE = /[\p{L}\p{Nd}]/u;
+var NAME_MARK_FLOOD = new RegExp(`\\p{M}{3,}`, "u");
+// game/src/loadout/loadout-blocklist-data.ts
+/** Whole words: a name is blocked when any of its words, after folding, equals one of these. A word that merely contains one passes (Scunthorpe, Classic, Cocktail). */
+var BLOCKED_WORDS = [
+	"nazi",
+	"nazis",
+	"hitler",
+	"kkk",
+	"swastika",
+	"nigger",
+	"nigga",
+	"faggot",
+	"fag",
+	"kike",
+	"spic",
+	"chink",
+	"tranny",
+	"retard",
+	"rape",
+	"rapist",
+	"fuck",
+	"fucker",
+	"fucking",
+	"shit",
+	"bitch",
+	"cunt",
+	"whore",
+	"slut",
+	"cock",
+	"pussy",
+	"dildo",
+	"porn",
+	"mario",
+	"luigi",
+	"zelda",
+	"sonic",
+	"elmo",
+	"shrek",
+	"barbie",
+	"batman",
+	"superman",
+	"naruto",
+	"goku"
+];
+/** Strings checked against the whole name with spaces, hyphens and apostrophes removed, so "Pika chu" and "Hello-Kitty" are caught. Long and distinctive only. */
+var BLOCKED_RUNS = [
+	"nigger",
+	"nigga",
+	"faggot",
+	"hitler",
+	"pikachu",
+	"pokemon",
+	"mickeymouse",
+	"hellokitty",
+	"nintendo",
+	"disney",
+	"spongebob",
+	"minecraft",
+	"fortnite",
+	"roblox"
+];
+/** Number and symbol swaps folded to letters before matching, so "n1gger" and "Mari0" are the words they imitate. */
+var FOLD_SWAPS = {
+	"0": "o",
+	"1": "i",
+	"3": "e",
+	"4": "a",
+	"5": "s",
+	"7": "t",
+	"@": "a",
+	$: "s"
+};
+// game/src/loadout/loadout-blocklist-model.ts
+var BLOCKED_WORD_SET = new Set(BLOCKED_WORDS);
+var COMBINING_MARKS = /\p{M}/gu;
+var NOT_A_LETTER = /[^a-z]+/g;
+var SWAPPED = /[0134577@$]/g;
+/** Lowercase, accents removed, number-for-letter swaps undone: "Hítler" and "n1gger" read as the words they imitate. */
+var fold = (name) => name.normalize("NFKD").replace(COMBINING_MARKS, "").toLowerCase().replace(SWAPPED, (char) => FOLD_SWAPS[char] ?? char);
+var NOT_A_WORD_CHAR = /[^a-z'’-]+/;
+var JOINERS = /['’-]/g;
+var SPACES = /\s+/u;
+/** Scripts with letters that look like Latin ones. A word drawing on two of these is a disguise, not a language. */
+var LOOKALIKE_SCRIPTS = [
+	/\p{Script=Latin}/u,
+	/\p{Script=Cyrillic}/u,
+	/\p{Script=Greek}/u,
+	/\p{Script=Armenian}/u,
+	/\p{Script=Cherokee}/u
+];
+/** True when one space-separated word mixes letters from more than one script: "nаzi" with a Cyrillic а. A whole-word non-Latin name passes. */
+var mixesScripts = (name) => name.split(SPACES).some((word) => LOOKALIKE_SCRIPTS.filter((script) => script.test(word)).length > 1);
+/** True when the name mixes scripts in a word, holds a blocked word, or holds a blocked run once its separators are removed. */
+var isNameBlocked = (name) => {
+	if (mixesScripts(name)) return true;
+	const folded = fold(name);
+	if (folded.split(NOT_A_LETTER).some((word) => BLOCKED_WORD_SET.has(word))) return true;
+	if (folded.split(NOT_A_WORD_CHAR).some((word) => BLOCKED_WORD_SET.has(word.replace(JOINERS, "")))) return true;
+	const run = folded.replace(NOT_A_LETTER, "");
+	return BLOCKED_RUNS.some((blocked) => run.includes(blocked));
+};
+// game/src/loadout/loadout-name-model.ts
+var DEFAULT_CHECK = { isBlocked: isNameBlocked };
+/** Only the ids this build knows are read: an unknown key in a pack is ignored, never kept. */
+var NAMED_IDS = [...SYNERGIES, ...SPECIALS].map((entry) => entry.id);
+/** The cleaned name, or null for one that fails any check. A blocklist that throws blocks the name. */
+var cleanName = (raw, isBlocked) => {
+	if (typeof raw !== "string") return null;
+	const name = raw.normalize("NFC").trim();
+	const length = [...name].length;
+	if (length < 1 || length > 24 || !NAME_PATTERN.test(name)) return null;
+	if (NAME_INVISIBLE.test(name) || NAME_MARK_FLOOD.test(name) || !NAME_VISIBLE.test(name)) return null;
+	try {
+		return isBlocked(name) ? null : name;
+	} catch {
+		return null;
+	}
+};
+/** The pack with every good entry, null when the value is no pack or no entry survives. Never throws. */
+var parseNamePack = (value, options = DEFAULT_CHECK) => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+	try {
+		const pack = {};
+		for (const id of NAMED_IDS) {
+			if (!Object.hasOwn(value, id)) continue;
+			const name = cleanName(value[id], options.isBlocked);
+			if (name !== null) pack[id] = name;
+		}
+		return Object.keys(pack).length > 0 ? pack : null;
+	} catch {
+		return null;
+	}
+};
+// game/src/builder/server/name-pack-prompt.ts
+var IDS = [...SYNERGIES, ...SPECIALS].map((entry) => entry.id);
+/** The prompt for one resident. Every id appears quoted, so the reply's keys are the ids the parser reads. */
+function renderNamePrompt(resolved) {
+	const { creature, personality, signatureDetail } = resolved;
+	return [
+		"You name the moves of a small cozy game character.",
+		`The character is a ${creature.label}. Personality: ${personality.label}. Signature detail: ${signatureDetail.label}.`,
+		"Give each move id below one short, playful name in that character's voice.",
+		`Rules: at most 24 characters, letters, digits, spaces, apostrophes and hyphens only, no emoji, no brand or franchise names, nothing rude, family friendly.`,
+		`Reply with one JSON object whose keys are exactly these ids and whose values are the names: ${IDS.map((id) => `"${id}"`).join(", ")}.`
+	].join("\n");
+}
+// game/src/builder/server/name-pack.ts
+async function requestNamePack(provider, resolved, timeoutMs = NAME_PACK_TIMEOUT_MS, outer) {
+	const controller = new AbortController();
+	const stop = () => controller.abort();
+	outer?.addEventListener("abort", stop, { once: true });
+	let timer;
+	const expired = new Promise((resolve) => {
+		timer = setTimeout(() => {
+			stop();
+			resolve(null);
+		}, timeoutMs);
+	});
+	try {
+		return parseNamePack(await Promise.race([provider.generate({
+			prompt: renderNamePrompt(resolved),
+			signal: controller.signal
+		}), expired]));
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(timer);
+		outer?.removeEventListener("abort", stop);
+	}
+}
 var option = (id, label, prompt) => ({
 	id,
 	label,
@@ -400,7 +707,109 @@ function crc32(bytes) {
 	for (const byte of bytes) crc = (CRC_TABLE[(crc ^ byte) & 255] ?? 0) ^ crc >>> 8;
 	return (crc ^ 4294967295) >>> 0;
 }
+var IMAGE_MAX_SIDE = 4096;
+var EXPRESSION_ID = "expression";
+var FOLLOW_UP_IDS = [EXPRESSION_ID, "alt"];
+var EXPRESSION_MAX_SIDE = IMAGE_MAX_SIDE;
+var ALT_MAX_SIDE = 1536;
 var REPLAY_ONLY_HEADER = "x-loftio-replay-only";
+// game/src/builder/alt-prompt-data.ts
+var ALT_PROMPT_VERSION = "alt-v1";
+var ALT_PROMPT_BLOCKS = {
+	identity: "The attached images are references for identity only: keep this character's colours, markings, proportions, features and art style exactly, and draw nothing else from them.",
+	novelty: "Draw a new illustration of the same character with a new pose, a new expression, a new camera angle and new lighting; do not copy the framing of the references.",
+	kind: {
+		A: "Show a dynamic action moment: the character mid-motion, full of energy, with a strong sense of movement.",
+		B: "Show a calm everyday moment: the character relaxed in a small quiet scene, at ease and unhurried."
+	},
+	trait: {
+		springy: "The character is light on its feet and bouncy.",
+		heavy: "The character is sturdy and weighty, solid on the ground.",
+		piercing: "The character is sharp and focused, with a keen gaze."
+	},
+	element: {
+		bloom: "Let soft leaves and petals colour the scene.",
+		splash: "Let water and bright droplets colour the scene.",
+		ember: "Let warm glowing embers colour the scene.",
+		spark: "Let crackling sparks of light colour the scene.",
+		chaos: "Let swirling, unpredictable shapes colour the scene."
+	},
+	background: "Paint a full, opaque background that suits the moment, with no transparency, text or borders.",
+	output: "Generate exactly one illustration of this one character: not a sheet, a grid or several panels."
+};
+/** Order the single blocks are joined in; the kind, trait and element blocks are picked by the context and sit after `novelty`. */
+var ALT_PROMPT_ORDER = [
+	"identity",
+	"novelty",
+	"kind",
+	"trait",
+	"element",
+	"background",
+	"output"
+];
+// game/src/builder/alt-prompt.ts
+/**
+* The alt prompt: identity comes from the reference images alone. The kind, trait and element each pick one fixed block, so no
+* free text reaches the prompt. The kind arrives in the context; this never derives it.
+*/
+function renderAltPrompt(ctx) {
+	const picked = {
+		...ALT_PROMPT_BLOCKS,
+		kind: ALT_PROMPT_BLOCKS.kind[ctx.kind],
+		trait: ALT_PROMPT_BLOCKS.trait[ctx.trait],
+		element: ALT_PROMPT_BLOCKS.element[ctx.element]
+	};
+	return ALT_PROMPT_ORDER.map((key) => picked[key]).join("\n\n");
+}
+// game/src/builder/expression-prompt-data.ts
+var EXPRESSION_PROMPT_VERSION = "expression-v1";
+var EXPRESSION_PROMPT_BLOCKS = {
+	identity: "The attached idle image is the only reference and the sole source of this character's identity: keep its colours, markings, proportions, features and art style exactly.",
+	framing: "Keep the same framing, the same size and the same position as the idle image, so the two images can be swapped one for the other without the character moving.",
+	expression: "Show a happy, welcoming expression: a warm greeting face, as if glad to see a friend arrive. Change only the face and, at most, a small relaxed shift of the pose.",
+	personality: "Let this personality colour the welcome: {{personality}}.",
+	background: "Use a fully transparent background with no ground, shadow, scenery or text.",
+	output: "Generate exactly one image of this one character: not a sheet, a grid or several poses."
+};
+/** Order the blocks are joined in. */
+var EXPRESSION_PROMPT_ORDER = [
+	"identity",
+	"framing",
+	"expression",
+	"personality",
+	"background",
+	"output"
+];
+// game/src/builder/expression-prompt.ts
+/** The expression prompt: identity comes from the idle image alone; only the personality text is filled in (catalog text, never user text). */
+function renderExpressionPrompt(resolved) {
+	const slots = { personality: resolved.personality.prompt };
+	return EXPRESSION_PROMPT_ORDER.map((key) => EXPRESSION_PROMPT_BLOCKS[key]).join("\n\n").replace(/\{\{(\w+)\}\}/g, (match, name) => slots[name] ?? match);
+}
+// game/src/builder/follow-ups.ts
+var FOLLOW_UPS = [{
+	id: EXPRESSION_ID,
+	renderPrompt: (ctx) => renderExpressionPrompt(ctx.resolved),
+	promptVersion: EXPRESSION_PROMPT_VERSION,
+	references: ["idle"],
+	alphaRequired: true,
+	maxSide: EXPRESSION_MAX_SIDE
+}, {
+	id: "alt",
+	renderPrompt: renderAltPrompt,
+	promptVersion: ALT_PROMPT_VERSION,
+	references: ["idle", "expression"],
+	alphaRequired: false,
+	maxSide: ALT_MAX_SIDE
+}];
+// game/src/loadout/element-data.ts
+var ELEMENTS = [
+	"bloom",
+	"splash",
+	"ember",
+	"spark",
+	"chaos"
+];
 // game/src/builder/copy.ts
 var COPY = {
 	title: "Meet a new resident",
@@ -440,6 +849,7 @@ var COPY = {
 	preparation: "Your image is saved. Retry preparing its preview without creating another image.",
 	invalid: "Choose a valid option in each field.",
 	cap: "The mock session limit has been reached. Reload to start a new free session.",
+	expressionTooLarge: "The new look was too large to send. Your resident is kept as it is.",
 	busy: "A generation is already in progress.",
 	safety: "The image request was rejected. No automatic retry was made.",
 	aborted: "Generation cancelled.",
@@ -481,11 +891,83 @@ async function abortable(provider, request) {
 		signal?.removeEventListener("abort", onAbort);
 	}
 }
+/**
+* Draws one follow-up image from earlier ones and checks it: a PNG within the follow-up's side, under IMAGE_MAX_BYTES, and with
+* transparency when the entry needs it. The local worker and the online handler both call this, so they refuse the same results.
+*/
+async function drawFollowUp(provider, def, ctx, references, signal) {
+	const result = await abortable(provider, {
+		prompt: def.renderPrompt(ctx),
+		referenceIds: [],
+		...references,
+		opaque: !def.alphaRequired,
+		signal
+	});
+	const info = readPngInfo(result.bytes);
+	const side = Math.min(def.maxSide, IMAGE_MAX_SIDE);
+	if (result.mime !== "image/png" || !info || !info.width || !info.height || info.width > side || info.height > side || result.bytes.length > 16777216 || def.alphaRequired && !info.hasAlphaChannel) throw new ProviderError("corrupt", COPY.corrupt);
+	return {
+		bytes: result.bytes,
+		info
+	};
+}
 var HTTP_BAD_GATEWAY$1 = 502;
 var HTTP_CONFLICT = 409;
 var HTTP_UNPROCESSABLE = 422;
 var HTTP_CLIENT_CLOSED = 499;
 var UNCACHED_STATUSES = [HTTP_BAD_GATEWAY$1, HTTP_CLIENT_CLOSED];
+var HTTP_BAD_REQUEST$2 = 400;
+var HTTP_FORBIDDEN$1 = 403;
+var HTTP_PAYLOAD_TOO_LARGE = 413;
+var HTTP_GATEWAY_TIMEOUT = 504;
+var tokenKey = (token, id) => `${FOLLOW_UP_KEY_PREFIX}${token}:${id}`;
+var ALT_KIND_VALUES = Object.keys(ALT_PROMPT_BLOCKS.kind);
+var isOneOf = (list, value) => typeof value === "string" && list.includes(value);
+function parseAltFields(body) {
+	const { kind, trait, element } = body;
+	if (!isOneOf(ALT_KIND_VALUES, kind) || !isOneOf(TRAITS, trait) || !isOneOf(ELEMENTS, element)) return null;
+	return {
+		kind,
+		trait,
+		element
+	};
+}
+var HEX_RADIX$1 = 16;
+var HEX_BYTE_CHARS = 2;
+async function sha256Hex(bytes) {
+	const digest = await crypto.subtle.digest("SHA-256", bytes);
+	return Array.from(new Uint8Array(digest), (byte) => byte.toString(HEX_RADIX$1).padStart(HEX_BYTE_CHARS, "0")).join("");
+}
+function parseToken(raw) {
+	if (raw === null) return null;
+	try {
+		const value = JSON.parse(raw);
+		return value && typeof value.idleSha256 === "string" && Number.isFinite(value.createdAt) && Number.isFinite(value.expiresAt) && value.resolved ? value : null;
+	} catch {
+		return null;
+	}
+}
+function providerFailure(error) {
+	const kind = error instanceof ProviderError ? error.kind : "network";
+	return {
+		kind,
+		response: failure$1(kind === "aborted" ? HTTP_CLIENT_CLOSED : kind === "safety" ? HTTP_UNPROCESSABLE : HTTP_BAD_GATEWAY$1, kind, COPY[kind])
+	};
+}
+function decodeIdle(value) {
+	if (typeof value !== "string" || value.length > 4498976) return null;
+	try {
+		const bytes = Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+		return bytes.length <= 16777216 && readPngInfo(bytes) ? bytes : null;
+	} catch {
+		return null;
+	}
+}
+function encodeBase64(bytes) {
+	let binary = "";
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary);
+}
 var GenerateSession = class {
 	options;
 	used = 0;
@@ -493,6 +975,81 @@ var GenerateSession = class {
 	cache = /* @__PURE__ */ new Map();
 	constructor(options) {
 		this.options = options;
+	}
+	async issueToken(generation, resolved, idle) {
+		const store = this.options.tokenStore;
+		if (!store) return null;
+		const token = crypto.randomUUID();
+		const record = {
+			buildId: generation.id,
+			idleSha256: await sha256Hex(idle),
+			createdAt: Date.parse(generation.createdAt),
+			expiresAt: this.options.now().getTime() + FOLLOW_UP_TOKEN_TTL_MS,
+			resolved
+		};
+		try {
+			for (const id of FOLLOW_UP_IDS) if (!await store.setNX(tokenKey(token, id), JSON.stringify(record), 305e3)) return null;
+			return token;
+		} catch {
+			return null;
+		}
+	}
+	async redeem(token, id) {
+		try {
+			return parseToken(await this.options.tokenStore.getDel(tokenKey(token, id)));
+		} catch {
+			return "unavailable";
+		}
+	}
+	async vouchExpression(token, expression) {
+		const store = this.options.tokenStore;
+		try {
+			const alt = parseToken(await store.getDel(tokenKey(token, "alt")));
+			const ttlMs = alt ? alt.expiresAt - this.options.now().getTime() + FOLLOW_UP_STORE_MARGIN_MS : 0;
+			if (alt && ttlMs > 0) await store.setNX(tokenKey(token, "alt"), JSON.stringify({
+				...alt,
+				expressionSha256: await sha256Hex(expression)
+			}), ttlMs);
+		} catch {}
+	}
+	async followUp(body, signal) {
+		const def = FOLLOW_UPS.find((entry) => entry.id === body.id);
+		const idle = decodeIdle(body.idle);
+		const expression = body.expression === void 0 ? void 0 : decodeIdle(body.expression);
+		const alt = def?.id === "alt" ? parseAltFields(body) : null;
+		if (!def || !idle || typeof body.token !== "string" || def.id === "alt" && (expression === null || !alt) || def.id !== "alt" && expression !== void 0) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
+		if (!this.options.tokenStore) return failure$1(HTTP_FORBIDDEN$1, "invalid", COPY.invalid);
+		const entry = await this.redeem(body.token, def.id);
+		if (entry === "unavailable") return failure$1(HTTP_BAD_GATEWAY$1, "network", COPY.network);
+		const now = this.options.now().getTime();
+		if (!entry || now > entry.expiresAt || entry.idleSha256 !== await sha256Hex(idle) || def.id === "alt" && expression && entry.expressionSha256 !== await sha256Hex(expression)) return failure$1(HTTP_FORBIDDEN$1, "invalid", COPY.invalid);
+		if (now - entry.createdAt > 315e3) return failure$1(HTTP_GATEWAY_TIMEOUT, "network", COPY.network);
+		const ctx = {
+			resolved: entry.resolved,
+			residentId: entry.buildId,
+			...alt
+		};
+		try {
+			const references = { referenceImages: def.id === "alt" && expression ? [idle, expression] : [idle] };
+			const { bytes, info } = await drawFollowUp(this.options.provider, def, ctx, references, signal);
+			const base64 = encodeBase64(bytes);
+			if (base64.length > (this.options.responseMaxBytes ?? 4e6)) return failure$1(HTTP_PAYLOAD_TOO_LARGE, "cap", COPY.expressionTooLarge);
+			if (def.id === "expression") await this.vouchExpression(body.token, bytes);
+			const { width, height, hasAlphaChannel } = info;
+			return Response.json({
+				ok: true,
+				id: def.id,
+				[def.id]: {
+					base64,
+					mime: "image/png",
+					width,
+					height,
+					hasAlphaChannel
+				}
+			}, { headers: { "Cache-Control": "no-store" } });
+		} catch (error) {
+			return providerFailure(error).response;
+		}
 	}
 	async generate(requestId, selections, signal) {
 		const resolvedSelections = resolveSelections(selections, this.options.rng);
@@ -524,25 +1081,30 @@ var GenerateSession = class {
 				});
 				const info = readPngInfo(result.bytes);
 				if (result.mime !== "image/png" || !info || !info.width || !info.height || info.width > 4096 || info.height > 4096 || result.bytes.length > 16777216) throw new ProviderError("corrupt", COPY.corrupt);
-				let binary = "";
-				for (const byte of result.bytes) binary += String.fromCharCode(byte);
+				const names = this.options.namePack && !signal.aborted ? await requestNamePack(this.options.namePack, resolvedSelections, this.options.namePackTimeoutMs, signal) : null;
+				const token = this.options.issueFollowUpTokens === false ? null : await this.issueToken(generation, resolvedSelections, result.bytes);
 				return Response.json({
 					ok: true,
 					generation,
 					image: {
 						...info,
 						mime: "image/png",
-						base64: btoa(binary)
+						base64: encodeBase64(result.bytes)
 					},
+					...names ? { names } : {},
+					...token ? { followUp: {
+						token,
+						ids: FOLLOW_UP_IDS
+					} } : {},
 					usage: {
 						used: this.used,
 						cap: this.options.limits.sessionCap
 					}
 				}, { headers: { "Cache-Control": "no-store" } });
 			} catch (error) {
-				const kind = error instanceof ProviderError ? error.kind : "network";
+				const { kind, response } = providerFailure(error);
 				if ((kind === "network" || kind === "corrupt") && attempts <= this.options.limits.technicalRetries && this.used < this.options.limits.sessionCap) continue;
-				return failure$1(kind === "aborted" ? HTTP_CLIENT_CLOSED : kind === "safety" ? HTTP_UNPROCESSABLE : HTTP_BAD_GATEWAY$1, kind, COPY[kind]);
+				return response;
 			}
 		}
 		return failure$1(429, "cap", COPY.cap);
@@ -555,15 +1117,17 @@ var GenerateSession = class {
 		let body;
 		try {
 			const text = await request.text();
-			if (text.length > 4096) return failure$1(400, "invalid", COPY.invalid);
+			if (text.length > 45e5) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
 			body = JSON.parse(text);
-			if (!body || typeof body !== "object" || Array.isArray(body)) return failure$1(400, "invalid", COPY.invalid);
+			if (!body || typeof body !== "object" || Array.isArray(body)) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
+			if ("token" in body) return await this.followUp(body, request.signal);
+			if (text.length > 4096) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
 		} catch {
-			return failure$1(400, "invalid", COPY.invalid);
+			return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
 		}
 		const validated = validateSelections(body.selections);
 		const requestId = body.requestId;
-		if (!validated.ok || typeof requestId !== "string" || !requestId.trim() || requestId.length > 64) return failure$1(400, "invalid", COPY.invalid);
+		if (!validated.ok || typeof requestId !== "string" || !requestId.trim() || requestId.length > 64) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
 		const fingerprint = JSON.stringify(validated.value);
 		const cached = this.cache.get(requestId);
 		if (cached) {
@@ -645,12 +1209,14 @@ function clientIp(request) {
 	if (real) return real;
 	return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 }
+var isFollowUp = (body) => "token" in body;
 async function readBody(request) {
 	try {
 		const text = await request.text();
-		if (text.length > 4096) return null;
+		if (text.length > 45e5) return null;
 		const body = JSON.parse(text);
-		return body && typeof body === "object" && !Array.isArray(body) ? body : null;
+		if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+		return isFollowUp(body) || text.length <= 4096 ? body : null;
 	} catch {
 		return null;
 	}
@@ -679,6 +1245,28 @@ async function outcome(response) {
 			kind: void 0,
 			body: void 0
 		};
+	}
+}
+async function followUp(options, request, body, ip) {
+	await options.visitorKey(ip).catch(() => {});
+	const forwarded = new Request(request.url, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			token: body.token,
+			id: body.id,
+			idle: body.idle,
+			expression: body.expression,
+			kind: body.kind,
+			trait: body.trait,
+			element: body.element
+		}),
+		signal: request.signal
+	});
+	try {
+		return await options.generate(forwarded);
+	} catch {
+		return failure(HTTP_BAD_GATEWAY, "network", COPY.network);
 	}
 }
 function createOnlineHandler(options) {
@@ -727,6 +1315,7 @@ function createOnlineHandler(options) {
 		const body = await readBody(request);
 		if (!body) return failure(HTTP_BAD_REQUEST$1, "invalid", COPY.invalid);
 		const ip = clientIp(request);
+		if (isFollowUp(body)) return followUp(options, request, body, ip);
 		if (!await isHuman(options.verifyHuman, body["turnstileToken"], ip)) return failure(HTTP_FORBIDDEN, "invalid", ONLINE_COPY.human);
 		const id = typeof body.requestId === "string" ? body.requestId : null;
 		if (id === null) return admit(request, body, ip);
@@ -744,6 +1333,73 @@ async function visitorKeyFor(ip, salt) {
 	const bytes = new TextEncoder().encode(`${salt}:${ip ?? UNKNOWN_IP}`);
 	const digest = await crypto.subtle.digest("SHA-256", bytes);
 	return Array.from(new Uint8Array(digest), (byte) => byte.toString(HEX_RADIX).padStart(2, "0")).join("");
+}
+// game/src/builder/server/openai-names-provider.ts
+var PROVIDER_ID$1 = "openai-names";
+var SYSTEM_LINE = "You write short game move names and reply with JSON only.";
+var text$1 = (value) => typeof value === "string" ? value : null;
+var consoleLog$1 = (entry) => console.error("openai-names request failed", JSON.stringify(entry));
+var fail$1 = (kind) => new ProviderError(kind, COPY[kind]);
+var isAbort$1 = (error, signal) => Boolean(signal?.aborted) || error?.name === "AbortError";
+async function readJson$1(response) {
+	try {
+		return await response.json();
+	} catch {
+		return;
+	}
+}
+function openaiNamesProvider(options) {
+	const model = options.model;
+	const doFetch = options.fetcher ?? fetch;
+	async function generate({ prompt, signal }) {
+		let response;
+		try {
+			response = await doFetch(OPENAI_CHAT_URL, {
+				method: "POST",
+				headers: {
+					Authorization: "Bearer " + options.apiKey,
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					model,
+					messages: [{
+						role: "system",
+						content: SYSTEM_LINE
+					}, {
+						role: "user",
+						content: prompt
+					}],
+					response_format: { type: "json_object" },
+					max_completion_tokens: 600,
+					...options.safetyIdentifier ? { safety_identifier: options.safetyIdentifier } : {}
+				}),
+				signal
+			});
+		} catch (error) {
+			throw fail$1(isAbort$1(error, signal) ? "aborted" : "network");
+		}
+		const body = await readJson$1(response);
+		if (!response.ok) {
+			(options.log ?? consoleLog$1)({
+				status: response.status,
+				code: text$1(body?.error?.code),
+				type: text$1(body?.error?.type)
+			});
+			throw fail$1("network");
+		}
+		const content = body?.choices?.[0]?.message?.content;
+		if (typeof content !== "string" || content.length > 4096) throw fail$1("corrupt");
+		try {
+			return JSON.parse(content);
+		} catch {
+			throw fail$1("corrupt");
+		}
+	}
+	return {
+		id: PROVIDER_ID$1,
+		model,
+		generate
+	};
 }
 // game/src/builder/server/openai-provider.ts
 var SAFETY_CODES = ["moderation_blocked", "content_policy_violation"];
@@ -804,14 +1460,15 @@ function openaiProvider(options) {
 		if (options.safetyIdentifier) form.append("safety_identifier", options.safetyIdentifier);
 		return form;
 	}
-	async function generate({ prompt, referenceIds, signal }) {
-		const images = await loadAll(referenceIds, options.loadReference, signal);
+	async function generate({ prompt, referenceIds, referenceImages, signal }) {
+		const images = referenceImages ?? await loadAll(referenceIds, options.loadReference, signal);
+		const ids = referenceImages ? referenceImages.map((_, index) => `reference-${index}`) : referenceIds;
 		let response;
 		try {
 			response = await doFetch(OPENAI_EDITS_URL, {
 				method: "POST",
 				headers: { Authorization: "Bearer " + options.apiKey },
-				body: buildForm(prompt, referenceIds, images),
+				body: buildForm(prompt, ids, images),
 				signal
 			});
 		} catch (error) {
@@ -835,6 +1492,31 @@ function openaiProvider(options) {
 		id: PROVIDER_ID,
 		model,
 		generate
+	};
+}
+// game/src/builder/server/token-store.ts
+var REDIS_OK = "OK";
+function upstashTokenStore(options) {
+	const pipeline = upstashPipeline(options);
+	return {
+		async setNX(key, value, ttlMs) {
+			const result = (await pipeline([[
+				"SET",
+				key,
+				value,
+				"NX",
+				"PX",
+				String(ttlMs)
+			]]))[0]?.result;
+			if (result === null) return false;
+			if (result === REDIS_OK) return true;
+			throw new Error("Upstash SET returned an unexpected reply");
+		},
+		async getDel(key) {
+			const result = (await pipeline([["GETDEL", key]]))[0]?.result;
+			if (result === null || typeof result === "string") return result;
+			throw new Error("Upstash GETDEL returned an unexpected reply");
+		}
 	};
 }
 // game/src/builder/server/turnstile-verify.ts
@@ -895,23 +1577,42 @@ function createVercelHandler(given, options = {}) {
 	const referenceDir = options.referenceDir ?? join(nodeProcess.cwd(), "api", "_references");
 	const salt = env[ENV.visitorSalt];
 	const visitor = new AsyncLocalStorage();
+	const provider = {
+		id: "openai-images",
+		model: env[ENV.model] || "gpt-image-2.5-sunburst",
+		generate: (request) => openaiProvider({
+			apiKey: env[ENV.openaiKey],
+			model: env[ENV.model] || void 0,
+			quality: env[ENV.quality] || void 0,
+			fetcher: liveFetch,
+			loadReference: async (id) => new Uint8Array(await readFile(join(referenceDir, `${id}.png`))),
+			safetyIdentifier: visitor.getStore()?.key
+		}).generate(request)
+	};
+	const nameModel = env[ENV.nameModel];
+	const namePack = nameModel ? {
+		id: "openai-names",
+		model: nameModel,
+		generate: (request) => openaiNamesProvider({
+			apiKey: env[ENV.openaiKey],
+			model: nameModel,
+			fetcher: liveFetch,
+			safetyIdentifier: visitor.getStore()?.key
+		}).generate(request)
+	} : void 0;
+	const redis = {
+		url: env[ENV.redisUrl],
+		token: env[ENV.redisToken],
+		fetcher: liveFetch
+	};
 	const generate = createGenerateHandler({
-		provider: {
-			id: "openai-images",
-			model: env[ENV.model] || "gpt-image-2.5-sunburst",
-			generate: (request) => openaiProvider({
-				apiKey: env[ENV.openaiKey],
-				model: env[ENV.model] || void 0,
-				quality: env[ENV.quality] || void 0,
-				fetcher: liveFetch,
-				loadReference: async (id) => new Uint8Array(await readFile(join(referenceDir, `${id}.png`))),
-				safetyIdentifier: visitor.getStore()?.key
-			}).generate(request)
-		},
+		provider,
+		namePack,
 		limits: ONLINE_LIMITS,
 		rng: Math.random,
 		newId: () => crypto.randomUUID(),
-		now: () => /* @__PURE__ */ new Date()
+		now: () => /* @__PURE__ */ new Date(),
+		tokenStore: upstashTokenStore(redis)
 	});
 	const online = createOnlineHandler({
 		verifyHuman: turnstileVerifier({
@@ -919,11 +1620,7 @@ function createVercelHandler(given, options = {}) {
 			fetcher: liveFetch
 		}),
 		caps: createCaps({
-			store: upstashStore({
-				url: env[ENV.redisUrl],
-				token: env[ENV.redisToken],
-				fetcher: liveFetch
-			}),
+			store: upstashStore(redis),
 			now: () => /* @__PURE__ */ new Date()
 		}),
 		visitorKey: async (ip) => {

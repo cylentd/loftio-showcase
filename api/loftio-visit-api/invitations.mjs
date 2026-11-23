@@ -4,6 +4,7 @@ var ENV = {
 	openaiKey: "OPENAI_API_KEY",
 	model: "LOFTIO_IMAGE_MODEL",
 	quality: "LOFTIO_IMAGE_QUALITY",
+	nameModel: "LOFTIO_NAME_MODEL",
 	redisUrl: "UPSTASH_REDIS_REST_URL",
 	redisToken: "UPSTASH_REDIS_REST_TOKEN",
 	redisUrlMarketplace: "KV_REST_API_URL",
@@ -50,6 +51,7 @@ var COPY$1 = {
 	preparation: "Your image is saved. Retry preparing its preview without creating another image.",
 	invalid: "Choose a valid option in each field.",
 	cap: "The mock session limit has been reached. Reload to start a new free session.",
+	expressionTooLarge: "The new look was too large to send. Your resident is kept as it is.",
 	busy: "A generation is already in progress.",
 	safety: "The image request was rejected. No automatic retry was made.",
 	aborted: "Generation cancelled.",
@@ -289,7 +291,10 @@ var COPY = {
 	load: "Saved guests could not be restored. Reload to try again.",
 	capacity: "Your loft has four guests. End a visit before welcoming another.",
 	shareFailed: "Sharing was unavailable. You can download the invitation instead.",
-	failed: "The artwork could not be opened. Your loft has not changed."
+	failed: "The artwork could not be opened. Your loft has not changed.",
+	ownedView: "Your resident, as they look in your loft.",
+	ownedNoSend: "This artwork is too large to send as an invitation, even when made smaller.",
+	ownedFailed: "This resident's artwork could not be shown. Your loft has not changed."
 };
 // game/src/visits/invite-contract.ts
 var bytesFromBase64 = (value) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));

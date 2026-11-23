@@ -5,6 +5,17 @@ export const REQUEST_ID_MAX_LENGTH = 64;
 export const REQUEST_BODY_MAX_LENGTH = 4096;
 export const IMAGE_MAX_SIDE = 4096;
 export const IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+// Follow-up images drawn after the idle. The id names the artifact pair (`<id>.png`, `<id>.webp`) under a record's UUID.
+// Adding a follow-up (feature 2, the alt art) adds its id here and its entry in follow-ups.ts.
+export const EXPRESSION_ID = 'expression';
+export const ALT_ID = 'alt';
+export const FOLLOW_UP_IDS: readonly string[] = [EXPRESSION_ID, ALT_ID]; // draw order: the alt takes the expression as a reference
+// The expression is drawn in the idle's frame, so it shares the idle's bounded side, not a smaller one the card could not swap.
+export const EXPRESSION_MAX_SIDE = IMAGE_MAX_SIDE;
+// The alt is an opaque illustration with a background, so its PNG is far larger than a transparent sprite. 1536 is the longest side
+// of the provider's landscape and portrait sizes (1536x1024, 1024x1536; OpenAI image API, from memory, NOT re-read or measured in
+// this branch: no live call was allowed). Its size on the wire is checked by ONLINE_RESPONSE_MAX_BYTES, not by this side.
+export const ALT_MAX_SIDE = 1536;
 // Answered requestIds one generate handler instance keeps for replay, shared by every visitor it serves. A repeat
 // follows its first call within minutes, so only recent ids matter. 32 is above DEFAULT_LIMITS.sessionCap and the
 // online GLOBAL_DAILY_CAP, and bounds memory: each cached success holds a base64 image of up to IMAGE_MAX_BYTES.

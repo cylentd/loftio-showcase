@@ -1,7 +1,7 @@
 import type { ResidentPortrait } from '../residents/view-parts';
 import { visitChrome } from './view-parts';
 import { COPY } from './copy';
-import { ownedArt, importFile, sourceOf, canonicalGuest } from './image';
+import { ownedArt, importFile, sourceOf, canonicalGuest, type OwnedArt } from './image';
 import { displayName } from './invite-contract';
 import type { Guest, Invitation } from './invite-contract';
 import { next, type VisitState } from './visit-model';
@@ -39,17 +39,18 @@ export function visitViewer(actions: Actions, links?: LinkPorts) {
   const downloads = new Set<() => void>(); const download = (file: File) => { downloads.add(downloadFile(file)); }; let state: VisitState = 'closed', generation = 0;
   const close = () => { if (state !== 'welcoming') ui.dialog.close(); };
   ui.dialog.addEventListener('close', () => { generation++; state = next(state, 'close'); ui.image.removeAttribute('src'); });
-  async function show(load: () => Promise<Invitation | Guest>, mode: 'owned' | 'import' | 'guest', trigger: HTMLElement, stored?: Guest, retry?: () => void) {
+  async function show(load: () => Promise<Invitation | Guest | OwnedArt>, mode: 'owned' | 'import' | 'guest', trigger: HTMLElement, stored?: Guest, retry?: () => void) {
     if (state === 'welcoming') return;
     const current = ++generation; state = next(state, 'open');
     ui.reset(); ui.image.removeAttribute('src'); ui.stage.hidden = true; ui.name.textContent = '';
     ui.message.textContent = mode === 'import' ? COPY.opening : COPY.loading; ui.status.textContent = ''; ui.open(trigger); ui.busy(false);
     try {
       const item = await load(); if (current !== generation) return;
-      ui.image.src = sourceOf(item); await ui.image.decode(); if (current !== generation) return;
+      ui.image.src = 'view' in item ? item.view : sourceOf(item); await ui.image.decode(); if (current !== generation) return;
       state = next(state, 'loaded'); ui.stage.hidden = false; ui.name.textContent = item.name;
-      ui.message.textContent = mode === 'owned' ? COPY.owned : mode === 'guest' ? COPY.guest : COPY.preview;
-      if (mode === 'owned') shareActions(ui, item, () => current === generation, download, links);
+      const sendable = 'view' in item ? item.invitation : null;
+      ui.message.textContent = mode === 'owned' ? (sendable ? COPY.owned : COPY.ownedView) : mode === 'guest' ? COPY.guest : COPY.preview;
+      if (mode === 'owned') { if (sendable) shareActions(ui, sendable, () => current === generation, download, links); else { ui.status.textContent = COPY.ownedNoSend; ui.button(COPY.done, close, true); } }
       else if (mode === 'import') welcomeActions(item as Guest);
       else if (stored) removalActions(stored);
     } catch (error) {
@@ -83,7 +84,7 @@ export function visitViewer(actions: Actions, links?: LinkPorts) {
   return {
     owned: (portrait: ResidentPortrait, trigger: HTMLElement) => show(async () => {
       if (!portrait.supported) throw Error(COPY.unsupported);
-      return ownedArt(portrait.name, portrait.source);
+      try { return await ownedArt(portrait.name, portrait.source); } catch { throw Error(COPY.ownedFailed); }
     }, 'owned', trigger),
     import: (file: File, trigger: HTMLElement) => show(() => importFile(file), 'import', trigger),
     link,

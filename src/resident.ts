@@ -98,6 +98,8 @@ export class Resident {
   height = 0;
   private touching = false;
   private pressure = 0;
+  /** A pointer is down on it (pressed or carried): play must leave it to the hand. */
+  get touched(): boolean { return this.touching; }
 
   touch(pressed: boolean): void {
     this.touching = pressed;

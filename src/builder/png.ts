@@ -4,8 +4,15 @@
 
 const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const COLOR_TYPE_GREY_ALPHA = 4;
+const COLOR_TYPE_RGB = 2;
 const COLOR_TYPE_RGBA = 6;
 const BIT_DEPTH_8 = 8;
+// Samples per pixel for a colour type (PNG spec, section 11.2.2, IHDR colour types): RGB has three, RGBA four.
+const CHANNELS_RGB = 3;
+const CHANNELS_RGBA = 4;
+// IHDR field offsets (PNG spec, 11.2.2): width at 0, height at 4, then bit depth, colour type, compression, filter, interlace.
+const IHDR_HEIGHT_AT = 4;
+const IHDR_BIT_DEPTH_AT = 8;
 const IHDR_LENGTH = 13;
 const CHUNK_OVERHEAD = 12; // length + type + CRC
 
@@ -67,15 +74,24 @@ async function deflate(raw: Uint8Array): Promise<Uint8Array> {
 }
 
 /** Encodes 8-bit RGBA pixels as a PNG. Used by the mock provider and by tests. */
-export async function encodeRgbaPng(width: number, height: number, rgba: Uint8Array): Promise<Uint8Array> {
-  const stride = width * 4;
+export function encodeRgbaPng(width: number, height: number, rgba: Uint8Array): Promise<Uint8Array> {
+  return encodePng(width, height, rgba, COLOR_TYPE_RGBA, CHANNELS_RGBA);
+}
+
+/** Encodes 8-bit RGB pixels as a PNG with no alpha channel: an opaque picture (the mock alt). */
+export function encodeRgbPng(width: number, height: number, rgb: Uint8Array): Promise<Uint8Array> {
+  return encodePng(width, height, rgb, COLOR_TYPE_RGB, CHANNELS_RGB);
+}
+
+async function encodePng(width: number, height: number, pixels: Uint8Array, colorType: number, channels: number): Promise<Uint8Array> {
+  const stride = width * channels;
   const raw = new Uint8Array((stride + 1) * height);
-  for (let y = 0; y < height; y++) raw.set(rgba.subarray(y * stride, (y + 1) * stride), y * (stride + 1) + 1);
+  for (let y = 0; y < height; y++) raw.set(pixels.subarray(y * stride, (y + 1) * stride), y * (stride + 1) + 1);
   const header = new Uint8Array(IHDR_LENGTH);
   const view = new DataView(header.buffer);
   view.setUint32(0, width);
-  view.setUint32(4, height);
-  header.set([BIT_DEPTH_8, COLOR_TYPE_RGBA, 0, 0, 0], 8);
+  view.setUint32(IHDR_HEIGHT_AT, height);
+  header.set([BIT_DEPTH_8, colorType, 0, 0, 0], IHDR_BIT_DEPTH_AT);
   const parts = [new Uint8Array(SIGNATURE), chunk("IHDR", header), chunk("IDAT", await deflate(raw)), chunk("IEND", new Uint8Array())];
   const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
   parts.reduce((at, part) => (out.set(part, at), at + part.length), 0);

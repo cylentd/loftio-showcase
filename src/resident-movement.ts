@@ -1,6 +1,6 @@
 import { IDLE, WORLD } from "./tune.ts";
 import { FLOOR_PLAY } from "./floor-play-data.ts";
-import { PLACEMENT, LANDING, SURFACES, SURFACE_SPLIT, SEATING_DEPTH, CHAIR_SUPPORT, COUCH_SEAT } from "./resident-movement-data.ts";
+import { PLACEMENT, LANDING, LOFT_CATCH, SURFACES, SURFACE_SPLIT, SEATING_DEPTH, CHAIR_SUPPORT, COUCH_SEAT } from "./resident-movement-data.ts";
 export type Point = { x: number; y: number };
 export type Frame = { scale: number; left: number; top: number };
 export type Surface = keyof typeof SURFACES | "couch";
@@ -49,7 +49,20 @@ export function restingPosition(point: Point): Point {
     const candidate = supportBelow(point, surface);
     if (candidate && (!landing || candidate.y < landing.y)) landing = candidate;
   }
-  return landing ?? floorPosition(point);
+  return landing ?? loftCatch(point) ?? floorPosition(point);
+}
+/** A finger cannot aim at a 20 px deck: feet in the band under it (`LOFT_CATCH`), a little past its sides too, come to rest on its
+ *  nearest edge. Level with the deck or above it, beside the deck is wall and falls to the floor as before. */
+function loftCatch(point: Point): Point | null {
+  let catchPoint: Point | null = null, nearest = LOFT_CATCH.side;
+  for (const surface of ["loft-left", "loft-right"] as const) {
+    const { front } = SURFACES[surface];
+    if (point.y <= front || point.y > front + LOFT_CATCH.below) continue;
+    const spot = floorPosition(point, surface);
+    const gap = Math.abs(spot.x - point.x);
+    if (gap <= nearest && (!catchPoint || gap < nearest)) { catchPoint = spot; nearest = gap; }
+  }
+  return catchPoint;
 }
 function supportBelow(point: Point, surface: Surface): Point | null {
   const bounds = surfaceBounds(surface);

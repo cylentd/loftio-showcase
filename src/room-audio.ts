@@ -19,12 +19,8 @@ function fadeIn(tracks: Soundtrack[]): void {
   requestAnimationFrame(step);
 }
 
-export function installRoomAudio() {
-  const music = installSoundtrack();
-  const tracks = [music.model, installRainSound()];
-  const channels: Channel[] = ["music", "rain"];
-  const chosen = loadAudioChoices();
-  const remember = (on: boolean) => { for (const channel of channels) rememberChoice(channel, { on }); };
+/** The play/pause button and the `sync` that repaints its icon and labels from the tracks' state. */
+function makeAudioButton(tracks: Soundtrack[]) {
   const button = document.createElement("button"); button.className = "room-audio room-action"; button.type = "button";
   const sync = () => {
     const playing = tracks.some(track => track.playing);
@@ -33,6 +29,16 @@ export function installRoomAudio() {
     button.setAttribute("aria-pressed", String(playing));
     button.title = tracks.some(track => track.failed) ? ROOM_AUDIO.blocked : playing ? ROOM_AUDIO.mute : ROOM_AUDIO.enable;
   };
+  return { button, sync };
+}
+
+export function installRoomAudio() {
+  const music = installSoundtrack();
+  const tracks = [music.model, installRainSound()];
+  const channels: Channel[] = ["music", "rain"];
+  const chosen = loadAudioChoices();
+  const remember = (on: boolean) => { for (const channel of channels) rememberChoice(channel, { on }); };
+  const { button, sync } = makeAudioButton(tracks);
   const removeUnlock = () => {
     document.removeEventListener("click", unlock, true);
     document.removeEventListener("keydown", unlock, true);

@@ -106,11 +106,25 @@
   --postcard-blue: #436b7b;
   --postcard-leaf: #66754e;
   --postcard-thread: #a46261;
+  /* Rumble abilities on a Residents card: one colour per trait, used for the icon and a light tint of its chip.
+     Piercing is blue like its beam in Rumble (VISION 2026-11-15); each icon is at least 3:1 on --world-paper-sunk. */
+  --ability-springy: var(--postcard-leaf);
+  --ability-heavy: var(--postcard-red);
+  --ability-piercing: var(--postcard-blue);
+  --ability-tint: 16%; /* the chip's fill: this much trait colour over parchment */
+  --ability-icon: 1.25rem;
+  --ability-cue: 1.2s; /* equals ABILITY_CUE_MS in residents/abilities-constants.ts */
   --controls-layer: 20;
+  /* Surfaces that show the holo cards (the storybook binder, the compare board) sit above the corner tray, so their
+     tabs and nav are never under it (owner, 2026-11-21). Modal dialogs (the zoom, the sheet) are in the top layer. */
   --cards-layer: calc(var(--controls-layer) + 1);
+  /* An action failed (the binder sheet's alert): 5.8:1 on --world-paper. */
   --world-danger: var(--postcard-red);
   --controls-icon: 1.25rem;
   --controls-rest-opacity: 0.7;
+  /* Mote sizes and paths on the opened card's painting (holo-alive.css), shares of the card's width (cqw), resolved where
+     used. Dust is fine and wanders; fireflies are a touch bigger and blink; embers are smallest and rise. Picked by eye,
+     for the owner to judge. */
   --hx-mote-dust-size: 1.4cqw;
   --hx-mote-firefly-size: 2.2cqw;
   --hx-mote-ember-size: 1.1cqw;
@@ -119,7 +133,7 @@
   --hx-mote-rise: 44cqw;
   --hx-mote-peak: 0.75;
   --hx-mote-dim: 0.2;
-  --hx-ember-pace: 0.55;
+  --hx-ember-pace: 0.55; /* embers rise quicker than dust settles */
   --hx-mote-dust: color-mix(in srgb, var(--world-paper) 85%, var(--grove-mote));
   --hx-mote-firefly: var(--grove-mote);
   --hx-mote-ember: color-mix(in srgb, var(--grove-glow) 45%, var(--postcard-red));

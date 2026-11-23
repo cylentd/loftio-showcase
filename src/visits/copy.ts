@@ -42,4 +42,7 @@ export const COPY = {
   capacity: 'Your loft has four guests. End a visit before welcoming another.',
   shareFailed: 'Sharing was unavailable. You can download the invitation instead.',
   failed: 'The artwork could not be opened. Your loft has not changed.',
+  ownedView: 'Your resident, as they look in your loft.',
+  ownedNoSend: 'This artwork is too large to send as an invitation, even when made smaller.',
+  ownedFailed: 'This resident\'s artwork could not be shown. Your loft has not changed.',
 };

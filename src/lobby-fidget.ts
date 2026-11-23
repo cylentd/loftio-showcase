@@ -48,8 +48,10 @@ export class LobbyFidget {
   /** A resident put down inside the middle table's footprint walks off it (nearest edge, small steps) instead of standing in the
    *  table drawn behind it. True when it took the resident; under Still it only moves the resident out at once and returns false. */
   slideOffTable(resident: Resident, from?: { x: number; y: number } | null): boolean {
+    // The table is judged where the resident was let go: clamped to the floor's back edge (y 725, in front of the table's back
+    // at 710) a drop behind the table would read as standing on it and slide off.
+    if (!slidesOffTable(resident.pos, resident.cast.interest, PLACEMENT.interestRadius)) return false;
     const feet = floorPosition(resident.pos);
-    if (!slidesOffTable(feet, resident.cast.interest, PLACEMENT.interestRadius)) return false;
     const flight = floorBody(feet.x, feet.y, this.radius(resident, feet.y));
     flight.edgeRadius = flight.radius * P.screenRadiusRatio / P.radiusRatio;
     if (this.look.frozen) {
@@ -99,6 +101,8 @@ export class LobbyFidget {
     const bodies = new Map(this.flights), view = this.view();
     for (const resident of this.scene.residents) {
       if (bodies.has(resident)) continue;
+      // A pressed resident belongs to the hand: a bump must not take it into play before the drag lifts it.
+      if (resident.touched) continue;
       // Only a pile's base, which play holds, stays a floor body while held: a hand or parcel owns the rest.
       if ((resident.holder !== null && !(resident.holder === "play" && this.stacks.isBase(resident))) || resident.falling || resident.walking || resident.climbing || resident.seatSupport.lift > 0) continue;
       if (resident.pos.y < PLACEMENT.back || resident.pos.y > PLACEMENT.front) continue;

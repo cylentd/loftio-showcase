@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { startNotingFresh } from '../../src/residents/fresh-start.ts';
+import { startNotingFresh } from '../../src/residents/fresh-start-model.ts';
 
 // The residents panel decides "fresh" (no saved residents, tickets or lineup) and then starts its session, which writes
 // the ticket ledger. Read in the other order, a first visit would never be fresh and its introduction would never open.

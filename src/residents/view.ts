@@ -21,7 +21,7 @@ import { RESIDENT_COPY as COPY } from './copy';
 import { residentForm } from './create-form';
 import { createAction } from './create-action';
 import { sceneResidents } from './scene-adapter';
-import { residentChrome, renderResidents, type PortraitAction } from './view-parts';
+import { builderDetails, residentChrome, renderResidents, type CardDetail, type PortraitAction } from './view-parts';
 import { arrivalReveal } from './arrival-reveal';
 import { roomDeliveries } from './delivery';
 import { creationIndicator } from './creation-progress';
@@ -32,8 +32,9 @@ import { originalResidents } from './original-scene';
 import { arrivalPreview } from './arrival-preview-mode';
 import { previewBackend } from './arrival-preview';
 import { bindSessionEvents } from './session-events';
-import { startNotingFresh } from './fresh-start';
+import { startNotingFresh } from './fresh-start-model';
 import { teardownAll } from '../teardown';
+import { browserRosterWiring } from './roster-wiring';
 
 const NAMES = {
   local: { registry: 'loftio-residents-v1', tickets: 'loftio-build-tickets-v1', journal: 'loftio-builder-local-pending-v1' },
@@ -41,8 +42,12 @@ const NAMES = {
   mock: { registry: 'loftio-residents-mock-v1', tickets: 'loftio-build-tickets-mock-v1', journal: 'loftio-builder-mock-pending-v1' },
 };
 
-/** What an entry may set through a room feature: the balance a missing ticket ledger starts with, the final Create label. */
-export type ResidentOptions = { initialTickets?: number; confirmLabel?: string; portrait?: PortraitAction };
+/** The localStorage keys each builder mode saves: registry, ticket ledger and request journal. The lineup saves beside the registry as `<registry>-originals`. */
+export const RESIDENT_STORAGE_NAMES = NAMES;
+
+/** What an entry may set through a room feature: the balance a missing ticket ledger starts with, the final Create label,
+ * a button on each card (`portrait`) and a block under each card's name (`cardDetail`). */
+export type ResidentOptions = { initialTickets?: number; confirmLabel?: string; portrait?: PortraitAction; cardDetail?: CardDetail };
 /** What a room feature may read. `fresh`: no saved residents, tickets or lineup before this load; `restored` settles once
  * the saved room is back (true) or failed to load (false). */
 export type ResidentHooks = {
@@ -106,6 +111,7 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   const originals = originalResidents(scene, runtime, overlay, controls, current.originals);
   // Test tickets only where images are free placeholders; real builds (local, online) never get them.
   const form = residentForm(builder, mode, mode === 'mock' ? () => tickets.grant(1) : undefined, () => chrome.drawer.dialog.close(), options.confirmLabel); chrome.panels[2]!.append(form.form, challenge);
+  const roster = browserRosterWiring(mode, preview !== null);
   const indicator = creationIndicator(chrome.openCreate);
   chrome.drawer.dialog.addEventListener('close', form.dismissProgress);
   const events = bindSessionEvents({ builder, mode, ticketKey, onTicketChange: () => render() });
@@ -131,11 +137,14 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
     chrome.trigger.setAttribute('aria-label', ready ? COPY.title + ' · ' + COPY.ready : COPY.title);
     chrome.trigger.title = ready ? COPY.ready : COPY.title;
     renderResidents(chrome.panels, state, entries, id => { try { adapter.remove(id); } catch (error) { failure(error); } }, reveal,
-      current.originals.list(), (id, inRoom) => { try { originals.setInRoom(id, inRoom); render(); } catch (error) { failure(error); } }, options.portrait);
+      current.originals.list(), (id, inRoom) => { try { originals.setInRoom(id, inRoom); render(); } catch (error) { failure(error); } }, options.portrait,
+      options.cardDetail && builderDetails(options.cardDetail, builder));
+    roster.publish({ originals: current.originals.list(), entries, kept: state.kept }); // fire and forget; the publisher dedupes
   }
   const openPreview = preview ? () => { const waiting = registry.list().find(entry => entry.arrival === 'waiting'); if (waiting) reveal(waiting); } : undefined;
   builder.subscribe(render); render();
   const restored = restore(current, adapter, failure, openPreview);
+  void restored.then(loaded => { if (loaded) roster.enable(); }); // a half-loaded room must never replace the snapshot
   const hooks: ResidentHooks = { fresh, storageKey: names.registry, preview: preview !== null, trigger: chrome.trigger, openCreate: chrome.openCreate, restored, extension: chrome.drawer.content };
   // Teardown, newest first: stop listening, end the form's timers, then stop the builder's live run. Its request
   // stays journaled, so the next visit's resume() collects it.
