@@ -8,6 +8,7 @@ import { arrivalNameField } from './name-field';
 import { unboxing } from './unboxing';
 import type { RevealAudioPreference } from './unboxing-sound';
 import { revealFlight } from './reveal-flight';
+import { hasResidentCardArt } from './kept-residents';
 import { attributesOf, clipLive, INITIAL, next, releasesAudio, releasesFlight, type DialogAttributes, type RevealEvent, type RevealState } from './arrival-reveal-model';
 
 type ArrivalCallbacks = {
@@ -15,6 +16,7 @@ type ArrivalCallbacks = {
   rename(id: string, name: string): void;
   later(id: string): void;
   failure(error: unknown): void;
+  openCard(saved: SavedCharacter, name: string, trigger: HTMLButtonElement, reduced: boolean): void;
 };
 
 function arrivalActions(entry: ResidentEntry, saved: SavedCharacter, callbacks: ArrivalCallbacks, skip: () => boolean, close: () => void) {
@@ -95,6 +97,10 @@ export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbac
     let skip = reduced;
     const actions = arrivalActions(entry, saved, callbacks, () => skip, () => arrival.dialog.close());
     const greeting = document.createElement('p'); greeting.textContent = COPY.greeting; greeting.hidden = true;
+    const card = worldButton(COPY.viewCard, () => {
+      const name = actions.input.value.trim() || entry.name || saved.resolvedSelections.creature.label;
+      callbacks.openCard(saved, name, card, reduced);
+    });
     const original = document.createElement('a'); original.hidden = true;
     if (saved.image.mime === 'image/webp') {
       original.href = saved.image.originalUrl; original.download = 'loftio-resident.png'; original.textContent = COPY.original;
@@ -102,7 +108,7 @@ export function arrivalReveal(chrome: ReturnType<typeof residentChrome>, callbac
     const box = unboxing(imageSource(saved.image), entry.name ?? saved.resolvedSelections.creature.label, reduced, immediate => {
       if (!arrival.dialog.open || !send({ type: 'opened' })) return;
       skip = immediate; actions.form.hidden = greeting.hidden = false; original.hidden = saved.image.mime !== 'image/webp';
-      actions.body.prepend(box.stage, greeting);
+      actions.body.prepend(box.stage, hasResidentCardArt(saved) ? card : greeting);
       actions.body.append(original);
       actions.input.focus({ preventScroll: true });
     }, audioEnabled, phase => {

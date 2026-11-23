@@ -44,6 +44,7 @@ export const RESIDENT_COPY = {
     online: 'Each resident is a brand-new image, drawn just for you. It takes about a minute.',
   },
   original: 'Download original PNG',
+  viewCard: 'View card',
   ticketNote: (left: number) => ['Uses 1 build ticket ·', left, 'left'].join(' '),
   outOfTickets: 'Out of build tickets',
   outOfTicketsBody: 'Each new resident is a brand-new image, so it uses a build ticket. More tickets aren’t available in this preview yet.',

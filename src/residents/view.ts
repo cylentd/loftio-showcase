@@ -37,6 +37,7 @@ import { teardownAll } from '../teardown';
 import { browserRosterWiring } from './roster-wiring';
 import type { KeptResident } from './kept-residents';
 import { keptResidents } from './kept-residents';
+import { openArrivalCard } from './arrival-card';
 
 const NAMES = {
   local: { registry: 'loftio-residents-v1', tickets: 'loftio-build-tickets-v1', journal: 'loftio-builder-local-pending-v1' },
@@ -123,7 +124,7 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   const showArrival = arrivalReveal(chrome, {
     welcome: async (entry, saved, skip) => { await adapter.add(entry, saved, true, skip); render(); },
     rename: (id, name) => registry.rename(id, name),
-    later: id => { registry.defer(id); render(); }, failure,
+    later: id => { registry.defer(id); render(); }, failure, openCard: openArrivalCard,
   }, audio);
   const reveal = (entry: ResidentEntry, trigger?: HTMLButtonElement) => {
     const saved = builder.state().kept.find(item => item.id === entry.savedId);
