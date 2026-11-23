@@ -1,0 +1,223 @@
+/* Storybook binder look test (`?mode=mock&binder`, 2026-11-20). A cloth-bound keepsake album: a stitched wood-brown
+   cover, parchment pages with a soft gutter shadow, brass rings on the spine, and each friend's holo card in a
+   clear sleeve. The holo is the only shine on the page. Tokens first; no literal below them. */
+:root {
+  --bd-pad: var(--space-4);
+  --bd-cover: var(--space-4);
+  --bd-page-pad: var(--space-5);
+  --bd-gap: var(--space-5);
+  --bd-ring-w: 0rem; /* room the phone page keeps for its rings */
+  --bd-spine: var(--space-6); /* the cloth between the two pages of a spread */
+  --bd-ring-size: var(--space-7);
+  --bd-chrome-h: 13rem; /* title, picker, nav and their gaps, measured at 1500 x 920 */
+  /* The holo picker: one row of pills (phone and drawer: the tabs scroll sideways inside it). */
+  --bd-picker-h: calc(var(--hx-tab-min) + 2 * var(--space-1));
+  --bd-picker-fade: var(--space-6); /* the tab row fades out over this much at its end: the cue that it scrolls */
+  --bd-cols: 4; /* pocket columns across the view: two pages of two */  --bd-card-max: 15rem;
+  --bd-card: min(
+    calc((100vw - 2 * var(--bd-pad) - 2 * var(--bd-cover) - var(--bd-cols) * var(--bd-page-pad) - var(--bd-ring-w) - var(--bd-spine) - var(--bd-cols) / 2 * var(--bd-gap)) / var(--bd-cols)),
+    calc((100dvh - var(--bd-chrome-h) - 2 * var(--bd-pad) - 2 * var(--bd-cover) - 2 * var(--bd-page-pad) - var(--bd-gap)) / 2 * 5 / 7),
+    var(--bd-card-max));
+  --bd-card-h: calc(var(--bd-card) * 7 / 5);
+  --bd-page-w: calc(2 * var(--bd-card) + var(--bd-gap) + 2 * var(--bd-page-pad));
+  --bd-page-h: calc(2 * var(--bd-card-h) + var(--bd-gap) + 2 * var(--bd-page-pad));
+  --bd-card-radius: calc(var(--bd-card) * 0.05); /* the holo card's 5cqi corner */
+  --bd-page-radius: var(--space-3);
+  --bd-cover-radius: var(--world-radius); /* DESIGN.md radius scale: a framed surface */
+  --bd-stitch-radius: var(--controls-panel-radius); /* the card step of the scale, just inside the cover's */
+  /* Materials */
+  --bd-cloth: var(--world-wood-dark);
+  --bd-cloth-weave: color-mix(in srgb, var(--world-wood-dark) 82%, var(--world-edge));
+  --bd-stitch: color-mix(in srgb, var(--world-edge) 70%, var(--world-paper));
+  --bd-paper: var(--world-paper);
+  --bd-gutter: color-mix(in srgb, var(--world-edge) 34%, transparent);
+  --bd-sleeve: var(--world-paper-sunk);
+  --bd-sleeve-well: color-mix(in srgb, var(--world-wood) 30%, transparent);
+  --bd-sleeve-glint: color-mix(in srgb, var(--world-paper) 40%, transparent);
+  --bd-brass: color-mix(in srgb, var(--grove-glow) 70%, var(--world-edge));
+  --bd-brass-deep: color-mix(in srgb, var(--world-edge) 60%, var(--world-wood-dark));
+  --bd-room-dim: color-mix(in srgb, var(--world-ink) 74%, transparent); /* the room recedes so its dock never reads beside the nav */
+  --bd-shade: color-mix(in srgb, var(--world-ink) 45%, transparent);
+  --bd-mark-away: color-mix(in srgb, var(--world-paper) 55%, transparent);
+  --bd-title-size: 1.5rem;
+  --bd-empty-size: 0.9rem;
+  --bd-peek-turn: -6deg;
+  --bd-peek-shift: -7% -4%;
+  --bd-mark-hang: calc(-1 * var(--tap-min) / 2 + var(--space-1)); /* the mark's centre near the card's corner, off the element medallion */
+  --bd-mark-disc: var(--space-6); /* the drawn disc; the button around it keeps the 44 px target */
+  --bd-mark-clear: calc(var(--space-2) + var(--world-lip)); /* how far right the mark sits past the corner so its disc clears the element badge (measured 8 x 9 px overlap at 390 px) */
+  --bd-turn-perspective: 140rem;
+}
+@media (max-width: 640px) {
+  :root {
+    --bd-pad: var(--space-2);
+    --bd-cover: var(--space-2);
+    --bd-page-pad: var(--space-3);
+    --bd-gap: var(--space-3);
+    --bd-ring-w: var(--space-4);
+    --bd-spine: 0rem;
+    --bd-ring-size: var(--space-6);
+    --bd-cols: 2;
+    --bd-chrome-h: calc(8rem + var(--bd-picker-h));
+    --bd-title-size: 1.25rem;
+    --bd-empty-size: 0.8rem;
+    --bd-mark-disc: var(--space-5);
+  }
+  /* A pocket card on a phone is about 150 px wide: the move lines would be 6 px type, so they wait for the big card. */
+  .binder .binder-card .holo-ability-line { display: none; }
+}
+
+.binder {
+  position: fixed; inset: 0; z-index: var(--cards-layer); /* above the corner tray, so its picker and nav are never under it */
+  display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: minmax(0, 1fr); /* the picker's tab row never widens the column */ justify-items: center; align-items: center; gap: var(--space-3);
+  padding: var(--bd-pad); background: var(--bd-room-dim); backdrop-filter: var(--holo-room-blur);
+  font-family: var(--font-body); color: var(--world-paper);
+}
+/* The holo picker (holo-picker.css) above the book, compact so the cards keep the room. */
+.binder-picker { min-width: 0; max-width: 100%; box-sizing: border-box; padding: var(--space-1); }
+/* On a phone: one row, the tabs scroll and fade at their end, the toggle stays put at the row's end. */
+@media (max-width: 640px) {
+  .binder-picker { flex-wrap: nowrap; width: 100%; }
+  .binder-picker .holo-tabs { flex-wrap: nowrap; justify-content: flex-start; min-width: 0; overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(to right, black calc(100% - var(--bd-picker-fade)), transparent); }
+  .binder-picker :is(.holo-tab, .holo-anim) { flex-shrink: 0; }
+}
+.binder-title { margin: 0; font: 700 var(--bd-title-size) / 1.2 var(--font-heading); color: var(--world-paper); }
+
+/* The cover: woven cloth, a stitched line just inside its edge. */
+.binder-book {
+  position: relative; display: grid; grid-template-columns: repeat(2, var(--bd-page-w)); column-gap: var(--bd-spine);
+  padding: var(--bd-cover); border-radius: var(--bd-cover-radius); perspective: var(--bd-turn-perspective);
+  background: repeating-linear-gradient(var(--world-grain-angle), var(--bd-cloth) 0, var(--bd-cloth-weave) var(--world-grain), var(--bd-cloth) calc(2 * var(--world-grain)));
+  box-shadow: var(--world-drop), inset 0 var(--world-lip) 0 var(--bd-cloth-weave);
+  touch-action: pan-y;
+}
+.binder-book::before {
+  content: ""; position: absolute; inset: calc(var(--bd-cover) / 2); pointer-events: none;
+  border: var(--world-lip) dashed var(--bd-stitch); border-radius: var(--bd-stitch-radius); opacity: 0.6;
+}
+.binder[data-view="page"] .binder-book { grid-template-columns: calc(var(--bd-page-w) + var(--bd-ring-w)); }
+.binder[data-view="page"] .binder-side:empty { display: none; }
+.binder-side { position: relative; width: 100%; height: var(--bd-page-h); transform-style: preserve-3d; }
+
+/* A page: four pockets on parchment, the gutter shadow on the spine side. */
+.binder-page {
+  position: absolute; inset: 0; display: grid; grid-template: repeat(2, var(--bd-card-h)) / repeat(2, var(--bd-card));
+  gap: var(--bd-gap); place-content: center; padding: var(--bd-page-pad); background: var(--bd-paper);
+}
+.binder-page[data-side="left"] { border-radius: var(--bd-page-radius) 0 0 var(--bd-page-radius); background: linear-gradient(to left, var(--bd-gutter), transparent 12%) var(--bd-paper); }
+.binder-page[data-side="right"] { border-radius: 0 var(--bd-page-radius) var(--bd-page-radius) 0; background: linear-gradient(to right, var(--bd-gutter), transparent 12%) var(--bd-paper); }
+.binder-page[data-side="single"] { border-radius: 0 var(--bd-page-radius) var(--bd-page-radius) 0; padding-left: calc(var(--bd-page-pad) + var(--bd-ring-w)); background: linear-gradient(to right, var(--bd-gutter), transparent 14%) var(--bd-paper); }
+.binder-page-reverse { background: linear-gradient(to left, var(--bd-gutter), transparent 14%) var(--bd-sleeve); border-radius: var(--bd-page-radius) 0 0 var(--bd-page-radius); }
+.binder-endpaper { display: grid; place-items: center; }
+.binder-endpaper-word { grid-column: 1 / -1; grid-row: 1 / -1; margin: 0; max-width: 16ch; text-align: center; font: italic 1.1rem / 1.4 var(--font-heading); color: var(--world-muted); }
+
+/* Brass rings on the spine; on a phone, down the page's left edge. */
+.binder-rings {
+  position: absolute; z-index: 3; top: var(--bd-cover); bottom: var(--bd-cover); left: 50%; width: var(--bd-ring-size); translate: -50% 0; pointer-events: none;
+  --bd-ring: radial-gradient(closest-side, transparent 52%, var(--bd-brass-deep) 58%, var(--bd-brass) 72%, var(--bd-brass-deep) 92%, transparent 100%);
+  background: var(--bd-ring) 50% 16% / 100% var(--space-4) no-repeat, var(--bd-ring) 50% 50% / 100% var(--space-4) no-repeat,
+    var(--bd-ring) 50% 84% / 100% var(--space-4) no-repeat;
+  filter: drop-shadow(0 var(--world-lip) var(--world-lip) var(--bd-shade));
+}
+.binder[data-view="page"] .binder-rings { left: calc(var(--bd-cover) + var(--bd-ring-w) / 2); }
+
+/* A pocket: the clear sleeve sunk into the page, the alt card peeking out behind the card. */
+.binder-pocket { position: relative; width: var(--bd-card); height: var(--bd-card-h); }
+.binder-sleeve {
+  position: absolute; inset: 0; border-radius: var(--bd-card-radius); background: var(--bd-sleeve);
+  box-shadow: inset 0 var(--world-lip) var(--space-2) var(--bd-sleeve-well);
+}
+.binder-sleeve::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, var(--bd-sleeve-glint) 38%, transparent 46%);
+  mix-blend-mode: soft-light;
+}
+.binder-peek {
+  position: absolute; inset: 0; z-index: 0; border-radius: var(--bd-card-radius);
+  background: var(--binder-peek-art) center / cover; translate: var(--bd-peek-shift); rotate: var(--bd-peek-turn);
+  box-shadow: inset 0 0 0 calc(var(--bd-card) * 0.016) var(--holo-gold), var(--world-button-shadow);
+}
+.binder .holo-card.binder-card { position: relative; inset: auto; right: auto; bottom: auto; translate: none; z-index: 1; width: 100%; }
+
+/* The loft mark: a filled house in the loft, a faint outline while away. */
+.binder-mark {
+  position: absolute; z-index: 3; top: var(--bd-mark-hang); right: calc(var(--bd-mark-hang) - var(--bd-mark-clear));
+  display: grid; place-items: center; width: var(--tap-min); height: var(--tap-min); padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--world-accent);
+}
+.binder-mark::before {
+  content: ""; grid-area: 1 / 1; width: var(--bd-mark-disc); height: var(--bd-mark-disc); border-radius: 50%;
+  border: var(--world-lip) solid var(--world-edge); background: var(--world-paper); box-shadow: var(--world-button-shadow);
+}
+.binder-mark .binder-house { grid-area: 1 / 1; z-index: 1; width: calc(var(--bd-mark-disc) * 0.6); height: calc(var(--bd-mark-disc) * 0.6); fill: currentColor; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+.binder-pocket[data-loft="away"] .binder-mark { color: var(--world-muted); }
+.binder-pocket[data-loft="away"] .binder-mark::before { background: var(--bd-mark-away); border-color: var(--bd-mark-away); box-shadow: none; }
+.binder-pocket[data-loft="away"] .binder-house { fill: none; }
+.binder-mark:focus-visible, .binder-sheet-close:focus-visible, .binder-action:focus-visible { outline: var(--focus-width) solid var(--ink-focus); outline-offset: var(--focus-offset); }
+/* The arrows and the art switch sit on the dark cloth and wood, where the dark ink-focus ring is 1.5:1; the paper ring is 5.8:1 or better. */
+/* The drawer's own :is(button):focus-visible ring (accent green) is more specific, so these name their parent. */
+.binder-nav .binder-arrow:focus-visible, .binder-art-switch .binder-art-option:focus-visible { outline: var(--focus-width) solid var(--world-paper); outline-offset: var(--focus-offset); }
+
+/* An empty pocket: the sleeve waiting, a faint house and a line. */
+.binder-pocket-empty .binder-sleeve { display: grid; place-content: center; justify-items: center; gap: var(--space-2); padding: var(--space-3); text-align: center; }
+.binder-pocket-empty .binder-house { width: 30%; fill: none; stroke: var(--world-muted); stroke-width: 1.25; stroke-linejoin: round; opacity: 0.55; }
+.binder-empty-word { max-width: 12ch; font: 700 var(--bd-empty-size) / 1.3 var(--font-body); color: var(--world-muted); }
+
+/* The nav: wood arrows round the page counter, under the book (thumb reach on a phone). */
+.binder-nav { display: flex; align-items: center; gap: var(--space-4); }
+.binder-counter { margin: 0; min-width: 11ch; text-align: center; font: 700 1rem / 1.2 var(--font-body); color: var(--world-paper); }
+.binder-arrow {
+  display: grid; place-items: center; width: var(--tap-min); height: var(--tap-min); padding: 0; border-radius: 50%; cursor: pointer;
+  border: var(--world-lip) solid var(--world-edge); color: var(--world-on-accent);
+  background: radial-gradient(circle at 50% 35%, var(--world-wood-light), var(--world-wood-dark)); box-shadow: 0 var(--world-pill-edge) 0 var(--world-wood-dark);
+}
+.binder-arrow svg { width: 55%; height: 55%; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.binder-arrow:disabled { opacity: var(--controls-rest-opacity); cursor: default; }
+
+/* The turning leaf and the still copies it uses. */
+.binder-side > .binder-snap { position: absolute; inset: 0; z-index: 4; }
+.binder-leaf { position: absolute; inset: 0; z-index: 5; transform-style: preserve-3d; pointer-events: none; }
+.binder-leaf-face { position: absolute; inset: 0; backface-visibility: hidden; }
+.binder-leaf-back { transform: rotateY(180deg); }
+.binder-leaf-shade { position: absolute; inset: 0; opacity: 0; border-radius: var(--bd-page-radius); background: linear-gradient(to right, var(--bd-shade), transparent 60%); }
+
+/* The big card: room for the Normal/Alt switch under it. */
+/* Centred, with a band above and below as tall as the switch and its gap; the switch hangs under the card, a layer above
+   it (the big card is on --controls-layer), so a tilted card's corner passes behind the switch, never over it. */
+.binder-zoom.holo-dialog { width: min(calc((100dvh - 2 * (var(--space-7) + var(--tap-min))) * 5 / 7), 92vw); }
+.binder-zoom .holo-card-big[hidden] { display: none; }
+.binder-art-switch {
+  position: absolute; left: 50%; top: calc(100% + var(--space-4)); translate: -50% 0; z-index: var(--cards-layer); display: flex; gap: var(--space-1); padding: var(--space-1);
+  border-radius: var(--chip-radius); background: var(--world-wood); box-shadow: var(--world-button-shadow);
+}
+.binder-art-option {
+  min-height: var(--tap-min); min-width: 6rem; padding: var(--space-2) var(--space-4); border: 0; border-radius: var(--chip-radius); cursor: pointer;
+  font: 800 1rem / 1 var(--font-body); background: var(--world-paper-sunk); color: var(--world-ink);
+}
+.binder-art-option[aria-pressed="true"] { background: var(--world-accent); color: var(--world-on-accent); box-shadow: inset 0 calc(-1 * var(--world-pill-edge)) 0 var(--world-accent-edge); }
+
+/* The options sheet: parchment in a wood frame; a bottom sheet on a phone. */
+.binder-sheet {
+  width: min(22rem, calc(100vw - 2 * var(--space-4))); padding: var(--space-5); border: var(--world-frame) solid var(--world-wood); border-radius: var(--world-radius);
+  background: var(--world-paper); color: var(--world-ink); box-shadow: var(--world-shadow); font-family: var(--font-body);
+}
+.binder-sheet::backdrop { background: var(--holo-room-dim); }
+.binder-sheet-head { display: grid; gap: var(--space-1); padding-right: var(--tap-min); margin-bottom: var(--space-4); }
+.binder-sheet-title { margin: 0; font: 700 1.5rem / 1.2 var(--font-heading); }
+.binder-sheet-status { margin: 0; font-size: 1rem; color: var(--world-muted); }
+.binder-sheet-close {
+  position: absolute; top: var(--space-3); right: var(--space-3); display: grid; place-items: center;
+  width: var(--tap-min); height: var(--tap-min); padding: 0; border: 0; border-radius: 50%; cursor: pointer; background: var(--world-paper-sunk); color: var(--world-ink);
+}
+.binder-close-icon { width: 50%; height: 50%; fill: none; stroke: currentColor; stroke-width: var(--world-close-stroke); stroke-linecap: round; }
+.binder-sheet-actions { display: grid; gap: var(--space-3); }
+.binder-action { width: 100%; font-weight: 700; }
+@media (max-width: 640px) {
+  .binder-sheet { width: 100%; max-width: none; margin: auto 0 0; border-width: var(--world-frame) 0 0; border-radius: var(--world-radius) var(--world-radius) 0 0; padding-bottom: max(var(--space-5), env(safe-area-inset-bottom)); }
+}
+.binder-sheet-detail:empty, .binder-sheet-alert:empty { display: none; }
+.binder-sheet-detail { margin-bottom: var(--space-4); }
+.binder-sheet-alert { margin: 0 0 var(--space-3); color: var(--world-danger); font-weight: 700; }
+.binder-sheet-blocked { margin: calc(-1 * var(--space-2)) 0 0; font-size: var(--bd-empty-size); color: var(--world-muted); }
+.binder-sheet[data-busy="true"] .binder-action { opacity: 0.6; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .binder-arrow, .binder-mark { transition: none; } }

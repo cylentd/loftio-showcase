@@ -1,0 +1,178 @@
+/* The six holo types (look test `&holocompare`, 2026-11-20), one block each, keyed by `data-holo` on the card's tilt
+   layer (the data table is holo-type-data.ts). Written from how printed holo cards look; no other project's code.
+
+   Holo integrated (2026-11-20): every pattern and every light band is a gradient or texture moved by the tilt's
+   properties (--holo-mx and --holo-my, -1 to 1; holo-tilt.ts). Each type sets, per pseudo-element, how far its
+   paint moves (k, card widths per unit of tilt) and how far it turns off the pointer's direction (r), for its
+   background and, separately, for its mask. Paint and mask moving at different rates is the parallax that makes
+   the light catch the foil. The board's idle animation moves the same properties, so nothing here has keyframes.
+
+   Every type paints the card's two foil layers:
+   - the dodge layer brightens what is under it, so it sparkles on mid and dark paint;
+   - the lift layer, here in hard-light at full saturation, shifts the hue, so the foil still reads on a bright sky,
+     where a dodge or screen alone turns white on white (round 3).
+   Inside each layer, ::before carries the type's pattern and ::after its light. Gaps are transparent, which every
+   blend mode leaves alone. The face's overflow clips both to the card. */
+:root {
+  --hx-tex-size: max(100cqi, 12rem); /* one texture tile: dense speckle on the big card, still a speckle on a small one */
+  --hx-band-angle: 115deg; /* the light bands lean like the card's default foil */
+  --hx-mask-dim: color-mix(in srgb, var(--holo-mask) 40%, transparent); /* the dark end of a light band: dim, not gone */
+  --hx-mask-faint: color-mix(in srgb, var(--holo-mask) 22%, transparent);
+  --hx-mask-mid: color-mix(in srgb, var(--holo-mask) 65%, transparent);
+  --hx-light: var(--holo-glare-colour);
+  /* Rainbow hues, red round to red, the order a prism shows. */
+  --hx-h1: 0; --hx-h2: 45; --hx-h3: 95; --hx-h4: 175; --hx-h5: 220; --hx-h6: 285; --hx-h7: 330;
+  --hx-gold-hue: 42;
+  --hx-diamond-a: 195; --hx-diamond-b: 320;
+  /* Cosmos's foil over the alt painting's centre: none. Its stars are bright points, so the shared 45% still put them
+     on Sprout's face (holo polish, 2026-11-20); a soft gradient type can keep 45%. */
+  --hx-cosmos-face: 0%;
+  /* Pattern periods, in the card's own width, so the small cards are scaled copies of the big one. */
+  --hx-bar-period: 14cqi; /* classic: about seven bars across the card */
+  --hx-classic-lift-s: 75%; /* classic's hard-light saturation: Rainbow's dodge 75%, not the shared 95% (holo polish) */
+  --hx-hue-period: 56cqi; /* classic and rainbow: one full spectrum across a bit over half the card */
+  --hx-ring: 9cqi; /* reverse: the foiled frame's width; 7 read faint on the small cards (round 2) */
+  --hx-diamond: 4.5cqi; /* radiant: one diamond's diagonal */
+  --hx-etch: 1.8cqi; /* etched: line spacing; at 1.25 the lines merged into a gold wash (capture round 2) */
+  /* Light bands across the card: the bright core and the length to the next one, in card widths. */
+  --hx-glow-band: 36cqi;
+  --hx-streak: 7cqi; /* half the width of a single sweeping light line */
+}
+
+/* Colour strength per layer: the dodge layer a touch lighter, the hard-light layer saturated at mid lightness. */
+.holo-tilt[data-holo] .holo-front > .holo-foil { --hx-s: 75%; --hx-l: 60%; }
+.holo-tilt[data-holo] .holo-front > .holo-foil-lift { --hx-s: 95%; --hx-l: 50%; mix-blend-mode: hard-light; }
+
+/* The typed layer: its own background off, two painted pseudo-elements on, each positioned from its rates. */
+.holo-tilt[data-holo] .holo-front > .holo-foil:not(.holo-foil-edge) { background: none; }
+.holo-tilt[data-holo] .holo-front > .holo-foil:not(.holo-foil-edge)::before,
+.holo-tilt[data-holo] .holo-front > .holo-foil:not(.holo-foil-edge)::after {
+  content: ""; position: absolute; inset: 0; display: block;
+  --hx-pos: calc(50% + (var(--holo-mx) * var(--hx-k) + var(--holo-my) * var(--hx-r)) * 1cqi)
+    calc(50% + (var(--holo-my) * var(--hx-k) - var(--holo-mx) * var(--hx-r)) * 1cqi);
+  --hx-mpos: calc(50% + (var(--holo-mx) * var(--hx-mk) + var(--holo-my) * var(--hx-mr)) * 1cqi)
+    calc(50% + (var(--holo-my) * var(--hx-mk) - var(--holo-mx) * var(--hx-mr)) * 1cqi);
+}
+.holo-tilt[data-holo] .holo-front > .holo-foil:not(.holo-foil-edge)::before {
+  --hx-k: var(--hx-a-k, 0); --hx-r: var(--hx-a-r, 0); --hx-mk: var(--hx-a-mk, 0); --hx-mr: var(--hx-a-mr, 0);
+}
+.holo-tilt[data-holo] .holo-front > .holo-foil:not(.holo-foil-edge)::after {
+  --hx-k: var(--hx-b-k, 0); --hx-r: var(--hx-b-r, 0); --hx-mk: var(--hx-b-mk, 0); --hx-mr: var(--hx-b-mr, 0);
+}
+
+/* Rainbow covers the whole alt painting (the brief: "over the art"); the others keep its quiet centre. Cosmos kept it
+   too until holo polish (2026-11-20): its stars and bands sat on Sprout's face. */
+.holo-tilt[data-holo="rainbow"] .holo-front[data-art="alt"] > .holo-foil:not(.holo-foil-edge) { mask: none; }
+.holo-tilt[data-holo="cosmos"] { --holo-alt-face: var(--hx-cosmos-face); }
+
+/* Cosmos: a galaxy of stars and colour clouds that barely moves (it is far away), lit by bands that sweep fast with
+   the tilt; a nearer star field drifts the other way and comes out as the card tips toward a corner. */
+.holo-tilt[data-holo="cosmos"] { --hx-a-k: 5; --hx-a-mk: 40; --hx-a-mr: 12; --hx-b-k: -16; --hx-b-r: 6; }
+.holo-tilt[data-holo="cosmos"] .holo-foil::before {
+  background: var(--hx-tex-cosmos) var(--hx-pos) / var(--hx-tex-size) repeat;
+  mask: repeating-linear-gradient(var(--hx-band-angle), var(--hx-mask-dim) 0, var(--holo-mask) var(--hx-glow-band), var(--hx-mask-dim) calc(var(--hx-glow-band) * 2))
+    var(--hx-mpos) / var(--holo-paint) var(--holo-paint);
+}
+.holo-tilt[data-holo="cosmos"] .holo-foil::after {
+  background: var(--hx-tex-twinkle) var(--hx-pos) / var(--hx-tex-size) repeat;
+  opacity: calc(0.25 + var(--holo-from) * 0.75);
+}
+
+/* Classic: vertical bars that stay nearly still while the rainbow runs fast through them, the other way. */
+/* Holo polish (2026-11-20): the bars were hard stripes at full strength, 95% saturated on the hard-light layer, the
+   loudest type. Now each bar ramps softly from the gap to its peak, the gap keeps Rainbow's sheen strength, and the
+   hard-light layer uses Rainbow's dodge saturation, so Classic reads as foil with a bar grain, not a stripe pattern. */
+.holo-tilt[data-holo="classic"] {
+  --hx-a-k: -34; --hx-a-mk: 8;
+  --hx-classic-gap: color-mix(in srgb, var(--holo-mask) 20%, transparent); /* Rainbow's sheen opacity, 0.2 */
+  --hx-classic-peak: color-mix(in srgb, var(--holo-mask) 50%, transparent); /* a bar's centre: 1.0 read as a stripe */
+}
+.holo-tilt[data-holo="classic"] .holo-front > .holo-foil-lift { --hx-s: var(--hx-classic-lift-s); }
+.holo-tilt[data-holo="classic"] .holo-foil::before {
+  background: linear-gradient(90deg, hsl(var(--hx-h1) var(--hx-s) var(--hx-l)), hsl(var(--hx-h2) var(--hx-s) var(--hx-l)),
+    hsl(var(--hx-h3) var(--hx-s) var(--hx-l)), hsl(var(--hx-h4) var(--hx-s) var(--hx-l)), hsl(var(--hx-h5) var(--hx-s) var(--hx-l)),
+    hsl(var(--hx-h6) var(--hx-s) var(--hx-l)), hsl(var(--hx-h1) var(--hx-s) var(--hx-l))) var(--hx-pos) / var(--hx-hue-period) 100% repeat;
+  mask: repeating-linear-gradient(90deg, var(--hx-classic-gap) 0, var(--hx-classic-peak) calc(var(--hx-bar-period) / 2),
+    var(--hx-classic-gap) var(--hx-bar-period)) var(--hx-mpos) / var(--holo-paint) var(--holo-paint);
+}
+.holo-tilt[data-holo="classic"] .holo-foil::after { display: none; }
+
+/* Reverse: the foil lives on a frame round the card; the art inside stays clean. Glitter holds still on the frame,
+   the hues slide through it, and one line of light crosses the frame as the card tips. */
+.holo-tilt[data-holo="reverse"] { --hx-a-k: 24; --hx-a-r: -10; --hx-a-mk: 4; --hx-b-k: 60; }
+.holo-tilt[data-holo="reverse"] .holo-front > .holo-foil:not(.holo-foil-edge) {
+  padding: var(--hx-ring);
+  mask: linear-gradient(var(--holo-mask) 0 0) content-box, linear-gradient(var(--holo-mask) 0 0);
+  mask-composite: exclude;
+}
+.holo-tilt[data-holo="reverse"] .holo-foil::before {
+  --hx-p: var(--hx-hue-period);
+  background: repeating-linear-gradient(var(--hx-band-angle), hsl(var(--hx-h4) var(--hx-s) var(--hx-l)) 0, hsl(var(--hx-h6) var(--hx-s) var(--hx-l)) calc(var(--hx-p) / 3),
+    hsl(var(--hx-h2) var(--hx-s) var(--hx-l)) calc(var(--hx-p) * 2 / 3), hsl(var(--hx-h4) var(--hx-s) var(--hx-l)) var(--hx-p)) var(--hx-pos) / var(--holo-paint) var(--holo-paint);
+  mask: var(--hx-tex-glitter) var(--hx-mpos) / var(--hx-tex-size), linear-gradient(var(--hx-mask-mid) 0 0);
+}
+.holo-tilt[data-holo="reverse"] .holo-foil::after {
+  background: linear-gradient(var(--hx-band-angle), transparent calc(50% - var(--hx-streak)), var(--hx-light) 50%, transparent calc(50% + var(--hx-streak)))
+    var(--hx-pos) / var(--holo-paint) var(--holo-paint);
+  opacity: 0.5;
+}
+
+/* Rainbow: pastel rainbow glitter over the whole card, the shiniest. The flecks hold nearly still while the rainbow
+   runs fast behind them, so each fleck changes colour as the card tips; a soft sheen of the same rainbow slides the
+   other way underneath. */
+.holo-tilt[data-holo="rainbow"] { --hx-a-k: 36; --hx-a-r: 14; --hx-a-mk: 4; --hx-b-k: -18; --hx-b-r: 6; }
+.holo-tilt[data-holo="rainbow"] .holo-front > .holo-foil:not(.holo-foil-edge) {
+  --hx-p: var(--hx-hue-period);
+  --hx-rainbow: repeating-linear-gradient(var(--hx-band-angle), hsl(var(--hx-h1) var(--hx-s) var(--hx-l)) 0, hsl(var(--hx-h2) var(--hx-s) var(--hx-l)) calc(var(--hx-p) / 7),
+    hsl(var(--hx-h3) var(--hx-s) var(--hx-l)) calc(var(--hx-p) * 2 / 7), hsl(var(--hx-h4) var(--hx-s) var(--hx-l)) calc(var(--hx-p) * 3 / 7),
+    hsl(var(--hx-h5) var(--hx-s) var(--hx-l)) calc(var(--hx-p) * 4 / 7), hsl(var(--hx-h6) var(--hx-s) var(--hx-l)) calc(var(--hx-p) * 5 / 7),
+    hsl(var(--hx-h7) var(--hx-s) var(--hx-l)) calc(var(--hx-p) * 6 / 7), hsl(var(--hx-h1) var(--hx-s) var(--hx-l)) var(--hx-p));
+}
+.holo-tilt[data-holo="rainbow"] .holo-foil::before {
+  background: var(--hx-rainbow) var(--hx-pos) / var(--holo-paint) var(--holo-paint);
+  mask: var(--hx-tex-glitter) var(--hx-mpos) / var(--hx-tex-size);
+}
+/* 0.2, not round 1's 0.45: with the sheen moving at its own rate it washed the whole alt painting rainbow and hid
+   the glitter (holo integrated capture). */
+.holo-tilt[data-holo="rainbow"] .holo-foil::after { background: var(--hx-rainbow) var(--hx-pos) / var(--holo-paint) var(--holo-paint); opacity: 0.2; }
+
+/* Radiant: a criss-cross lattice of diamonds fixed to the card, lit in broad bands that cross it with the tilt; a
+   flash line runs over the lattice only near a corner tilt. */
+.holo-tilt[data-holo="radiant"] { --hx-a-k: 2; --hx-a-mk: 46; --hx-a-mr: -18; --hx-b-k: 2; --hx-b-mk: 80; --hx-b-mr: 20; }
+.holo-tilt[data-holo="radiant"] .holo-foil::before, .holo-tilt[data-holo="radiant"] .holo-foil::after {
+  background:
+    repeating-linear-gradient(45deg, transparent 0 calc(var(--hx-diamond) * 0.45), var(--hx-c1) calc(var(--hx-diamond) * 0.55), transparent calc(var(--hx-diamond) * 0.7) var(--hx-diamond)),
+    repeating-linear-gradient(-45deg, transparent 0 calc(var(--hx-diamond) * 0.45), var(--hx-c2) calc(var(--hx-diamond) * 0.55), transparent calc(var(--hx-diamond) * 0.7) var(--hx-diamond));
+  background-size: var(--holo-paint) var(--holo-paint);
+  background-position: var(--hx-pos);
+}
+.holo-tilt[data-holo="radiant"] .holo-foil::before {
+  --hx-c1: hsl(var(--hx-diamond-a) var(--hx-s) var(--hx-l)); --hx-c2: hsl(var(--hx-diamond-b) var(--hx-s) var(--hx-l));
+  mask: repeating-linear-gradient(var(--hx-band-angle), var(--hx-mask-faint) 0, var(--holo-mask) calc(var(--hx-glow-band) * 0.75), var(--hx-mask-faint) calc(var(--hx-glow-band) * 1.5))
+    var(--hx-mpos) / var(--holo-paint) var(--holo-paint);
+}
+.holo-tilt[data-holo="radiant"] .holo-foil::after {
+  --hx-c1: var(--hx-light); --hx-c2: var(--hx-light);
+  opacity: calc(var(--holo-from) * var(--holo-from));
+  mask: linear-gradient(var(--hx-band-angle), transparent calc(50% - var(--hx-streak)), var(--holo-mask) 50%, transparent calc(50% + var(--hx-streak)))
+    var(--hx-mpos) / var(--holo-paint) var(--holo-paint);
+}
+
+/* Etched gold: fine gold lines fixed to the card, catching the light in bands that pass with the tilt; one bright
+   line sweeps faster over them. */
+.holo-tilt[data-holo="etched"] { --hx-a-k: 2; --hx-a-mk: 38; --hx-a-mr: 12; --hx-b-k: 70; }
+.holo-tilt[data-holo="etched"] .holo-foil::before {
+  --hx-gold: hsl(var(--hx-gold-hue) var(--hx-s) var(--hx-l));
+  background:
+    repeating-linear-gradient(65deg, transparent 0 calc(var(--hx-etch) * 0.78), var(--hx-gold) calc(var(--hx-etch) * 0.8) var(--hx-etch)),
+    repeating-radial-gradient(circle at 20% 80%, transparent 0 calc(var(--hx-etch) * 0.86), var(--hx-gold) calc(var(--hx-etch) * 0.88) var(--hx-etch));
+  background-size: var(--holo-paint) var(--holo-paint);
+  background-position: var(--hx-pos);
+  mask: repeating-linear-gradient(var(--hx-band-angle), var(--hx-mask-dim) 0, var(--holo-mask) calc(var(--hx-glow-band) * 0.8), var(--hx-mask-dim) calc(var(--hx-glow-band) * 1.6))
+    var(--hx-mpos) / var(--holo-paint) var(--holo-paint);
+}
+.holo-tilt[data-holo="etched"] .holo-foil::after {
+  background: linear-gradient(var(--hx-band-angle), transparent calc(50% - var(--hx-streak)), var(--hx-light) 50%, transparent calc(50% + var(--hx-streak)))
+    var(--hx-pos) / var(--holo-paint) var(--holo-paint);
+  opacity: 0.35;
+}

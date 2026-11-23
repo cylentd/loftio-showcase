@@ -2,6 +2,10 @@ import { icon } from './icons';
 import type { ICON_PATHS } from './icon-data';
 import './world-modal.css';
 
+/** The class a full-screen modal that is not a `<dialog>` (the storybook page) carries, so a feature that must not
+ *  open over another modal (the welcome card) sees it as well as an open `<dialog>`. */
+export const ROOM_MODAL_CLASS = 'room-modal';
+
 export function dismissOnBackdrop(dialog: HTMLDialogElement): void {
   const outside = (event: MouseEvent) => {
     const box = dialog.getBoundingClientRect();

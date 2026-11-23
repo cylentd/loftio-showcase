@@ -1,0 +1,69 @@
+/* Generic motion on the opened card's painting (look test #565): slow drift, mood motes, depth on tilt. Only the big
+   card's dialog with `is-alive` (set once the open flight lands) moves; each part also needs its switcher on
+   (`data-alive-*` on the gallery board, or on the dialog itself for the storybook's big card). Timing comes from HOLO_ALIVE via holo-alive.ts; the look tokens (`--hx-mote-*`) are in tokens.css. */
+.holo-card-big .holo-backdrop, .holo-card-big .hx-motes { --holo-dx: 0; --holo-dy: 0; }
+
+/* Overscan: the painting is grown just enough that the drift's pan and the clamped depth offset never show an edge
+   (overscanScale, tested). It eases in with the fade, so opening the card shows no jump. */
+.holo-backdrop { transition: scale var(--hx-alive-fade-ms) ease-out; }
+.holo-dialog.is-alive:is([data-alive-drift="on"], [data-alive-drift="on"] *, [data-alive-depth="on"], [data-alive-depth="on"] *) .holo-backdrop { scale: var(--hx-overscan); }
+
+/* 1. Slow drift: grows and pans one way, eases back, loops. Starts at rest, so it never jumps in. */
+.holo-dialog.is-alive:is([data-alive-drift="on"], [data-alive-drift="on"] *) .holo-backdrop {
+  animation: hx-drift var(--hx-drift-ms) ease-in-out infinite alternate;
+}
+@keyframes hx-drift {
+  from { transform: none; }
+  to { transform: translate(var(--hx-drift-x), var(--hx-drift-y)) scale(var(--hx-drift-scale)); }
+}
+
+/* 4. Depth on tilt: holo-tilt.ts writes the clamped offset; the motes move further, as nearer than the painting. */
+.holo-dialog.is-alive:is([data-alive-depth="on"], [data-alive-depth="on"] *) .holo-backdrop {
+  translate: calc(var(--holo-dx) * 100cqw) calc(var(--holo-dy) * 100cqw);
+}
+.holo-dialog.is-alive:is([data-alive-depth="on"], [data-alive-depth="on"] *) .hx-motes {
+  translate: calc(var(--holo-dx) * var(--hx-mote-depth) * 100cqw) calc(var(--holo-dy) * var(--hx-mote-depth) * 100cqw);
+}
+
+/* 2. Mood motes: hidden until alive, then fade in. */
+.hx-motes { opacity: 0; transition: opacity var(--hx-alive-fade-ms) ease-out; }
+.holo-dialog.is-alive:is([data-alive-motes="on"], [data-alive-motes="on"] *) .hx-motes { opacity: 1; }
+.hx-mote {
+  position: absolute; display: block; opacity: 0;
+  width: var(--hx-mote-size); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, var(--hx-mote-colour) 0 30%, transparent 70%);
+}
+.hx-motes[data-kind="dust"] { --hx-mote-size: var(--hx-mote-dust-size); --hx-mote-colour: var(--hx-mote-dust); }
+.hx-motes[data-kind="firefly"] { --hx-mote-size: var(--hx-mote-firefly-size); --hx-mote-colour: var(--hx-mote-firefly); }
+.hx-motes[data-kind="ember"] { --hx-mote-size: var(--hx-mote-ember-size); --hx-mote-colour: var(--hx-mote-ember); }
+
+.holo-dialog.is-alive:is([data-alive-motes="on"], [data-alive-motes="on"] *) .hx-motes[data-kind="dust"] .hx-mote { animation: hx-dust var(--hx-mote-ms) linear infinite; }
+.holo-dialog.is-alive:is([data-alive-motes="on"], [data-alive-motes="on"] *) .hx-motes[data-kind="firefly"] .hx-mote { animation: hx-firefly var(--hx-mote-ms) ease-in-out infinite; }
+.holo-dialog.is-alive:is([data-alive-motes="on"], [data-alive-motes="on"] *) .hx-motes[data-kind="ember"] .hx-mote { animation: hx-ember calc(var(--hx-mote-ms) * var(--hx-ember-pace)) ease-out infinite; }
+
+@keyframes hx-dust {
+  0% { transform: translate(0, 0); opacity: 0; }
+  25% { opacity: var(--hx-mote-peak); }
+  75% { opacity: var(--hx-mote-peak); }
+  100% { transform: translate(var(--hx-mote-travel-x), calc(var(--hx-mote-travel-y) * -0.5)); opacity: 0; }
+}
+@keyframes hx-firefly {
+  0% { transform: translate(0, 0); opacity: 0; }
+  20% { opacity: 1; }
+  35% { transform: translate(calc(var(--hx-mote-travel-x) * 0.6), calc(var(--hx-mote-travel-y) * -0.3)); opacity: var(--hx-mote-dim); }
+  50% { opacity: 1; }
+  70% { transform: translate(calc(var(--hx-mote-travel-x) * -0.3), calc(var(--hx-mote-travel-y) * -0.7)); opacity: var(--hx-mote-dim); }
+  85% { opacity: 1; }
+  100% { transform: translate(calc(var(--hx-mote-travel-x) * 0.2), calc(var(--hx-mote-travel-y) * -1)); opacity: 0; }
+}
+@keyframes hx-ember {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 1; }
+  50% { transform: translate(calc(var(--hx-mote-travel-x) * 0.4), calc(var(--hx-mote-rise) * -0.5)); }
+  100% { transform: translate(calc(var(--hx-mote-travel-x) * -0.2), calc(var(--hx-mote-rise) * -1)); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holo-dialog .holo-backdrop, .holo-dialog .hx-motes, .holo-dialog .hx-mote { animation: none !important; translate: none !important; scale: none !important; transition: none; }
+  .hx-motes { display: none; }
+}

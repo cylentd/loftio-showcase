@@ -1,0 +1,308 @@
+/* The storybook page (#565): a fairy-tale book opened full screen over the dimmed loft. Cloth cover with its title in
+   live type, endpapers on the boards, cream paper pages, and each friend's three holo cards as the illustrations. The
+   holo is the only shine; the chrome is wood and paper from the room's own tokens. Tokens first; no literal below.
+   The block is declared on the stage too, so every size under it reads the stage's own height (100cqh, below) rather
+   than a guess at the dock's: the book never runs under the nav or the picker, however tall they wrap. */
+:root, .storybook-stage {
+  --sb-pad: var(--space-4);
+  --sb-top: calc(var(--tap-min) + 2 * var(--space-3)); /* the close button's row */
+  --sb-picker-h: calc(var(--hx-tab-min) + 2 * var(--space-1));
+  --sb-dock-h: calc(var(--tap-min) + 2 * var(--space-3)); /* desktop: nav and picker share one row under the book */
+  --sb-board: var(--space-3); /* the board's edge showing round the pages */
+  --sb-page-pad: var(--space-5);
+  --sb-gap: var(--space-4);
+  --sb-folio-h: var(--space-6);
+  --sb-per-view: 2;
+  --sb-page-ratio: 0.7; /* a portrait storybook page, width over height */
+  --sb-page-h: calc(100dvh - var(--sb-top) - var(--sb-dock-h) - 2 * var(--sb-board));
+  --sb-page-w: min(calc(var(--sb-page-h) * var(--sb-page-ratio)), calc((100vw - 2 * var(--sb-pad)) / var(--sb-per-view) - 2 * var(--sb-board)));
+  /* S4: one card's width in the 3x3 grid. Three 5:7 cards per row, each row a card and its name line, so the grid is
+     3 W + 2 gap wide and 4.2 W + 3 name + 2 gap tall; the smaller fit wins. */
+  --sb-name-h: calc(var(--text-sm) * var(--line-tight) + var(--space-1));
+  --sb-card: min(calc((var(--sb-page-h) - 2 * var(--sb-page-pad) - var(--sb-folio-h) - 3 * var(--sb-name-h) - 2 * var(--sb-gap)) / 4.2),
+    calc((var(--sb-page-w) - 2 * var(--sb-page-pad) - 2 * var(--sb-gap)) / 3));
+  --sb-side-w: calc(var(--sb-page-w) + var(--sb-board));
+  --sb-closed-shift: calc(-1 * var(--sb-side-w) / 2); /* the closed book sits centred: half a side to the left */
+  --sb-radius: var(--space-3);
+  --sb-page-radius: var(--space-2); /* the paper's corner, just inside the board's */
+  --sb-title-size: calc(var(--sb-page-w) / 13); /* "Collection" on one line in the top band, clear of the painted oval */
+  /* The open cue (S3): the closed cover's fore-edge lifts and settles on a slow loop, showing the page edge under it. */
+  --sb-peek-turn: -18deg; /* the lift at its top: the page edge shows, the page does not */
+  --sb-peek-ms: 3600ms; /* one loop: lift, hold, settle, rest */
+  --sb-peek-ease: cubic-bezier(0.45, 0.05, 0.25, 1); /* STORYBOOK.easing, the cover's own swing */
+  --sb-ajar-turn: -7deg; /* reduced motion: the cover held this far open, no loop */
+  --sb-hover-lift: -22deg; /* a pointer over the cover lifts it a little further, the press state's first half */
+  --sb-press-dim: brightness(0.9); /* the cover's pressed state */
+  /* A lifted cover's fore-edge comes toward the eye and grows by P / (P - W sin lift). With the perspective P tied to
+     the screen height (k x 100dvh, never less than k x the stage S) and the cover no wider than 0.7 of its height, the
+     grown cover fits S when its height is S x k / (k + 0.7 sin lift). k = 2.4 keeps the old 140rem look at 920 px. */
+  --sb-persp-k: 2.4;
+  --sb-perspective: calc(var(--sb-persp-k) * 100dvh);
+  --sb-cover-ratio: 0.7; /* the widest cover, width over height (--sb-page-ratio on a spread; a phone page is narrower) */
+  --sb-lift-fit: calc(var(--sb-persp-k) / (var(--sb-persp-k) - var(--sb-cover-ratio) * sin(var(--sb-hover-lift))));
+  --sb-hover-bright: brightness(1.06);
+  /* Materials */
+  --sb-cloth: var(--world-wood-dark);
+  --sb-cloth-weave: color-mix(in srgb, var(--world-wood-dark) 82%, var(--world-edge));
+  --sb-gilt: color-mix(in srgb, var(--grove-glow) 75%, var(--world-paper));
+  --sb-endpaper: color-mix(in srgb, var(--world-leaf) 55%, var(--world-wood-dark));
+  --sb-endpaper-dot: color-mix(in srgb, var(--grove-glow) 40%, transparent);
+  --sb-gutter: color-mix(in srgb, var(--world-edge) 30%, transparent);
+  --sb-shade: color-mix(in srgb, var(--world-ink) 45%, transparent);
+  --sb-title-wash: color-mix(in srgb, var(--world-ink) 70%, transparent);
+  --sb-title-shadow:0 var(--world-lip) var(--space-2) var(--world-ink);
+  /* S4 margin sketches: painted ones from the look URL, else faint code-drawn line ornaments in the muted ink. */
+  --sb-sketch-ink: color-mix(in srgb, var(--world-muted) 40%, transparent);
+  --sb-corner: max(calc(var(--sb-page-pad) * 4), calc((var(--sb-page-w) - 3 * var(--sb-card) - 2 * var(--sb-gap)) / 2)); /* a corner sketch's box: the side margin beside the grid */
+  --sb-band-max: calc(var(--space-7) * 2); /* the head and tail sketches never grow taller than this */
+  --sb-sketch-behind: 0.35; /* S5: the vignettes behind the grid, at the brief's cap (0.3 read too faint in the gutters) */
+  --sb-opening-sketch-size: 24%;
+  --sb-opening-sketch-height: calc(var(--sb-folio-h) + var(--space-2));
+  --sb-opening-sketch-ink: 0.58;
+  --sb-behind-size: 78%; /* each behind-grid vignette's width: the two overlap at the centre, together reach every gutter */
+  --sb-cover-fade: 420ms; /* S5: the code-drawn cover crossfades to the painted one once it has decoded */
+  --sb-cover-trim-opacity: 0.7; /* the cover's gilt line and its pre-paint trim, a little under full so the cloth shows through */
+  --sb-empty-slot-opacity: 0.85; /* a card slot with no card yet */
+  --sb-leaf-shade-opacity: 0.5; /* the shade a turning leaf casts on the page beneath */
+  --sb-title-weight: 700; /* the cover title, live heading type */
+}
+@media (max-width: 640px) {
+  :root, .storybook-stage {
+    --sb-pad: var(--space-2);
+    --sb-top: calc(var(--tap-min) + 2 * var(--space-2));
+    --sb-dock-h: calc(var(--tap-min) + var(--sb-picker-h) + 3 * var(--space-2)); /* picker over the nav, both in thumb reach */
+    --sb-board: var(--space-2);
+    --sb-page-pad: var(--space-3);
+    --sb-gap: var(--space-3);
+    --sb-folio-h: var(--space-5);
+    --sb-per-view: 1;
+    --sb-page-ratio: 1; /* a phone page takes the width it has */
+    --sb-title-size: calc(var(--sb-page-w) / 11);
+  }
+}
+
+.storybook {
+  position: fixed; inset: 0; z-index: var(--cards-layer); /* above the corner tray */
+  display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center;
+  padding: var(--sb-top) var(--sb-pad) 0; box-sizing: border-box;
+  font-family: var(--font-body); color: var(--world-paper);
+}
+/* The dimmed room behind the book. S6: its strength follows the entrance (--sb-dim, set per frame by flight.ts), so the
+   room dims as the book arrives; at rest it is unset and the room sits fully dimmed. */
+.storybook::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: var(--sb-dim, 1);
+  background: var(--holo-room-dim); backdrop-filter: var(--holo-room-blur); }
+.storybook-stage { position: relative; display: grid; place-items: center; min-height: 0; perspective: var(--bd-turn-perspective);
+  container-type: size; justify-self: stretch; align-self: stretch; }
+/* The page fills the stage's height, which is what is left once the close row and the dock have taken theirs. */
+/* It leaves room for the hovered cover's lift (--sb-lift-fit), so the grown fore-edge never reaches the nav or picker. */
+.storybook-stage { --sb-page-h: calc(100cqh * var(--sb-lift-fit) - 2 * var(--sb-board)); perspective: var(--sb-perspective); }
+/* S6: while the book flies in it turns and scales round the closed cover's centre (the right half of a desktop spread),
+   so it leaves the trigger and lands on the centre as the cover, not as the empty spread box. */
+.storybook[data-state="arriving"][data-view="spread"] .storybook-book { transform-origin: 75% 50%; }
+.storybook[data-state="arriving"] .storybook-book { will-change: transform, opacity; }
+/* The gold motes shed on landing: specks of gilt light round the cover's centre, positioned per frame. */
+.storybook-motes { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 7; }
+.storybook-mote { position: absolute; width: var(--space-4); height: var(--space-4); margin: calc(var(--space-4) / -2); border-radius: 50%;
+  background: radial-gradient(circle, var(--world-paper) 0, var(--sb-gilt) 30%, transparent 70%); opacity: 0; }
+/* The painted cover not decoded when the flight starts: the code-drawn cover flies, and the painted one crossfades in
+   only after landing (data-cover-hold is cleared then). One already decoded is on from the first frame, no fade. */
+.storybook[data-cover-hold][data-art-cover] .storybook-cover-front::after { opacity: 0; }
+.storybook[data-cover-hold][data-art-cover] .storybook-cover-front::before { opacity: var(--sb-cover-trim-opacity); }
+.storybook[data-state="arriving"]:not([data-cover-hold]) .storybook-cover-front::before,
+.storybook[data-state="arriving"]:not([data-cover-hold]) .storybook-cover-front::after { transition: none; }
+
+/* The book: two boards side by side, each holding a page; the cover hinges on the spine. */
+.storybook-book { position: relative; display: grid; grid-template-columns: repeat(var(--sb-per-view), var(--sb-side-w)); transform-style: preserve-3d; touch-action: pan-y; }
+.storybook[data-view="page"] .storybook-book { grid-template-columns: calc(var(--sb-page-w) + 2 * var(--sb-board)); }
+.storybook[data-view="page"] .storybook-right { display: none; }
+.storybook:is([data-state="arriving"], [data-state="closed"], [data-state="opening"])[data-view="spread"] .storybook-book { translate: var(--sb-closed-shift) 0; }
+.storybook:is([data-state="arriving"], [data-state="closed"]) .storybook-left, .storybook[data-state="opening"][data-view="spread"] .storybook-left { opacity: 0; }
+
+.storybook-side {
+  position: relative; height: calc(var(--sb-page-h) + 2 * var(--sb-board)); transform-style: preserve-3d;
+  background: var(--sb-endpaper-art, radial-gradient(circle, var(--sb-endpaper-dot) var(--world-lip), transparent calc(var(--world-lip) * 2)) 0 0 / var(--space-4) var(--space-4)) center / cover, var(--sb-endpaper);
+  box-shadow: var(--world-drop);
+}
+.storybook-left { border-radius: var(--sb-radius) 0 0 var(--sb-radius); }
+.storybook-right { border-radius: 0 var(--sb-radius) var(--sb-radius) 0; }
+.storybook[data-view="page"] .storybook-left { border-radius: var(--sb-radius); }
+
+/* A page: cream paper (painted when the look URL brings it), the gutter shadow on the spine side. */
+.storybook-page {
+  position: absolute; inset: var(--sb-board) 0 var(--sb-board) var(--sb-board);
+  display: grid; grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); justify-items: center; gap: var(--space-1);
+  padding: var(--sb-page-pad) var(--sb-page-pad) calc(var(--sb-page-pad) + var(--sb-folio-h));
+  background: linear-gradient(to left, var(--sb-gutter), transparent 10%), var(--sb-paper-art, none) center / cover, var(--world-paper);
+  border-radius: var(--sb-page-radius) 0 0 var(--sb-page-radius);
+}
+.storybook-right .storybook-page { inset: var(--sb-board) var(--sb-board) var(--sb-board) 0; border-radius: 0 var(--sb-page-radius) var(--sb-page-radius) 0;
+  background: linear-gradient(to right, var(--sb-gutter), transparent 10%), var(--sb-paper-art, none) center / cover, var(--world-paper); }
+.storybook[data-view="page"] .storybook-page { inset: var(--sb-board); border-radius: var(--sb-page-radius);
+  background: linear-gradient(to right, var(--sb-gutter), transparent 6%), var(--sb-paper-art, none) center / cover, var(--world-paper); }
+/* The 3x3 grid: cards in list order, a row per resident today; the name sits small under the row's first card. */
+.storybook-grid { display: grid; grid-template-columns: repeat(3, var(--sb-card)); grid-auto-rows: calc(var(--sb-card) * 1.4 + var(--sb-name-h)); column-gap: var(--sb-gap); row-gap: var(--sb-gap); position: relative; z-index: 1; }
+.storybook-card { display: grid; grid-template-rows: auto var(--sb-name-h); align-content: start; }
+.storybook .holo-card.binder-card { position: relative; inset: auto; right: auto; bottom: auto; translate: none; z-index: 1; width: 100%; }
+.storybook-grid .holo-ability-line { display: none; } /* a grid card is under 200 px wide: its move lines wait for the big card */
+.storybook .holo-breath { animation: none; }
+.storybook-name { margin: 0; padding-top: var(--space-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: italic var(--weight-strong) var(--text-sm) / var(--line-tight) var(--font-heading); color: var(--world-ink); }
+.storybook-folio { position: absolute; left: 0; right: 0; bottom: var(--space-2); margin: 0; text-align: center; font: italic var(--text-sm) / var(--line-tight) var(--font-heading); color: var(--world-muted); }
+.storybook-over { z-index: 4; }
+
+/* Margin sketches (S4). Painted when the look URL brings them, else a faint line ornament drawn here. They sit in the
+   margins and empty slots, behind the cards (z-index 1 above), never over a card. */
+.storybook-sketch { pointer-events: none; mix-blend-mode: multiply; /* S6: a sketch's pale, half-opaque edge pixels (sketch-corner-a, alpha 207 near white) vanish into the paper instead of drawing a lighter square */  background-repeat: no-repeat; background-position: center; background-size: contain; }
+.storybook-sketch-head, .storybook-sketch-tail { justify-self: stretch; height: 100%; max-height: var(--sb-band-max); min-height: 0; }
+.storybook-sketch-head { align-self: end; }
+.storybook-sketch-tail { align-self: start; }
+.storybook:not([data-art-head]) .storybook-sketch-head,
+.storybook:not([data-art-tail]) .storybook-sketch-tail {
+  background-image: radial-gradient(circle, var(--sb-sketch-ink) var(--world-lip), transparent calc(var(--world-lip) * 1.5)),
+    linear-gradient(to right, transparent, var(--sb-sketch-ink) 30%, transparent 46%, transparent 54%, var(--sb-sketch-ink) 70%, transparent);
+  background-size: var(--space-3) var(--space-3), 60% var(--world-lip);
+}
+.storybook[data-art-head] .storybook-sketch-head { background-image: var(--sb-head-art); }
+.storybook[data-art-tail] .storybook-sketch-tail { background-image: var(--sb-tail-art); }
+.storybook-corner-tl, .storybook-corner-br { position: absolute; width: var(--sb-corner); height: var(--sb-corner); }
+.storybook-corner-tl { top: var(--space-1); left: var(--space-2); background-position: top left; }
+.storybook-corner-br { bottom: var(--space-1); right: var(--space-2); background-position: bottom right; }
+.storybook:not([data-art-corner-tl]) .storybook-corner-tl { inset: var(--space-2) auto auto var(--space-3); width: var(--sb-page-pad); height: var(--sb-page-pad);
+  border: solid var(--sb-sketch-ink); border-width: var(--world-lip) 0 0 var(--world-lip); border-top-left-radius: var(--sb-page-pad); }
+.storybook:not([data-art-corner-br]) .storybook-corner-br { inset: auto var(--space-3) var(--space-2) auto; width: var(--sb-page-pad); height: var(--sb-page-pad);
+  border: solid var(--sb-sketch-ink); border-width: 0 var(--world-lip) var(--world-lip) 0; border-bottom-right-radius: var(--sb-page-pad); }
+.storybook[data-art-corner-tl] .storybook-corner-tl { background-image: var(--sb-cornerTl-art); }
+.storybook[data-art-corner-br] .storybook-corner-br { background-image: var(--sb-cornerBr-art); }
+/* Only the top-left corner painted (run 20261122T001005Z: sketch-corner-b failed): the bottom-right turns it round. */
+.storybook[data-art-corner-tl]:not([data-art-corner-br]) .storybook-corner-br { inset: auto var(--space-2) var(--space-1) auto; width: var(--sb-corner); height: var(--sb-corner);
+  border: 0; border-radius: 0; background-image: var(--sb-cornerTl-art); background-position: top left; rotate: 180deg; }
+/* S5: the treehouse and the books-and-candle vignettes behind the grid, faint, showing in the gutters and round the grid.
+   Cards are opaque and sit above (the grid's z-index), so a sketch never covers one. */
+.storybook-sketch-behind { position: absolute; inset: var(--sb-page-pad) var(--sb-page-pad) calc(var(--sb-page-pad) + var(--sb-folio-h)); z-index: 0; opacity: var(--sb-sketch-behind);
+  background-image: var(--sb-vignette-art, none), var(--sb-vignetteAlt-art, none); background-position: left top, right bottom; background-size: var(--sb-behind-size) auto; }
+
+.storybook:not([data-art-vignette]) .storybook-page[data-page='0'] .storybook-sketch-behind {
+  inset: auto var(--sb-page-pad) var(--space-1) auto;
+  width: var(--sb-opening-sketch-size);
+  height: var(--sb-opening-sketch-height);
+  background-image: url('./book-treehouse.webp');
+  background-position: right bottom;
+  background-size: contain;
+  opacity: var(--sb-opening-sketch-ink);
+}
+.storybook-corner-tl, .storybook-corner-br { z-index: 0; }
+.storybook-slot-empty { background: var(--sb-vignette-art, none) center / 80% no-repeat; opacity: var(--sb-empty-slot-opacity); }
+.storybook-slot-empty:nth-child(even) { background-image: var(--sb-vignetteAlt-art, var(--sb-vignette-art, none)); }
+
+/* The cover: cloth board over the right side (the only side on a phone), hinged on its left edge. */
+.storybook-cover { position: absolute; inset: 0 0 0 50%; z-index: 6; transform-origin: left center; transform-style: preserve-3d; }
+.storybook[data-view="page"] .storybook-cover { inset: 0; }
+.storybook:is([data-state="open"], [data-state="turning"]) .storybook-cover { display: none; }
+.storybook-cover-front, .storybook-cover-back { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 0 var(--sb-radius) var(--sb-radius) 0; }
+.storybook-cover-front {
+  display: grid; align-content: start; justify-items: center; padding: var(--space-7) var(--space-6) 0; border: 0; cursor: pointer;
+  background: repeating-linear-gradient(var(--world-grain-angle), var(--sb-cloth) 0, var(--sb-cloth-weave) var(--world-grain), var(--sb-cloth) calc(2 * var(--world-grain))) center / cover, var(--sb-cloth);
+  box-shadow: var(--world-drop), inset var(--world-lip) 0 0 var(--sb-cloth-weave);
+  color: var(--sb-gilt); font-family: var(--font-heading);
+}
+/* S5: the painted cover lies over the cloth at opacity 0 and fades in only once decoded (data-art-cover), so the closed
+   book is never blank or half painted. The gilt frame fades out under it. */
+.storybook-cover-front::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: var(--sb-cover-art, none) center / cover; transition: opacity var(--sb-cover-fade) var(--motion-ease); }
+.storybook[data-art-cover] .storybook-cover-front::after { opacity: 1; }
+.storybook-cover-titles { position: relative; z-index: 1; }
+.storybook[data-art-cover] .storybook-cover-front::before { opacity: 0; }
+.storybook-cover-front::before {
+  content: ""; position: absolute; inset: var(--space-4); border: var(--world-lip) solid var(--sb-gilt); border-radius: var(--space-2); opacity: var(--sb-cover-trim-opacity); pointer-events: none;
+  transition: opacity var(--sb-cover-fade) var(--motion-ease);
+}
+.storybook-cover-titles { display: grid; text-align: center; text-shadow: var(--sb-title-shadow); }
+/* Painted cloth is lighter than the code cloth: a soft shadow pool under the title keeps the gilt at 4.5:1. */
+.storybook[data-art-cover] .storybook-cover-front { padding-top: calc(var(--space-7) - var(--space-4)); } /* title stays put */
+.storybook[data-art-cover] .storybook-cover-titles { padding: var(--space-4) var(--space-6); background: radial-gradient(closest-side, var(--sb-title-wash), transparent); }
+.storybook-cover-title { font: var(--sb-title-weight) var(--sb-title-size) / 1.05 var(--font-heading); white-space: nowrap; }
+/* The open cue: only while the closed book waits (data-cue, coverCue in state.ts); the swing clears it first. */
+@keyframes sb-peek {
+  0%, 100% { transform: rotateY(0deg); }
+  30%, 42% { transform: rotateY(var(--sb-peek-turn)); }
+  72% { transform: rotateY(0deg); }
+}
+.storybook[data-cue="peek"] .storybook-cover { animation: sb-peek var(--sb-peek-ms) var(--sb-peek-ease) infinite; }
+.storybook[data-cue="ajar"] .storybook-cover { transform: rotateY(var(--sb-ajar-turn)); }
+.storybook[data-cue] .storybook-cover { transition: transform var(--world-duration) var(--motion-ease); }
+.storybook[data-cue] .storybook-cover-front { transition: filter var(--world-duration) var(--motion-ease); }
+.storybook[data-cue] .storybook-cover-front:hover { filter: var(--sb-hover-bright); }
+@media (hover: hover) { .storybook[data-cue="peek"] .storybook-cover:hover { animation: none; transform: rotateY(var(--sb-hover-lift)); } }
+.storybook[data-cue] .storybook-cover-front:active { filter: var(--sb-press-dim); }
+.storybook-cover-back {
+  transform: rotateY(180deg); border-radius: var(--sb-radius) 0 0 var(--sb-radius);
+  background: var(--sb-endpaper-art, radial-gradient(circle, var(--sb-endpaper-dot) var(--world-lip), transparent calc(var(--world-lip) * 2)) 0 0 / var(--space-4) var(--space-4)) center / cover, var(--sb-endpaper);
+}
+
+/* The turning leaf: the old page on its front, plain paper on its back. */
+.storybook-leaf { position: absolute; inset: 0; z-index: 5; transform-style: preserve-3d; pointer-events: none; }
+.storybook-leaf-face { position: absolute; inset: 0; backface-visibility: hidden; }
+.storybook-leaf-back { transform: rotateY(180deg); }
+.storybook-leaf-back::before { content: ""; position: absolute; inset: var(--sb-board) var(--sb-board) var(--sb-board) 0; background: var(--sb-paper-art, none) center / cover, var(--world-paper-sunk); }
+.storybook-leaf-shade { position: absolute; inset: var(--sb-board); pointer-events: none; background: linear-gradient(to right, var(--sb-shade), transparent 60%); opacity: var(--sb-leaf-shade-opacity); }
+
+/* Under the book: the nav and the holo picker. One row on a desktop; on a phone the picker sits over the nav. */
+.storybook-dock { display: flex; align-items: center; justify-content: center; gap: var(--space-5); padding: var(--space-3) 0 max(var(--space-3), env(safe-area-inset-bottom)); max-width: 100%; min-width: 0; }
+.storybook-nav { display: flex; align-items: center; gap: var(--space-3); order: 2; }
+.storybook:is([data-state="arriving"], [data-state="closed"], [data-state="opening"]) .storybook-nav { visibility: hidden; } /* no pages yet: the room stays reserved */
+.storybook-picker { order: 1; min-width: 0; max-width: 100%; box-sizing: border-box; padding: var(--space-1); }
+.storybook-counter { margin: 0; min-width: 13ch; text-align: center; font: var(--weight-strong) var(--text-base) / var(--line-tight) var(--font-body); color: var(--world-paper); }
+.storybook-arrow, .storybook-close {
+  display: grid; place-items: center; width: var(--tap-min); height: var(--tap-min); padding: 0; border-radius: 50%; cursor: pointer;
+  border: var(--world-lip) solid var(--world-edge); color: var(--world-on-accent);
+  background: radial-gradient(circle at 50% 35%, var(--world-wood-light), var(--world-wood-dark)); box-shadow: 0 var(--world-pill-edge) 0 var(--world-wood-dark);
+}
+.storybook-arrow svg, .storybook-close svg { width: 55%; height: 55%; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.storybook-arrow:disabled { opacity: var(--controls-rest-opacity); cursor: default; }
+.storybook-close { position: absolute; top: var(--space-3); right: max(var(--space-3), env(safe-area-inset-right)); z-index: 7; }
+.storybook :is(.storybook-arrow, .storybook-close, .storybook-cover-front):focus-visible { outline: var(--focus-width) solid var(--world-paper); outline-offset: var(--focus-offset); }
+@media (max-width: 640px) {
+  .storybook { backdrop-filter: none; }
+  .storybook-dock { flex-direction: column; gap: var(--space-2); width: 100%; padding-top: var(--space-2); }
+  .storybook-picker { flex-wrap: nowrap; width: 100%; }
+  /* The fade is the cue that more tabs sit to the right: only while some do (data-more, tab-fade.ts). A picked tab is
+     scrolled clear of it by the scroll padding, so it always reads in full. */
+  .storybook-picker .holo-tabs { flex-wrap: nowrap; justify-content: flex-start; min-width: 0; overflow-x: auto; scrollbar-width: none; scroll-padding-inline: var(--bd-picker-fade); }
+  .storybook-picker .holo-tabs[data-more] { mask-image: linear-gradient(to right, black calc(100% - var(--bd-picker-fade)), transparent); }
+  .storybook-picker .holo-tab { flex-shrink: 0; }
+  .storybook-close { top: var(--space-2); }
+}
+
+/* The tray tile: the Residents knob, with its one-word label under it. */
+/* Collection adds a tile, six in all (Play, Residents, Collection, Music, Postcard, Settings): the board widens to six
+   label cells, so "Collection" never runs into "Residents". Labels never shrink (L11: 13 px at least). */
+:root { --sb-tray-cell: var(--tray-cell); --sb-tray-tiles: 6; }
+.scene-actions:has(.storybook-trigger) {
+  --tray-width: calc(var(--sb-tray-tiles) * var(--sb-tray-cell) + 2 * var(--tray-pad));
+  --tray-cell: calc((min(var(--tray-width), 100vw - 2 * var(--tray-corner)) - 2 * var(--tray-pad)) / var(--sb-tray-tiles));
+}
+/* The book hides the tray (storybook.ts sets [hidden]); the tray's own display: flex must not keep it on screen. */
+.scene-actions:has(.storybook-trigger)[hidden] { display: none; }
+/* A phone's board is narrower than six equal label cells at full size, so each tile's slot is as wide as its own label
+   (--tile-label-w, measured by tray-room.ts) and the row shares what is left between them. Each label sits on one line,
+   centred under its tile, as wide as its text. */
+@media (max-width: 640px) {
+  .scene-actions:has(.storybook-trigger) { --tray-pad: var(--space-1); } /* the board's side padding goes to the labels */
+  .scene-actions:has(.storybook-trigger) .tray-items { justify-content: space-between; gap: 0; }
+  .scene-actions:has(.storybook-trigger) .tray-items > * { margin-inline: max(0px, calc((var(--tile-label-w, 0px) - var(--tray-knob-size)) / 2)); }
+  .scene-actions:has(.storybook-trigger) .tray-items [data-label]::after { width: max-content; text-wrap: nowrap; }
+}
+.scene-actions .storybook-trigger {
+  display: grid; place-items: center; width: var(--tray-knob-size); height: var(--tray-knob-size); margin: var(--tray-divide) 0 var(--tray-label-room); padding: 0; border: 0;
+  border-radius: 50%; color: var(--world-ink); background: var(--tray-knob); box-shadow: var(--tray-knob-raise); cursor: pointer;
+  transition: transform var(--world-duration) var(--motion-ease), box-shadow var(--world-duration) var(--motion-ease);
+}
+.scene-actions .storybook-trigger svg { width: var(--tray-knob-icon); height: var(--tray-knob-icon); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.scene-actions .storybook-trigger:hover { background: var(--world-paper); }
+.scene-actions .storybook-trigger:active { transform: translateY(var(--world-press)); background: var(--world-paper-sunk); }
+.scene-actions[data-music="false"] .storybook-trigger { margin-top: var(--space-1); }
+.scene-actions .storybook-trigger::after {
+  content: attr(data-label); visibility: visible; top: calc(100% + var(--world-pill-edge) + var(--space-1)); bottom: auto; left: 50%; right: auto; translate: -50% 0;
+  width: var(--tray-cell); max-width: none; padding: 0; border: 0; background: none; box-shadow: none;
+  color: var(--tray-label-ink); font: var(--weight-strong) var(--tray-label-size) / var(--line-tight) var(--font-body); text-align: center;
+}
+@media (prefers-reduced-motion: reduce) { .scene-actions .storybook-trigger { transition: none; } .scene-actions .storybook-trigger:active { transform: none; } }

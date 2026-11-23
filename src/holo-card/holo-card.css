@@ -1,0 +1,434 @@
+/* The holographic resident card (look test `?holocard`, round 2): full art, no boxed panels, a thin gold edge.
+   Front, bottom to top: backdrop, foil, resident, scrim, words, gold edge and its foil, glare. Tokens first. */
+@font-face {
+  /* Nunito's heavy weights from the same file tokens.css loads (it declares 400 to 600), so the card's display
+     type stays Nunito and the page stays at one family (standards L11). */
+  font-family: "Nunito"; font-style: normal; font-weight: 700 900; font-display: swap;
+  src: url("/fonts/nunito-latin.woff2") format("woff2");
+}
+:root {
+  --holo-width: 15rem; /* the card in the room */
+  --holo-width-phone: 12.5rem;
+  --holo-big-width: min(calc(86dvh * 5 / 7), 94vw); /* popped out, as big as the viewport allows (owner, round 3) */
+  --holo-art-ratio: 424 / 512; /* the card art's canvas, from prepare_holo_card_art.py */
+  --holo-cutout-width: 84%; /* a made resident's cutout: contained in this share of the card's width, standing on the art slot's floor */
+  --holo-ratio: 5 / 7;
+  --holo-perspective: 60rem;
+  --holo-border: 1.6cqi; /* thin metallic edge: about 4 px on the room card, 7 px popped */
+  --holo-corner: 5cqi;
+  --holo-font: var(--font-body);
+  --holo-ray: 6deg; /* one stripe of the backdrop's burst */
+  --holo-gold-light: color-mix(in srgb, var(--grove-mote) 70%, var(--world-paper));
+  --holo-gold: color-mix(in srgb, var(--grove-glow) 75%, var(--world-edge));
+  --holo-gold-deep: color-mix(in srgb, var(--world-edge) 65%, var(--world-wood));
+  /* Berry for the special (round 6). The standards have no berry token; --postcard-thread is the nearest, but it is
+     about 3.8:1 on the scrim, so the label lifts it toward paper to pass 4.5:1 (L9). */
+  --holo-berry-light: color-mix(in srgb, var(--postcard-thread) 55%, var(--world-paper));
+  --holo-berry: var(--postcard-thread);
+  --holo-berry-deep: color-mix(in srgb, var(--postcard-thread) 60%, var(--world-ink));
+  --holo-berry-ink: color-mix(in srgb, var(--postcard-thread) 62%, var(--world-paper)); /* 62%: still 4.5:1 once see-through (round 7) */
+  --holo-kind-alpha: 85%; /* the move labels' opacity, round 7 */
+  --holo-words-gap-phone: 8cqi; /* room between the two move columns on a phone (round 7; 4cqi felt cramped) */
+  /* Backdrop: warm lamplight at the centre falling to deep leaf at the edges. */
+  /* Gold at the centre, amber, then leaf only at the edge: mixing gold straight into green went muddy (capture 1). */
+  --holo-sun: color-mix(in srgb, var(--grove-mote) 70%, var(--world-paper));
+  --holo-glow: var(--grove-glow);
+  --holo-amber: color-mix(in srgb, var(--grove-glow) 55%, var(--postcard-red));
+  --holo-deep: color-mix(in srgb, var(--world-leaf) 55%, var(--world-ink));
+  --holo-ray-a: color-mix(in srgb, var(--grove-mote) 30%, transparent);
+  --holo-ray-b: transparent;
+  /* Element palettes (owner, round 12: the backdrop's colours follow the resident's element, replacing round 10's
+     trait palettes). One place for all five. Roles: sun = the lamp at the centre, glow = the inner ring, mid = the
+     middle ring, deep = the edge, ray = the burst's stripes; gem, gem-deep and gem-ink colour the element's own mark.
+     The standards tokens have no aqua, flame, lime or midnight, so those are literals here, named once. */
+  /* bloom: warm green-gold. */
+  --holo-el-bloom-sun: color-mix(in srgb, var(--grove-mote) 70%, var(--world-paper));
+  --holo-el-bloom-glow: color-mix(in srgb, var(--grove-glow) 70%, var(--postcard-leaf));
+  --holo-el-bloom-mid: color-mix(in srgb, var(--postcard-leaf) 75%, var(--grove-glow));
+  --holo-el-bloom-deep: color-mix(in srgb, var(--world-leaf) 55%, var(--world-ink));
+  --holo-el-bloom-ray: color-mix(in srgb, var(--grove-mote) 30%, transparent);
+  --holo-el-bloom-gem: #7fae4a;
+  --holo-el-bloom-gem-deep: #34501d;
+  --holo-el-bloom-gem-ink: #fff8e6;
+  /* splash: aqua blue. */
+  --holo-el-splash-sun: #e9fbff;
+  --holo-el-splash-glow: #7fd6e6;
+  --holo-el-splash-mid: #2b8db5;
+  --holo-el-splash-deep: #0e3550;
+  --holo-el-splash-ray: rgb(225 250 255 / 0.3);
+  --holo-el-splash-gem: #5cc4e0;
+  --holo-el-splash-gem-deep: #14506e;
+  --holo-el-splash-gem-ink: #072433;
+  /* ember: warm orange-red. */
+  --holo-el-ember-sun: color-mix(in srgb, var(--grove-mote) 70%, var(--world-paper));
+  --holo-el-ember-glow: #ff9d4f;
+  --holo-el-ember-mid: #c9412b;
+  --holo-el-ember-deep: #45130e;
+  --holo-el-ember-ray: rgb(255 214 160 / 0.3);
+  --holo-el-ember-gem: #e8573a;
+  --holo-el-ember-gem-deep: #7a1d12;
+  --holo-el-ember-gem-ink: #fff3e2;
+  /* spark: bright yellow-white. */
+  --holo-el-spark-sun: #fffdf0;
+  --holo-el-spark-glow: #ffe874;
+  --holo-el-spark-mid: #e3b425;
+  --holo-el-spark-deep: #66460a;
+  --holo-el-spark-ray: rgb(255 255 235 / 0.4);
+  --holo-el-spark-gem: #ffd84a;
+  --holo-el-spark-gem-deep: #8a6210;
+  --holo-el-spark-gem-ink: #3a2604;
+  /* chaos is purple (owner, 2026-11-19): a near-black violet base under a pale lilac glow and magenta rays, so a purple
+     resident still separates from it by value, not by hue. */
+  --holo-el-chaos-sun: #f4dcff;
+  --holo-el-chaos-glow: #c27cf2;
+  --holo-el-chaos-mid: #4a1f78;
+  --holo-el-chaos-deep: #14081f;
+  --holo-el-chaos-ray: rgb(240 190 255 / 0.28);
+  --holo-el-chaos-gem: #a35ee8;
+  --holo-el-chaos-gem-deep: #3d1766;
+  --holo-el-chaos-gem-ink: #fcf3ff;
+  /* The element's own mark (round 12): the medallion in the name row (a), the gem in the top border (b), the
+     engraved word on the bottom border (c). Sizes in cqi, like every size on the face. */
+  --holo-element-medal: 11cqi;
+  --holo-element-glyph: 62%;
+  --holo-gem-bezel-w: 15cqi;
+  --holo-gem-bezel-h: 8.5cqi;
+  --holo-gem: 7cqi;
+  --holo-head-top-gem: 7cqi; /* placement b pushes the title row down, clear of the bezel */
+  --holo-plate-h: 6.6cqi; /* placement c's plate on the bottom border */
+  --holo-plate-pad: 3cqi;
+  --holo-plate-size: 3.8cqi; /* 13.4 px on the 352 px popped phone card: the helper-text floor (L11) */
+  --holo-words-bottom-plate: 9cqi; /* placement c lifts the moves clear of the plate */
+  --holo-gem-shadow: 0 0.6cqi 1cqi rgb(20 12 6 / 0.55);
+  /* The title row's scrim (round 10): dark across the whole top band, fading down, so name and trait read on every
+     palette. Held to the row's foot (about 14%), half by 20%, gone by 30%, above the resident's face. */
+  --holo-scrim-title: rgb(26 16 9 / 0.62);
+  --holo-scrim-title-hold: 12%;
+  --holo-scrim-title-mid: 20%;
+  --holo-scrim-title-end: 30%;
+  /* The trait line under the name (round 9): engraved gold, a dark lip above (cut in), a faint lit lip below. */
+  --holo-trait-ink: color-mix(in srgb, var(--grove-mote) 40%, var(--world-paper)); /* cream gold: lighter than the name (round 10) */
+  --holo-trait-size: 4.25cqi; /* 1.25x round 9's 3.4cqi: Springy read small (owner, round 10) */
+  /* Every size on the face is in cqi or em of the card's own width, never rem or a px floor, so the resting card is
+     an exact scaled-down copy of the popped one (round 11: rem floors made the room card's text overflow). */
+  --holo-words-size: 3.6cqi;
+  --holo-kind-size: 0.85em;
+  /* Phone values match round 10's popped phone card, where the old 13 and 16 px floors were live (366 px wide). */
+  --holo-trait-size-phone: 4.36cqi; /* 16 px on the 366 px popped card */
+  --holo-kind-size-phone: 0.985em; /* 13 px over 13.2 px words */
+  --holo-engrave-dark: rgb(20 12 6 / 0.8);
+  --holo-engrave-lit: color-mix(in srgb, var(--holo-gold-light) 40%, transparent);
+  --holo-engrave: 0 -1px 0 var(--holo-engrave-dark), 0 1px 0 var(--holo-engrave-lit);
+  --holo-engrave-icon: drop-shadow(0 -1px 0 var(--holo-engrave-dark)) drop-shadow(0 1px 0 var(--holo-engrave-lit));
+  --holo-trait-icon: 1.35em; /* over the word's line height: at 1.15em the spring was a speck on a phone (round 9) */
+  --holo-trait-gap: 0.3em;
+  --holo-name-size: 13cqi;
+  /* Alt art: a faint foil inside this ellipse, full foil past the fade (owner, 2026-11-20: "let a faint foil cross the
+     whole alt painting"). The face share keeps the painting's resident readable; round 2's clear centre hid the foil. */
+  --holo-alt-clear: 35%;
+  --holo-alt-fade: 80%;
+  --holo-alt-face: 45%;
+  /* The trait word's letters sit above the middle of its line box, so the icon rises to meet them (owner, 2026-11-19:
+     measured 1.7px low at 16px type). */
+  --holo-trait-icon-lift: -0.2em;
+  --holo-title-gap: 3cqi; /* the least room between the name and the trait line on one row (round 10) */
+  /* The room behind the popped card: 70% dark and a slight blur, so the card lifts out of the scene (round 7). */
+  --holo-room-dim: rgb(20 12 7 / 0.7);
+  --holo-room-blur: blur(4px);
+  /* The foil's three colours (holo redo, 2026-11-20). holo-foil-tint-model.ts replaces them with the painting's own hues
+     once its pixels are read; these hold until then, at mid lightness, since color-dodge divides by (1 - foil) and
+     pastels blow out to white (round 1). Same values as FOIL_TINT.fallback. */
+  --holo-t1: hsl(40 72% 50%); --holo-t2: hsl(140 72% 50%); --holo-t3: hsl(270 72% 50%);
+  /* One rainbow band, in card widths (holo integrated: redo 3's 11% of a sheet twice the card, about a third of it). */
+  --holo-band: 33cqi;
+  --holo-foil-angle: 115deg;
+  /* Bands of light the rainbow shows through, one per this length (redo 3's 24% of the sheet), so one always crosses
+     the alt art's foiled rim, not only its faint centre. */
+  --holo-light: 72cqi;
+  /* Dark length at each end of a light band (redo 3: a crisp stripe reads as a holo band; an even ramp washed out). */
+  --holo-light-dark: 18cqi;
+  /* Holo integrated (2026-11-20): every foil gradient is this many times the card, so moving it never shows its edge. */
+  --holo-paint: 300%;
+  /* How far, in card widths per unit of tilt offset (-1 to 1), the default foil's two gradients move. Opposite signs
+     and different rates: the hues run one way and the light the other, so the bands shift inside the card. */
+  --holo-rate-light: 34;
+  --holo-rate-hue: -14;
+  /* The light band's brightness at rest and its gain toward a corner tilt (--holo-from, 0 to 1). */
+  --holo-light-rest: 55%;
+  --holo-light-gain: 45%;
+  --holo-mask: #000;
+  --holo-ink: var(--world-paper); /* words on the dark scrim */
+  --holo-ink-soft: color-mix(in srgb, var(--world-paper) 82%, transparent);
+  /* The shade under the moves, softened (owner, 2026-11-19: the bottom read dark): 70% at the edge, gone a third up. */
+  --holo-scrim-ink: rgb(26 16 9 / 0.7);
+  --holo-scrim-ink-hold: 14%;
+  --holo-scrim-ink-end: 34%;
+  --holo-scrim-top: rgb(26 16 9 / 0.5);
+  --holo-name-shadow: 0 0.06em 0 var(--holo-gold-deep), 0 0.1em 0.25em rgb(20 12 6 / 0.65);
+  --holo-creature-shadow: drop-shadow(0 1.2cqi 1.6cqi rgb(26 16 9 / 0.45));
+  --holo-medal: 2.4em; /* the move's icon medallion, about two text lines tall */
+  --holo-medal-stroke: 2.4; /* the shared icons draw at 2 on 24; a touch heavier reads on the gold disc */
+  --holo-medal-shadow: 0 0.1em 0.25em rgb(20 12 6 / 0.55);
+  --holo-lift: 0 0.6rem 0.8rem rgb(28 15 10 / 0.3), 0 1.6rem 2.4rem rgb(28 15 10 / 0.3);
+  --holo-glare-colour: #fff6e4;
+  /* The pointer glare (holo redo 3): a soft warm-white spot under screen. Core 70% so it reads mid-tilt (45% did not);
+     the spot is about half the card across. */
+  --holo-glare-core: color-mix(in srgb, var(--holo-glare-colour) 70%, transparent);
+  --holo-glare-mid: color-mix(in srgb, var(--holo-glare-colour) 32%, transparent);
+  --holo-glare-mid-at: 10cqi;
+  --holo-glare-size: 52cqi;
+  /* How strong the screen copy of the foil is against the color-dodge one: enough to show on dark paint, low enough
+     that light paint does not wash to pastel. Holo redo 3: 0.6, since 0.35 left mid-tilt bands invisible. */
+  --holo-lift-share: 0.75;
+}
+
+.holo-card {
+  position: fixed; z-index: var(--controls-layer);
+  right: 7vw; top: 50%; translate: 0 -50%;
+  width: var(--holo-width); aspect-ratio: var(--holo-ratio);
+  padding: 0; border: 0; background: none; cursor: pointer; touch-action: none;
+  perspective: var(--holo-perspective); transform-style: preserve-3d;
+  font: inherit; color: var(--holo-ink); -webkit-tap-highlight-color: transparent;
+}
+.holo-card.is-away { visibility: hidden; }
+.holo-card:focus-visible { outline: none; }
+.holo-card:focus-visible .holo-face { outline: var(--world-lip) solid var(--ink-focus); outline-offset: var(--space-1); }
+
+/* No filter or overflow on anything above the faces: either would flatten the 3D and show a mirrored front mid-turn. */
+.holo-tilt, .holo-flipper, .holo-face { position: absolute; inset: 0; display: block; border-radius: var(--holo-corner); }
+/* The tilt is written inline by holo-tilt.ts, with the properties every foil and glare gradient moves by. */
+.holo-tilt {
+  container-type: inline-size; transform-style: preserve-3d; will-change: transform;
+  --holo-px: 50%; --holo-py: 50%; --holo-mx: 0; --holo-my: 0; --holo-from: 0; --holo-shine: 0; --holo-glare: 0;
+}
+.holo-flipper { transform-style: preserve-3d; }
+.holo-face { backface-visibility: hidden; overflow: hidden; isolation: isolate; box-shadow: var(--holo-lift); background: var(--holo-deep); }
+.holo-back { transform: rotateY(180deg); }
+.holo-face > * { position: absolute; inset: 0; display: block; pointer-events: none; }
+
+/* 1. Backdrop: a burst of lamplight, drawn in code (the leaves went in round 8: muddy beside the burst). */
+.holo-backdrop {
+  background:
+    radial-gradient(circle at 50% 40%, var(--holo-sun) 0 10%, transparent 48%),
+    repeating-conic-gradient(from 0deg at 50% 40%, var(--holo-ray-a) 0 var(--holo-ray), var(--holo-ray-b) var(--holo-ray) calc(var(--holo-ray) * 2)),
+    radial-gradient(circle at 50% 40%, var(--holo-glow) 0, var(--holo-amber) 45%, var(--holo-deep) 92%);
+}
+/* A generated scene (look test, 2026-11-20) replaces the burst; the element still colours the medallion. */
+.holo-backdrop[data-scene] { background: var(--holo-scene) center / cover no-repeat; }
+/* Alt art: the painting already holds the resident, so the living cut-out is not drawn over it. */
+.holo-front[data-art="alt"] > .holo-creature { display: none; }
+/* The painting's resident is not foiled (owner, 2026-11-20: the streaks washed Chomper out): the foil fades in only
+   toward the edges and corners. */
+.holo-front[data-art="alt"] > .holo-foil:not(.holo-foil-edge) {
+  mask: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--holo-mask) var(--holo-alt-face), transparent) 0 var(--holo-alt-clear), var(--holo-mask) var(--holo-alt-fade));
+}
+/* The element picks the palette (round 12); bloom's set is also the default on :root's roles. */
+.holo-front[data-element="bloom"] {
+  --holo-sun: var(--holo-el-bloom-sun); --holo-glow: var(--holo-el-bloom-glow); --holo-amber: var(--holo-el-bloom-mid);
+  --holo-deep: var(--holo-el-bloom-deep); --holo-ray-a: var(--holo-el-bloom-ray);
+  --holo-gem-colour: var(--holo-el-bloom-gem); --holo-gem-deep: var(--holo-el-bloom-gem-deep); --holo-gem-ink: var(--holo-el-bloom-gem-ink);
+}
+.holo-front[data-element="splash"] {
+  --holo-sun: var(--holo-el-splash-sun); --holo-glow: var(--holo-el-splash-glow); --holo-amber: var(--holo-el-splash-mid);
+  --holo-deep: var(--holo-el-splash-deep); --holo-ray-a: var(--holo-el-splash-ray);
+  --holo-gem-colour: var(--holo-el-splash-gem); --holo-gem-deep: var(--holo-el-splash-gem-deep); --holo-gem-ink: var(--holo-el-splash-gem-ink);
+}
+.holo-front[data-element="ember"] {
+  --holo-sun: var(--holo-el-ember-sun); --holo-glow: var(--holo-el-ember-glow); --holo-amber: var(--holo-el-ember-mid);
+  --holo-deep: var(--holo-el-ember-deep); --holo-ray-a: var(--holo-el-ember-ray);
+  --holo-gem-colour: var(--holo-el-ember-gem); --holo-gem-deep: var(--holo-el-ember-gem-deep); --holo-gem-ink: var(--holo-el-ember-gem-ink);
+}
+.holo-front[data-element="spark"] {
+  --holo-sun: var(--holo-el-spark-sun); --holo-glow: var(--holo-el-spark-glow); --holo-amber: var(--holo-el-spark-mid);
+  --holo-deep: var(--holo-el-spark-deep); --holo-ray-a: var(--holo-el-spark-ray);
+  --holo-gem-colour: var(--holo-el-spark-gem); --holo-gem-deep: var(--holo-el-spark-gem-deep); --holo-gem-ink: var(--holo-el-spark-gem-ink);
+}
+.holo-front[data-element="chaos"] {
+  --holo-sun: var(--holo-el-chaos-sun); --holo-glow: var(--holo-el-chaos-glow); --holo-amber: var(--holo-el-chaos-mid);
+  --holo-deep: var(--holo-el-chaos-deep); --holo-ray-a: var(--holo-el-chaos-ray);
+  --holo-gem-colour: var(--holo-el-chaos-gem); --holo-gem-deep: var(--holo-el-chaos-gem-deep); --holo-gem-ink: var(--holo-el-chaos-gem-ink);
+}
+
+/* 2. Foil (holo integrated, 2026-11-20): diagonal rainbow bands in the painting's three hues, seen through bands of
+   light (black is neutral under color-dodge). Both are gradients the tilt's properties move (holo-tilt.ts), each at
+   its own rate and direction, so the light catches different hues as the card tips: the foil reads as part of the
+   card, not a sticker gliding over it (owner, 2026-11-20). The light brightens toward a corner tilt. It sits under
+   the resident, so the resident is never foiled, and inside the face, whose overflow clips it to the card. */
+.holo-foil {
+  mix-blend-mode: color-dodge; opacity: var(--holo-shine);
+  --holo-light-now: color-mix(in srgb, var(--holo-glare-colour) calc(var(--holo-light-rest) + var(--holo-from) * var(--holo-light-gain)), var(--holo-mask));
+  background:
+    repeating-linear-gradient(var(--holo-foil-angle), var(--holo-mask) 0 var(--holo-light-dark), var(--holo-light-now) calc(var(--holo-light) / 2), var(--holo-mask) calc(var(--holo-light) - var(--holo-light-dark)) var(--holo-light)),
+    repeating-linear-gradient(var(--holo-foil-angle), var(--holo-t1) 0, var(--holo-t2) calc(var(--holo-band) / 3),
+      var(--holo-t3) calc(var(--holo-band) * 2 / 3), var(--holo-t1) var(--holo-band));
+  background-size: var(--holo-paint) var(--holo-paint);
+  background-position:
+    calc(50% + var(--holo-mx) * var(--holo-rate-light) * 1cqi) calc(50% + var(--holo-my) * var(--holo-rate-light) * 1cqi),
+    calc(50% + var(--holo-mx) * var(--holo-rate-hue) * 1cqi) calc(50% + var(--holo-my) * var(--holo-rate-hue) * 1cqi);
+  background-blend-mode: multiply;
+}
+/* Color-dodge barely lifts dark paint (it divides a dark base by a little), so the bands vanished on Chomper (holo
+   redo 2). A second, same foil in screen adds the hue straight onto dark paint, at a fixed share of the first. */
+.holo-foil-lift { mix-blend-mode: screen; opacity: calc(var(--holo-shine) * var(--holo-lift-share)); }
+
+/* 3. The resident, about 70% of the card's height (owner, round 3), alive: it breathes from the feet. */
+.holo-face > .holo-creature {
+  inset: auto; left: 50%; top: 8%; height: 70%; width: auto; aspect-ratio: var(--holo-art-ratio); translate: -50% 0;
+  transform-origin: 50% 100%; filter: var(--holo-creature-shadow); user-select: none;
+}
+/* A made resident's idle is a cutout sprite of any ratio: the art slot is as wide as the card's text column and the pose is
+   contained (object-fit) and stood on the slot's floor, instead of the painting's ratio (G4). */
+.holo-face > .holo-creature[data-fit="cutout"] { aspect-ratio: auto; width: var(--holo-cutout-width); }
+.holo-creature[data-fit="cutout"] .holo-pose { object-position: 50% 100%; }
+.holo-breath {
+  position: absolute; inset: 0; display: block; transform-origin: 50% 100%;
+  animation: holo-breathe var(--holo-breath-ms) ease-in-out infinite;
+}
+.holo-creature.is-resting .holo-breath { animation-play-state: paused; }
+/* The body-shaped tap area (round 6): live only on the popped card, where a tap on it greets. Its box is set from
+   HOLO_PAT. The words and the name sit above it and take their own taps, so a tap on a text row still flips. */
+.holo-pat { position: absolute; display: block; pointer-events: none; }
+.holo-card-big .holo-pat { pointer-events: auto; }
+.holo-card-big .holo-face > .holo-head, .holo-card-big .holo-face > .holo-words { pointer-events: auto; }
+.holo-pose { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transform-origin: 50% 100%; }
+.holo-pose-welcome { opacity: 0; }
+@keyframes holo-breathe {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(var(--holo-bob)) scale(calc(1 - var(--holo-breath) / 2), calc(1 + var(--holo-breath))); }
+}
+
+/* 4. Scrim: a soft dark pool behind the title block (round 10), a light band under the name, a deep one under the words. */
+.holo-scrim {
+  background:
+    linear-gradient(to bottom, var(--holo-scrim-title) 0 var(--holo-scrim-title-hold), var(--holo-scrim-top) var(--holo-scrim-title-mid), transparent var(--holo-scrim-title-end)),
+    linear-gradient(to top, var(--holo-scrim-ink) 0 var(--holo-scrim-ink-hold), transparent var(--holo-scrim-ink-end));
+}
+
+/* 5. Words, straight on the art. */
+.holo-face > .holo-head {
+  /* One title row (owner, round 10: the right side read bare): the name left, the trait line right, on one baseline. */
+  inset: 4.5cqi 6cqi auto; display: flex; flex-direction: row; justify-content: space-between; align-items: baseline; gap: var(--holo-title-gap);
+}
+.holo-name { font: 900 var(--holo-name-size) / 1 var(--holo-font); letter-spacing: -0.01em; color: var(--holo-gold-light); text-shadow: var(--holo-name-shadow); }
+/* Compact, in two columns, so the words stay under the resident's body and never reach the face (round 3). */
+.holo-face > .holo-words {
+  inset: auto 6cqi 5cqi; display: grid; grid-template-columns: 1fr 1fr; gap: 2cqi 4cqi; align-items: start; text-align: start;
+  font: var(--holo-words-size) / 1.25 var(--font-body); color: var(--holo-ink);
+}
+/* The trait line under the name (round 9): icon then word, engraved in gold, at the Ability label's size. No foil of
+   its own: the card's glare layer above still passes over it with the tilt, but nothing tints it rainbow. */
+.holo-trait {
+  display: inline-flex; align-items: center; gap: var(--holo-trait-gap);
+  font: 800 var(--holo-trait-size) / 1.1 var(--holo-font); color: var(--holo-trait-ink); text-shadow: var(--holo-engrave);
+}
+.holo-trait .ability-icon {
+  width: var(--holo-trait-icon); height: var(--holo-trait-icon); flex: none;
+  stroke-width: var(--holo-medal-stroke); filter: var(--holo-engrave-icon);
+  translate: 0 var(--holo-trait-icon-lift);
+}
+/* Each move: a gold medallion beside its label and name, the line underneath (round 5). */
+.holo-ability { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.1em 0.5em; }
+.holo-ability-line { grid-column: 1 / -1; }
+.holo-medal {
+  display: grid; place-items: center; width: var(--holo-medal); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--holo-gold-light), var(--holo-gold) 55%, var(--holo-gold-deep));
+  box-shadow: inset 0 -0.12em 0 var(--holo-gold-deep), inset 0 0.08em 0 var(--holo-gold-light), var(--holo-medal-shadow);
+  color: var(--world-ink);
+}
+.holo-medal .ability-icon { width: 62%; height: 62%; stroke-width: var(--holo-medal-stroke); }
+.holo-ability-head { display: grid; justify-items: start; gap: 0.1em; } /* the label sits over the name (round 4) */
+.holo-ability-name { font: 900 1.3em / 1.1 var(--holo-font); color: var(--holo-ink); white-space: nowrap; }
+/* Quieter than the name (round 7): regular weight, a little see-through, so the move name leads. Still 4.5:1 or more. */
+.holo-ability-kind { font: 500 var(--holo-kind-size) / 1.1 var(--holo-font); color: color-mix(in srgb, var(--holo-gold-light) var(--holo-kind-alpha), transparent); } /* 13 px on the popped phone card via --holo-kind-size-phone (round 3's floor, now in em) */
+.holo-ability-line { color: var(--holo-ink-soft); }
+/* The special is berry, so the two moves read apart at a glance (owner, round 6). */
+.holo-ability[data-kind="special"] .holo-medal {
+  background: radial-gradient(circle at 35% 30%, var(--holo-berry-light), var(--holo-berry) 55%, var(--holo-berry-deep));
+  box-shadow: inset 0 -0.12em 0 var(--holo-berry-deep), inset 0 0.08em 0 var(--holo-berry-light), var(--holo-medal-shadow);
+  color: var(--world-paper);
+}
+.holo-ability[data-kind="special"] .holo-ability-kind { color: color-mix(in srgb, var(--holo-berry-ink) var(--holo-kind-alpha), transparent); }
+
+/* 6. The thin gold edge, and foil on it. */
+.holo-face > .holo-foil-edge, .holo-face::after {
+  padding: var(--holo-border); border-radius: inherit;
+  mask: linear-gradient(var(--holo-mask) 0 0) content-box, linear-gradient(var(--holo-mask) 0 0);
+  mask-composite: exclude;
+}
+.holo-face::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(135deg, var(--holo-gold-light), var(--holo-gold) 25%, var(--holo-gold-deep) 50%, var(--holo-gold-light) 70%, var(--holo-gold) 90%);
+}
+.holo-face > .holo-foil-edge { z-index: 1; }
+
+/* 7. Glare: a soft lamp spot painted at the pointer (or the idle path's point) from the tilt's properties. Screen,
+   not soft-light (holo redo 2: soft-light's white spot showed in no tilt capture). */
+.holo-face > .holo-glare {
+  z-index: 2; mix-blend-mode: screen; opacity: var(--holo-glare);
+  background: radial-gradient(circle at var(--holo-px) var(--holo-py), var(--holo-glare-core) 0, var(--holo-glare-mid) var(--holo-glare-mid-at), transparent var(--holo-glare-size));
+}
+
+/* Back: the blind box's front panel, zoomed past its painted title, with the painted grove sign in its place. */
+.holo-back { background: var(--art-box-front) 50% 100% / auto 140% no-repeat, var(--holo-deep); }
+.holo-back-scrim { background: linear-gradient(to bottom, var(--holo-scrim-top) 0, transparent 30%); }
+.holo-face > .holo-sign { inset: 7% auto auto 50%; width: 84%; height: auto; translate: -50% 0; filter: var(--holo-creature-shadow); }
+
+/* Popped out. The dialog box is the card, so dismissOnBackdrop reads a tap beside it as outside. */
+.holo-dialog {
+  width: var(--holo-big-width); aspect-ratio: var(--holo-ratio); max-width: none; max-height: none;
+  padding: 0; border: 0; background: none; overflow: visible; perspective: var(--holo-perspective);
+}
+.holo-dialog::backdrop { background: var(--holo-room-dim); backdrop-filter: var(--holo-room-blur); }
+.holo-card-big { position: relative; inset: auto; translate: none; width: 100%; height: 100%; display: block; }
+.holo-card-big:focus { outline: none; }
+.holo-card-big:focus-visible .holo-face { outline: var(--world-lip) solid var(--ink-focus); outline-offset: var(--space-1); }
+
+/* 8. The element (round 12), in one of three places. The gem disc is shared: element-coloured, lit from the upper
+   left like the room's lamp, with a gold rim. */
+.holo-element-a, .holo-gem {
+  display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; color: var(--holo-gem-ink);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--holo-gem-colour) 55%, var(--world-paper)), var(--holo-gem-colour) 50%, var(--holo-gem-deep));
+  box-shadow: 0 0 0 0.7cqi var(--holo-gold), inset 0 -0.5cqi 0 var(--holo-gem-deep), var(--holo-gem-shadow);
+}
+.holo-element .holo-glyph { width: var(--holo-element-glyph); height: var(--holo-element-glyph); stroke-width: var(--holo-medal-stroke); }
+/* a) A medallion at the right end of the name row; the trait is engraved on its own line under the name. */
+/* The medallion centres on the name's line, not on name plus trait (owner, 2026-11-19): half the gap between the
+   name's line box and the medallion's own width. */
+.holo-front[data-place="a"] > .holo-head { align-items: flex-start; }
+.holo-front[data-place="a"] .holo-element-a { margin-top: calc((var(--holo-name-size) - var(--holo-element-medal)) / 2); }
+.holo-title { display: grid; justify-items: start; gap: 1cqi; }
+.holo-element-a { width: var(--holo-element-medal); flex: none; }
+/* b) A gem set into the top centre of the gold border, in a gold bezel hanging from the edge. */
+.holo-front[data-place="b"] > .holo-head { top: var(--holo-head-top-gem); }
+.holo-face > .holo-element-b {
+  inset: 0 auto auto 50%; translate: -50% 0; z-index: 1; width: var(--holo-gem-bezel-w); height: var(--holo-gem-bezel-h);
+  display: grid; place-items: center; border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  background: linear-gradient(180deg, var(--holo-gold-deep), var(--holo-gold) 45%, var(--holo-gold-light));
+  box-shadow: var(--holo-gem-shadow);
+}
+.holo-element-b .holo-gem { width: var(--holo-gem); translate: 0 -0.4cqi; }
+.holo-element-b .holo-glyph { width: 64%; height: 64%; }
+/* c) Only the backdrop and a small engraved word with its glyph, on a gold plate centred on the bottom border. */
+.holo-front[data-place="c"] > .holo-words { bottom: var(--holo-words-bottom-plate); }
+.holo-face > .holo-element-c {
+  inset: auto auto 0 50%; translate: -50% 0; z-index: 1; height: var(--holo-plate-h); padding: 0 var(--holo-plate-pad);
+  display: inline-flex; align-items: center; gap: 0.35em; white-space: nowrap;
+  border-radius: var(--holo-plate-h) var(--holo-plate-h) 0 0;
+  background: linear-gradient(180deg, var(--holo-gold-light), var(--holo-gold) 55%, var(--holo-gold-deep));
+  font: 900 var(--holo-plate-size) / 1 var(--holo-font); letter-spacing: 0.06em; color: var(--holo-gold-deep);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--holo-gold-light) 70%, transparent);
+}
+.holo-element-c .holo-glyph { width: 1.25em; height: 1.25em; color: var(--holo-gem-deep); }
+
+@media (max-width: 640px) {
+  /* The card in the room only; 12rem clears the tray. */
+  .holo-card:not(.holo-card-big) { width: var(--holo-width-phone); right: 50%; top: auto; bottom: 12rem; translate: 50% 0; }
+  /* Both cards on a phone, so the resting card stays a scaled copy of the popped one: the phone's type sizes, a wider
+     gutter between the moves, and narrower side insets so each line still fits in two rows. */
+  .holo-card { --holo-trait-size: var(--holo-trait-size-phone); --holo-kind-size: var(--holo-kind-size-phone); }
+  .holo-card .holo-face > .holo-words { left: 5cqi; right: 5cqi; column-gap: var(--holo-words-gap-phone); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-tilt { transform: none !important; } /* holo-tilt.ts writes the tilt inline; reduced motion never tips */
+  .holo-breath { animation: none; }
+}

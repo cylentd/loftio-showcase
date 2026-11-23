@@ -107,6 +107,20 @@
   --postcard-leaf: #66754e;
   --postcard-thread: #a46261;
   --controls-layer: 20;
+  --cards-layer: calc(var(--controls-layer) + 1);
+  --world-danger: var(--postcard-red);
   --controls-icon: 1.25rem;
   --controls-rest-opacity: 0.7;
+  --hx-mote-dust-size: 1.4cqw;
+  --hx-mote-firefly-size: 2.2cqw;
+  --hx-mote-ember-size: 1.1cqw;
+  --hx-mote-travel-x: 10cqw;
+  --hx-mote-travel-y: 22cqw;
+  --hx-mote-rise: 44cqw;
+  --hx-mote-peak: 0.75;
+  --hx-mote-dim: 0.2;
+  --hx-ember-pace: 0.55;
+  --hx-mote-dust: color-mix(in srgb, var(--world-paper) 85%, var(--grove-mote));
+  --hx-mote-firefly: var(--grove-mote);
+  --hx-mote-ember: color-mix(in srgb, var(--grove-glow) 45%, var(--postcard-red));
 }

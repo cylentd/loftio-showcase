@@ -1,6 +1,7 @@
 import type { ResidentHooks, ResidentOptions } from './view';
 import { firstVisit } from './first-visit';
 import { welcomeCard } from './welcome';
+import { ROOM_MODAL_CLASS } from '../world-ui';
 import { WELCOME_SEEN_SUFFIX, WELCOME_TICKETS } from './welcome-constants';
 import { WELCOME_COPY } from './welcome-copy';
 
@@ -45,9 +46,13 @@ export function welcomeFeature(page: WelcomePage) {
   return Object.assign(install, { residents: WELCOME_OPTIONS });
 }
 
+/** True while any modal is up: an open `<dialog>` or a full-screen page marked as a room modal (the storybook). */
+export const modalOpen = (root: Pick<ParentNode, 'querySelector'>): boolean =>
+  root.querySelector('dialog[open]') !== null || root.querySelector(`.${ROOM_MODAL_CLASS}`) !== null;
+
 export const welcome = welcomeFeature({
   storage: { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) },
   returning: () => document.documentElement.hasAttribute('data-loft-return'),
-  dialogOpen: () => document.querySelector('dialog[open]') !== null,
+  dialogOpen: () => modalOpen(document),
   card: welcomeCard,
 });

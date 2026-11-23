@@ -1,0 +1,29 @@
+/* The holo picker: pill tabs and the animation toggle on a wood strip. Shared by the compare board and the storybook
+   binder (holo-picker.ts). Each host sizes it through the --hx-tab-* tokens. */
+:root {
+  --hx-tab-pad: 0.45rem 0.9rem;
+  --hx-tab-size: 0.95rem;
+  --hx-tab-min: 2.75rem; /* the 44 px touch target (standards, section 3) */
+}
+@media (max-width: 640px) {
+  :root { --hx-tab-pad: 0.4rem 0.7rem; --hx-tab-size: 0.85rem; }
+}
+
+.holo-picker {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-2);
+  padding: var(--space-2); border-radius: var(--world-radius);
+  background: var(--world-wood); box-shadow: var(--world-button-shadow);
+}
+.holo-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1); }
+.holo-tab, .holo-anim {
+  min-height: var(--hx-tab-min); padding: var(--hx-tab-pad); border: 0; border-radius: var(--hx-tab-min);
+  font: 800 var(--hx-tab-size) / 1 var(--font-body); cursor: pointer;
+  background: var(--world-paper-sunk); color: var(--world-ink);
+  transition: background var(--world-duration), color var(--world-duration);
+}
+.holo-tab:hover, .holo-anim:hover { background: var(--world-paper); }
+.holo-tab[aria-pressed="true"] { background: var(--world-accent); color: var(--world-on-accent); box-shadow: inset 0 calc(-1 * var(--world-pill-edge)) 0 var(--world-accent-edge); }
+.holo-tab:focus-visible, .holo-anim:focus-visible { outline: var(--world-lip) solid var(--ink-focus); outline-offset: var(--world-lip); }
+.holo-anim { display: inline-flex; gap: var(--space-1); align-items: center; }
+.holo-anim-state { min-width: 2.2em; padding: 0.2em 0.5em; border-radius: var(--hx-tab-min); background: var(--world-wood-light); color: var(--world-paper); }
+.holo-anim[aria-pressed="true"] .holo-anim-state { background: var(--world-accent); }
