@@ -35,6 +35,15 @@ function followUpBody(request: FollowUpRequest, withExpression: boolean): string
   });
 }
 
+async function readFollowUp(response: Response, id: string, references: AltReference[]): Promise<Awaited<ReturnType<NonNullable<BuilderApi['followUp']>>>> {
+  const body = await response.json() as Record<string, unknown> | null;
+  const error = body?.error as Record<string, unknown> | undefined;
+  if (body?.ok === false) return { ok: false, kind: typeof error?.kind === 'string' && failureKinds.has(error.kind) ? error.kind as FailureKind : 'network' };
+  if (body?.ok !== true || !validImage(body[id])) return { ok: false, kind: 'corrupt' };
+  return { ok: true, image: body[id] as GeneratedImage, createdAt: new Date().toISOString(),
+    promptVersion: FOLLOW_UPS.find(entry => entry.id === id)?.promptVersion ?? '', ...(id === ALT_ID ? { references } : {}) };
+}
+
 /** The public showcase's API: one POST per image, carrying a Turnstile token. No polling, cancel or prepare. */
 export function onlineApi({ fetcher = fetch, getToken, bodyMaxLength = FOLLOW_UP_BODY_MAX_LENGTH }: {
   fetcher?: typeof fetch; getToken: () => Promise<string>; bodyMaxLength?: number; // the longest follow-up body sent whole; default the server's own cap
@@ -48,17 +57,21 @@ export function onlineApi({ fetcher = fetch, getToken, bodyMaxLength = FOLLOW_UP
       const droppedExpression = text.length > bodyMaxLength && !!request.expression;
       if (droppedExpression) text = followUpBody(request, false);
       const response = await fetcher(LOCAL_API_PREFIX + '/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text, signal });
-      const body = await response.json() as Record<string, unknown> | null;
-      const error = body?.error as Record<string, unknown> | undefined;
-      if (body?.ok === false) return { ok: false, kind: typeof error?.kind === 'string' && failureKinds.has(error.kind) ? error.kind as FailureKind : 'network' };
-      if (body?.ok !== true || !validImage(body[request.id])) return { ok: false, kind: 'corrupt' };
       const references: AltReference[] = request.expression && !droppedExpression ? ['idle', 'expression'] : ['idle'];
-      return { ok: true, image: body[request.id] as GeneratedImage, createdAt: new Date().toISOString(),
-        promptVersion: FOLLOW_UPS.find(entry => entry.id === request.id)?.promptVersion ?? '', ...(request.id === ALT_ID ? { references } : {}) };
+      return await readFollowUp(response, request.id, references);
     } catch { return { ok: false, kind: signal?.aborted ? 'aborted' : 'network' }; }
   };
   return {
     followUp,
+    async recoverAlt(request, selections, verify, signal) {
+      const { kind, trait, element, image } = request;
+      try {
+        const text = JSON.stringify({ action: 'recover-alt', idle: base64Of(image), selections, kind, trait, element, [TURNSTILE_BODY_FIELD]: await verify() });
+        if (text.length > bodyMaxLength) return { ok: false, kind: 'cap' };
+        const response = await fetcher(LOCAL_API_PREFIX + '/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text, signal });
+        return await readFollowUp(response, ALT_ID, ['idle']);
+      } catch { return { ok: false, kind: signal?.aborted ? 'aborted' : 'network' }; }
+    },
     async generate(body, signal) {
       let token: string;
       try { token = await getToken(); } catch { return { ok: false, error: { kind: 'invalid', message: COPY.human } }; }

@@ -958,7 +958,9 @@ function decodeIdle(value) {
 	if (typeof value !== "string" || value.length > 4498976) return null;
 	try {
 		const bytes = Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
-		return bytes.length <= 16777216 && readPngInfo(bytes) ? bytes : null;
+		if (bytes.length > 16777216) return null;
+		const info = readPngInfo(bytes);
+		return info && info.width <= 4096 && info.height <= 4096 ? bytes : null;
 	} catch {
 		return null;
 	}
@@ -1029,12 +1031,28 @@ var GenerateSession = class {
 			residentId: entry.buildId,
 			...alt
 		};
+		return this.paintFollowUp(def, ctx, idle, expression, signal, body.token);
+	}
+	async recoverAlt(body, signal) {
+		const idle = decodeIdle(body.idle);
+		const alt = parseAltFields(body);
+		const picks = validateSelections(body.selections);
+		const def = FOLLOW_UPS.find((entry) => entry.id === "alt");
+		if (!idle || !alt || !picks.ok || !def) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
+		const ctx = {
+			resolved: resolveSelections(picks.value, this.options.rng),
+			residentId: this.options.newId(),
+			...alt
+		};
+		return this.paintFollowUp(def, ctx, idle, void 0, signal);
+	}
+	async paintFollowUp(def, ctx, idle, expression, signal, token) {
 		try {
 			const references = { referenceImages: def.id === "alt" && expression ? [idle, expression] : [idle] };
 			const { bytes, info } = await drawFollowUp(this.options.provider, def, ctx, references, signal);
 			const base64 = encodeBase64(bytes);
 			if (base64.length > (this.options.responseMaxBytes ?? 4e6)) return failure$1(HTTP_PAYLOAD_TOO_LARGE, "cap", COPY.expressionTooLarge);
-			if (def.id === "expression") await this.vouchExpression(body.token, bytes);
+			if (def.id === "expression" && token) await this.vouchExpression(token, bytes);
 			const { width, height, hasAlphaChannel } = info;
 			return Response.json({
 				ok: true,
@@ -1120,6 +1138,7 @@ var GenerateSession = class {
 			if (text.length > 45e5) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
 			body = JSON.parse(text);
 			if (!body || typeof body !== "object" || Array.isArray(body)) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
+			if ("action" in body && body.action === "recover-alt") return await this.recoverAlt(body, request.signal);
 			if ("token" in body) return await this.followUp(body, request.signal);
 			if (text.length > 4096) return failure$1(HTTP_BAD_REQUEST$2, "invalid", COPY.invalid);
 		} catch {
@@ -1178,6 +1197,8 @@ function createGenerateHandler(options) {
 }
 // game/src/builder/server/online-copy.ts
 var ONLINE_COPY = {
+	recoveryVisitorCap: "You’ve reached your Alt art limit for today.",
+	recoveryGlobalCap: "Alt art is at capacity for today.",
 	human: "We couldn't confirm you're a person. Refresh the page and try again.",
 	globalCap: "Loftio is out of magic for today. Come back tomorrow.",
 	visitorCap: `You've made 3 residents today. Come back tomorrow for more.`,
@@ -1210,13 +1231,14 @@ function clientIp(request) {
 	return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 }
 var isFollowUp = (body) => "token" in body;
+var isRecovery = (body) => body.action === "recover-alt";
 async function readBody(request) {
 	try {
 		const text = await request.text();
 		if (text.length > 45e5) return null;
 		const body = JSON.parse(text);
 		if (!body || typeof body !== "object" || Array.isArray(body)) return null;
-		return isFollowUp(body) || text.length <= 4096 ? body : null;
+		return isFollowUp(body) || isRecovery(body) || text.length <= 4096 ? body : null;
 	} catch {
 		return null;
 	}
@@ -1269,6 +1291,34 @@ async function followUp(options, request, body, ip) {
 		return failure(HTTP_BAD_GATEWAY, "network", COPY.network);
 	}
 }
+async function recover(options, request, body, ip) {
+	let reservation;
+	try {
+		reservation = await options.recoveryCaps?.reserve(await options.visitorKey(ip));
+	} catch {}
+	if (!reservation) return failure(HTTP_UNAVAILABLE$1, "busy", ONLINE_COPY.unavailable);
+	if (!reservation.ok) return failure(HTTP_TOO_MANY, "cap", reservation.reason === "visitor" ? ONLINE_COPY.recoveryVisitorCap : ONLINE_COPY.recoveryGlobalCap);
+	const { action, idle, kind, trait, element, selections } = body;
+	try {
+		const response = await options.generate(new Request(request.url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				action,
+				idle,
+				kind,
+				trait,
+				element,
+				selections
+			}),
+			signal: request.signal
+		}));
+		if (response.status === HTTP_BAD_REQUEST$1) await reservation.release().catch(() => {});
+		return response;
+	} catch {
+		return failure(HTTP_BAD_GATEWAY, "network", COPY.network);
+	}
+}
 function createOnlineHandler(options) {
 	const pending = /* @__PURE__ */ new Map();
 	async function admit(request, body, ip) {
@@ -1315,8 +1365,9 @@ function createOnlineHandler(options) {
 		const body = await readBody(request);
 		if (!body) return failure(HTTP_BAD_REQUEST$1, "invalid", COPY.invalid);
 		const ip = clientIp(request);
-		if (isFollowUp(body)) return followUp(options, request, body, ip);
+		if (isFollowUp(body) && !isRecovery(body)) return followUp(options, request, body, ip);
 		if (!await isHuman(options.verifyHuman, body["turnstileToken"], ip)) return failure(HTTP_FORBIDDEN, "invalid", ONLINE_COPY.human);
+		if (isRecovery(body)) return recover(options, request, body, ip);
 		const id = typeof body.requestId === "string" ? body.requestId : null;
 		if (id === null) return admit(request, body, ip);
 		for (let earlier = pending.get(id); earlier; earlier = pending.get(id)) await earlier.catch(() => {});
@@ -1445,7 +1496,7 @@ function openaiProvider(options) {
 	const model = options.model ?? "gpt-image-2.5-sunburst";
 	const quality = options.quality ?? "medium";
 	const doFetch = options.fetcher ?? fetch;
-	function buildForm(prompt, ids, images) {
+	function buildForm(prompt, ids, images, opaque) {
 		const form = new FormData();
 		form.append("model", model);
 		images.forEach((bytes, index) => {
@@ -1454,13 +1505,13 @@ function openaiProvider(options) {
 		form.append("prompt", prompt);
 		form.append("size", IMAGE_SIZE);
 		form.append("quality", quality);
-		form.append("background", "transparent");
+		form.append("background", opaque ? "opaque" : "transparent");
 		form.append("output_format", "png");
 		form.append("n", "1");
 		if (options.safetyIdentifier) form.append("safety_identifier", options.safetyIdentifier);
 		return form;
 	}
-	async function generate({ prompt, referenceIds, referenceImages, signal }) {
+	async function generate({ prompt, referenceIds, referenceImages, opaque, signal }) {
 		const images = referenceImages ?? await loadAll(referenceIds, options.loadReference, signal);
 		const ids = referenceImages ? referenceImages.map((_, index) => `reference-${index}`) : referenceIds;
 		let response;
@@ -1468,7 +1519,7 @@ function openaiProvider(options) {
 			response = await doFetch(OPENAI_EDITS_URL, {
 				method: "POST",
 				headers: { Authorization: "Bearer " + options.apiKey },
-				body: buildForm(prompt, ids, images),
+				body: buildForm(prompt, ids, images, opaque),
 				signal
 			});
 		} catch (error) {
@@ -1548,6 +1599,8 @@ function turnstileVerifier(options) {
 // game/src/builder/server/vercel-entry.ts
 var nodeProcess = globalThis.process;
 var HTTP_UNAVAILABLE = 503;
+var ALT_RECOVERY_GLOBAL_CAP = 10;
+var ALT_RECOVERY_VISITOR_CAP = 2;
 var REQUIRED_ENV = [
 	ENV.openaiKey,
 	ENV.redisUrl,
@@ -1622,6 +1675,13 @@ function createVercelHandler(given, options = {}) {
 		caps: createCaps({
 			store: upstashStore(redis),
 			now: () => /* @__PURE__ */ new Date()
+		}),
+		recoveryCaps: createCaps({
+			store: upstashStore(redis),
+			now: () => /* @__PURE__ */ new Date(),
+			keyPrefix: "loftio:alt-recovery",
+			globalCap: ALT_RECOVERY_GLOBAL_CAP,
+			visitorCap: ALT_RECOVERY_VISITOR_CAP
 		}),
 		visitorKey: async (ip) => {
 			const key = await visitorKeyFor(ip, salt);

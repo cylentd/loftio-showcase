@@ -34,6 +34,7 @@ export type StorybookDeps = {
   /** Bundled art and optional look overrides, or null for code-drawn surfaces. */
   art: Parameters<typeof loadArtInOrder>[1] | null;
   readMadeCards?: () => readonly BinderCard[];
+  recoverAlt?: NonNullable<import('../residents/view').ResidentHooks['recoverAlt']>;
   /** S6: the entrance's clock (flight.ts). Unset: the browser's frames; null: no flight, the book lands at once. */
   clock?: FlightClock | null;
 };
@@ -287,8 +288,11 @@ export function storybookPage(deps: StorybookDeps) {
   const openZoom = (card: PageCardData, button: HTMLButtonElement) => {
     if (!core.send({ type: 'zoom', id: card.id })) return;
     core.paint();
-    deps.zoom.open('made' in card ? card.made : zoomCard(card.id), button, () => { core.send({ type: 'unzoom' }); core.paint(); },
-      { holo: seed => tabHolo(core.look.tab, seed), animate: core.look.animate, side: card.side });
+    const selected = 'made' in card ? deps.readMadeCards?.().find(item => item.id === card.id) ?? card.made : zoomCard(card.id);
+    const recoverAlt = deps.recoverAlt;
+    deps.zoom.open(selected, button, () => { core.send({ type: 'unzoom' }); core.paint(); },
+      { holo: seed => tabHolo(core.look.tab, seed), animate: core.look.animate, side: card.side,
+        ...(selected.kind === 'made' && !selected.art.alt && recoverAlt ? { recoverAlt: host => recoverAlt(selected.id, host) } : {}) });
   };
   const forward = () => void (core.state.kind === 'opening' ? moves.swingOpen() : moves.turn(1));
   ui.root.addEventListener('keydown', onKey);

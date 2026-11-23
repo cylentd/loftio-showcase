@@ -194,6 +194,16 @@
   min-height: var(--tap-min); min-width: 6rem; padding: var(--space-2) var(--space-4); border: 0; border-radius: var(--chip-radius); cursor: pointer;
   font: 800 1rem / 1 var(--font-body); background: var(--world-paper-sunk); color: var(--world-ink);
 }
+.binder-zoom.holo-dialog:has(.alt-recovery) {
+  aspect-ratio: auto; max-height: calc(100dvh - 2 * var(--space-4)); overflow: auto;
+}
+.binder-zoom:has(.alt-recovery) .holo-card-big { aspect-ratio: var(--holo-ratio); height: auto; }
+.binder-art-switch.alt-recovery {
+  position: relative; inset: auto; translate: none; width: fit-content; max-width: 100%; box-sizing: border-box;
+  margin: var(--space-2) auto; flex-direction: column;
+  text-align: center; color: var(--world-paper-sunk); font-family: var(--font-body);
+}
+.alt-recovery > :empty { display: none; }
 .binder-art-option[aria-pressed="true"] { background: var(--world-accent); color: var(--world-on-accent); box-shadow: inset 0 calc(-1 * var(--world-pill-edge)) 0 var(--world-accent-edge); }
 
 /* The options sheet: parchment in a wood frame; a bottom sheet on a phone. */

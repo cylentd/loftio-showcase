@@ -57,6 +57,7 @@ export type ResidentHooks = {
   fresh: boolean; storageKey: string; preview: boolean; trigger: HTMLElement; openCreate: () => void; restored: Promise<boolean>;
   extension?: HTMLElement;
   kept?: () => KeptResident[];
+  recoverAlt?: (id: string, host: HTMLElement) => ReturnType<ReturnType<typeof createBuilder>['recoverAlt']>;
 };
 
 // A visible Turnstile challenge shows here, in the Create panel: the drawer is a modal dialog, so the page behind it is inert.
@@ -150,7 +151,9 @@ export function installResidents(scene: Scene, runtime: Runtime, overlay: Overla
   const restored = restore(current, adapter, failure, openPreview);
   void restored.then(loaded => { if (loaded) roster.enable(); }); // a half-loaded room must never replace the snapshot
   const hooks: ResidentHooks = { fresh, storageKey: names.registry, preview: preview !== null, trigger: chrome.trigger, openCreate: chrome.openCreate,
-    restored, extension: chrome.drawer.content, kept: () => keptResidents(builder.state().kept, registry.list()) };
+    restored, extension: chrome.drawer.content, kept: () => keptResidents(builder.state().kept, registry.list()),
+    ...(mode === 'online' && !preview ? { recoverAlt: (id: string, host: HTMLElement) => builder.recoverAlt(id,
+      turnstileTokens({ siteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY, host: () => host })) } : {}) };
   // Teardown, newest first: stop listening, end the form's timers, then stop the builder's live run. Its request
   // stays journaled, so the next visit's resume() collects it.
   const dispose = teardownAll([events, () => form.dispose(), () => builder.dispose()]);

@@ -1,4 +1,5 @@
-import { backfillLoadout, elementFor, isRerollable, newLoadout, parseLoadout, rollLoadout, type Element, type Loadout, type Trait } from '../loadout/loadout-model.ts';
+import { followUpRequest, recoverSavedAlt, type FollowUpBase } from './recover-saved-alt.ts';
+import { backfillLoadout, isRerollable, newLoadout, parseLoadout, rollLoadout, type Element, type Loadout, type Trait } from '../loadout/loadout-model.ts';
 import { parseNamePack, type NamePack } from '../loadout/loadout-name-model.ts';
 import { ProviderError, type BuilderFailure, type FailureKind } from './provider.ts';
 import { FOLLOW_UPS, type FollowUpDef } from './follow-ups.ts';
@@ -33,6 +34,7 @@ export type FollowUpOutcome =
 export type BuilderApi = {
   // Absent in the standalone harness: the resident then has no expression. Never spends or refunds a ticket.
   followUp?: (request: FollowUpRequest, signal?: AbortSignal) => Promise<FollowUpOutcome>;
+  recoverAlt?: (request: FollowUpRequest, selections: UserSelections, verify: () => Promise<string>, signal?: AbortSignal) => Promise<FollowUpOutcome>;
   // Only an api whose worker keeps the slot (local) has this: a reloaded page polls it again. Online and mock lose their token.
   resumeFollowUp?: (request: FollowUpRequest, signal?: AbortSignal) => Promise<FollowUpOutcome>;
   generate(body: BuilderRequest, signal?: AbortSignal, onStage?: StageListener): Promise<GenerateOutcome>;
@@ -93,7 +95,6 @@ function savedRecord(preview: Preview, keptAt: string, rumble: Loadout, slots?: 
 const OPAQUE: FollowUpOutcome = { ok: false, kind: 'corrupt' };
 
 // What every follow-up request of one build shares; each entry adds its own id and references.
-type FollowUpBase = Omit<FollowUpRequest, 'id' | 'expression' | 'kind' | 'trait' | 'element'>;
 type FollowUpCall = (request: FollowUpRequest, signal: AbortSignal) => Promise<FollowUpOutcome>;
 
 // The loadout with the build's name pack on it; no pack leaves the loadout as it is, with no `names` key.
@@ -310,7 +311,7 @@ class BuilderController {
   }
 
   private async drawOne(id: string, entry: FollowUpDef, asked: FollowUpBase, call: FollowUpCall) {
-    const request = this.followUpRequest(id, entry, asked);
+    const request = followUpRequest(id, entry, asked, this.slots.get(id), this.shown.kept.find(item => item.id === id)?.rumble);
     let outcome: FollowUpOutcome;
     try {
       outcome = await call(request, this.followUpAbort.signal);
@@ -319,17 +320,6 @@ class BuilderController {
     if (this.disposed) return;
     this.slots.set(id, settleSlot(this.slots.get(id) ?? {}, entry.id, outcome, !!request.expression));
     await this.writeSlots(id);
-  }
-
-  // The expression goes along only when its slot is ready; the alt also names its kind, trait and element, which come from the
-  // resident's stored loadout (a reroll between the draws is seen).
-  private followUpRequest(id: string, entry: FollowUpDef, asked: FollowUpBase): FollowUpRequest {
-    const expression = this.slots.get(id)?.expression;
-    const sendsExpression = entry.references.includes('expression') && expression?.status === 'ready';
-    const request: FollowUpRequest = { id: entry.id, ...asked, ...(sendsExpression ? { expression: expression.image } : {}) };
-    if (entry.id !== ALT_ID) return request;
-    const loadout = parseLoadout(this.shown.kept.find(item => item.id === id)?.rumble) ?? newLoadout(id);
-    return { ...request, kind: altKindFor(id), trait: loadout.trait, element: elementFor(loadout, id) };
   }
 
   private async requireTransparent(outcome: Extract<FollowUpOutcome, { ok: true }>): Promise<FollowUpOutcome> {
@@ -341,14 +331,21 @@ class BuilderController {
 
   // Writes the slots onto the saved record (draft or kept) and shows them. It waits for a Keep or reroll in flight, so
   // the record it reads is the one they wrote. A failed save keeps the slots in memory, where Keep carries them.
+  recoverAlt(id: string, verify: () => Promise<string>): Promise<'ready' | FailureKind> {
+    return recoverSavedAlt({ id, verify, api: this.dependencies.api, saved: this.shown.kept.find(item => item.id === id), slots: this.slots,
+      signal: this.followUpAbort.signal,
+      write: () => this.writeSlots(id) });
+  }
+
   private async writeSlots(id: string) {
     await this.pendingSave;
     await this.rerolls.get(id);
     const set = this.slots.get(id);
     const current = this.shown.kept.find(item => item.id === id);
-    if (!set || !current) return;
-    try { await this.dependencies.store.put({ ...current, ...slotFields(set) }); } catch { return; }
+    if (!set || !current) return false;
+    try { await this.dependencies.store.put({ ...current, ...slotFields(set) }); } catch { return false; }
     this.update({ kept: this.shown.kept.map(item => (item.id === id ? { ...item, ...slotFields(set) } : item)) });
+    return true;
   }
 
   tryAnother() { return this.create(); }

@@ -73,7 +73,7 @@ function mountStorybook({ app, look, shell, residents }: ShelfRoom, surface: 'ga
     app.ticker.add(position);
     const tray = document.querySelector<HTMLElement>('.scene-actions');
     page = storybookPage({ reduced, layout: matchMedia(BINDER.phoneQuery), face: subject => holoFace(subject, true), zoom: liveHoloZoom,
-      trigger, tray, art, readMadeCards: () => madeCards(residents) });
+      trigger, tray, art, readMadeCards: () => madeCards(residents), recoverAlt: residents?.recoverAlt });
     afterDialogs();
   };
   const teardown = () => {

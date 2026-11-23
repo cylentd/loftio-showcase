@@ -26,7 +26,8 @@ export type CoreAction = CardAction & { blocked?(card: BinderCard): string | nul
 /** The picker's look for the big card: the holo for a card seed (`lookSeed` in holo-card/feature.ts) and the foil
  * animation. */
 /** `side`: the card the big view opens on (`cozy`, `action`); unset or unknown opens on Normal. */
-export type ZoomLook = { holo: (seed: string) => HoloId; animate: boolean; side?: string };
+export type ZoomLook = { holo: (seed: string) => HoloId; animate: boolean; side?: string;
+  recoverAlt?: (host: HTMLElement) => Promise<string> };
 /** The seed a card's look is picked by under Mix: the resident and which of its cards (`normal`, `cozy`, `action`, `alt`). */
 export const lookSeed = (id: string, side: string) => `${id}|${side}`;
 /** The big card a tap opens (game only). With none, a tap opens the options sheet. `done` is called once the big card

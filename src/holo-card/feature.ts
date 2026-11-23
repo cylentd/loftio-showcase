@@ -12,6 +12,7 @@ import { binderZoom, type ZoomSide } from '../binder/binder-zoom';
 import { CARD_RESIDENTS, type OriginalId } from './holo-card-model';
 import { cardSubjectFor } from './holo-card-made-model';
 import { originalSubject, type CardSubject } from './holo-card-subject';
+import { altRecoveryControls } from './alt-recovery-controls';
 
 const GROVE_SIGN = 'brand/grove-sign.webp';
 
@@ -59,6 +60,7 @@ export function holoZoom(reduced: boolean, build: ZoomBuild = buildZoom): CardZo
     open: (card, trigger, done, look) => {
       const { normal, alt, sides } = zoomSubjects(card, look?.holo);
       const view = build(normal, alt, trigger as HTMLButtonElement, reduced, new URL(GROVE_SIGN, document.baseURI).href, sides, look?.animate ?? false, look?.side);
+      if (look?.recoverAlt && !card.art.alt) view.dialog.append(altRecoveryControls(look.recoverAlt));
       document.body.append(view.dialog);
       view.dialog.addEventListener('close', () => { done(); view.dispose(); });
       view.open();
