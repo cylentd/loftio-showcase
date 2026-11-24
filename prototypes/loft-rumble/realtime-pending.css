@@ -1,0 +1,7 @@
+:root{--stage-transition-surface:#16251f}html[data-rumble-pending],html[data-rumble-demo]{background:var(--stage-transition-surface)}html[data-rumble-pending] body,html[data-rumble-demo] body{background:transparent}html[data-rumble-pending] main{opacity:0}
+html[data-rumble-arrival-gate] body>main{visibility:hidden;pointer-events:none}
+html[data-rumble-arrival-gate]{background:var(--stage-transition-surface)}
+.rumble-arrival-unavailable{display:none;position:absolute;inset-block-start:0;inset-inline:0;margin:var(--pad) auto;padding:var(--pad);max-width:var(--side);font:var(--rumble-body-size) var(--font-body);color:var(--rumble-cream)}
+html[data-rumble-arrival-gate] .rumble-arrival-unavailable{display:block}
+.rumble-arrival-unavailable a{display:inline-flex;align-items:center;min-width:var(--rumble-arrival-touch);min-height:var(--rumble-arrival-touch);padding-inline:var(--pad);color:var(--rumble-amber)}
+.rumble-arrival-unavailable a:focus-visible{outline:var(--focus-width) solid currentColor;outline-offset:var(--focus-offset)}

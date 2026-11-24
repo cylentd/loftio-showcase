@@ -11,11 +11,18 @@
   --glade-departure-ease: ease-in-out;
   --glade-transition-surface: #16251f;
   --glade-gap: 1rem;
+  --glade-viewport-inset: 1.5rem;
+  --glade-close-inset: 0.75rem;
+  --glade-compact-gutter: 1rem;
+  --glade-compact-gap: 0.5rem;
+  --glade-compact-art: 6rem;
+  --glade-retry-art: 4rem;
   --glade-inset: 1rem;
   --glade-padding: 1.25rem;
   --glade-width: 55rem;
   --glade-card-min: 20rem;
   --glade-art-ratio: 16 / 10;
+  --glade-art-inset: 0.75rem;
   --glade-radius: 1.5rem;
   --glade-sign-radius: 0.5rem 1rem 1rem 0.5rem;
   --glade-logo-width: 8rem;

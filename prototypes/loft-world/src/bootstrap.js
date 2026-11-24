@@ -1,6 +1,8 @@
 import { INITIAL_LOADING, nextLoading } from './loading-model.mjs';
 import { LOADING } from './loading-copy.mjs';
 import { openGate } from './intro-gate.js';
+import { enterWorld, loadWorld } from './resident-entry.mjs';
+import { decodeResidentArt } from './resident-art.js';
 
 const cover = document.querySelector('[data-world-loading]');
 const status = cover.querySelector('[role="status"]');
@@ -15,11 +17,12 @@ back.href = new URL('../../?from=valley', location.href).href;
 back.hidden = !document.documentElement.hasAttribute('data-published-world');
 retry.addEventListener('click', () => location.reload());
 let state = INITIAL_LOADING;
+let resolvingResident = false;
 const block = event => {
   if (!cover.contains(event.target)) { event.stopImmediatePropagation(); event.preventDefault(); }
 };
 for (const type of ['pointerdown', 'keydown', 'wheel']) addEventListener(type, block, { capture: true, passive: false });
-const timer = setTimeout(() => send('error'), LOADING.timeoutMs);
+const timer = setTimeout(() => resolvingResident ? residentUnavailable() : fail(), LOADING.timeoutMs);
 function send(event) {
   state = nextLoading(state, event);
   if (state.phase === 'error') {
@@ -42,6 +45,15 @@ async function lift() {
 }
 const fail = () => send('error');
 const rendered = () => { if (state.assets) send('frame'); };
+function residentUnavailable() {
+  resolvingResident = false;
+  fail();
+  status.textContent = LOADING.residentUnavailable;
+  retry.hidden = true;
+  back.hidden = false;
+  removeEventListener('error', fail);
+  removeEventListener('world-first-frame', rendered);
+}
 addEventListener('error', fail);
 addEventListener('world-first-frame', rendered);
 try {
@@ -50,6 +62,15 @@ try {
   DefaultLoadingManager.onStart = () => { started = true; status.textContent = LOADING.textures; };
   DefaultLoadingManager.onLoad = () => { status.textContent = LOADING.drawing; send('assets'); };
   DefaultLoadingManager.onError = fail;
-  await import('./main.js');
-  if (!started) send('assets');
+  resolvingResident = true;
+  await enterWorld(location.search, {
+    decode: decodeResidentArt,
+    async start(art) {
+      resolvingResident = false;
+      if (art && state.phase === 'error') return;
+      await loadWorld(art);
+      if (!started) send('assets');
+    },
+    unavailable: residentUnavailable,
+  });
 } catch (error) { console.error(error); fail(); }

@@ -17,8 +17,9 @@
     const wedges=data.sectorSlices,result=[];
     for(let n=0;n<wedges;n++){
       const a=p.startAngle+(p.endAngle-p.startAngle)*n/wedges,b=p.startAngle+(p.endAngle-p.startAngle)*(n+1)/wedges;
-      const planes=[v=>Math.cos(a)*(v.y-p.origin.y)-Math.sin(a)*(v.x-p.origin.x),
-        v=>Math.sin(b)*(v.x-p.origin.x)-Math.cos(b)*(v.y-p.origin.y)];
+      const ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b); // once per wedge, not once per clipped vertex
+      const planes=[v=>ca*(v.y-p.origin.y)-sa*(v.x-p.origin.x),
+        v=>sb*(v.x-p.origin.x)-cb*(v.y-p.origin.y)];
       if(bounds)planes.push(v=>v.x,v=>v.y,v=>bounds.width-v.x,v=>bounds.height-v.y);
       for(const outline of raw){let polygon=outline;for(const side of planes)polygon=clip(polygon,side);
         polygon.group=outline.group+':'+n;polygon.raw=raw;polygon.planes=planes;if(polygon.length)result.push(polygon);}
@@ -31,19 +32,23 @@
       for(let i=0,j=poly.length-1;i<poly.length;j=i++){
         const a=poly[j],b=poly[i],dx=b.x-a.x,dy=b.y-a.y;
         const k=Math.max(0,Math.min(1,((point.x-a.x)*dx+(point.y-a.y)*dy)/(dx*dx+dy*dy||1)));
-        const candidate={x:a.x+k*dx,y:a.y+k*dy};
-        // Concave clipping can connect disjoint islands along a clip plane. That zero-area
-        // connector is not painted; its real endpoints are still tested by the adjacent edges.
-        const bridge=poly.planes?.some(side=>Math.abs(side(a))<data.geometryEpsilon&&Math.abs(side(b))<data.geometryEpsilon)
-          &&distance(poly.raw,candidate)>data.contactTolerance;
-        if(!bridge)nearest=Math.min(nearest,Math.hypot(point.x-candidate.x,point.y-candidate.y));
+        const cx=a.x+k*dx,cy=a.y+k*dy,gx=point.x-cx,gy=point.y-cy;
+        // An edge no nearer than the best so far changes nothing, so it skips the hypot (the slow call) and the bridge test. The margin keeps
+        // an edge that hypot would rank by one rounding step.
+        if(gx*gx+gy*gy<=nearest*nearest*(1+data.nearestSlack)){
+          const reach=Math.hypot(gx,gy);
+          // Concave clipping can connect disjoint islands along a clip plane. That zero-area
+          // connector is not painted; its real endpoints are still tested by the adjacent edges.
+          if(reach<nearest&&!(poly.planes?.some(side=>Math.abs(side(a))<data.geometryEpsilon&&Math.abs(side(b))<data.geometryEpsilon)
+            &&distance(poly.raw,{x:cx,y:cy})>data.contactTolerance))nearest=reach;
+        }
         if((a.y>point.y)!==(b.y>point.y)&&point.x<(b.x-a.x)*(point.y-a.y)/(b.y-a.y)+a.x)contained=!contained;
       }
       if(contained)groups[poly.group]=!groups[poly.group];
     }
     return Object.values(groups).some(Boolean)?0:nearest;
   }
-  function first(state,from,to,start,end,radius){
+  function first(state,from,to,start,end,radius,shapes=new Map()){
     const model=root.LoftRumbleWhiplashModel,c=state.config,begin=c.prepare+c.telegraph;
     const lo=Math.max(from,begin),hi=Math.min(to,begin+c.strike);
     if(hi<lo||from>=begin+c.strike||to<=from)return null;
@@ -56,7 +61,7 @@
     function sample(t,clipped=true){
       const k=(t-from)/(to-from),body={x:start.x+(end.x-start.x)*k,y:start.y+(end.y-start.y)*k};
       const p=model.project({...state,elapsed:Math.min(t,begin+c.strike-data.clockEpsilon*2)});
-      const shape=clipped?footprint(p,state.rig):root.LoftRumbleWhiplashPose.polygons(p,state.rig);
+      const key=clipped+':'+t;let shape=shapes.get(key);if(!shape){shape=clipped?footprint(p,state.rig):root.LoftRumbleWhiplashPose.polygons(p,state.rig);shapes.set(key,shape);}
       return {gap:distance(shape,body)-radius,body,p};
     }
     function search(a,b){
@@ -72,8 +77,9 @@
     return search(lo,hi);
   }
   function contacts(state,from,to,previous,bodies,radius,already=[]){
+    const shapes=new Map(); // painted shape per probe time: it does not depend on the resident, so residents share it
     return Object.keys(bodies).filter(id=>!already.includes(id)).flatMap(id=>{
-      const hit=first(state,from,to,previous[id]??bodies[id],bodies[id],radius);
+      const hit=first(state,from,to,previous[id]??bodies[id],bodies[id],radius,shapes);
       return hit?[{id,...hit}]:[];
     }).sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id));
   }

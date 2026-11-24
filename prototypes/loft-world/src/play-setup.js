@@ -37,10 +37,16 @@ export function createContext({ scene, camera, world, hud, sfx, low }) {
 }
 
 /** Painted residents with a round collider, and what they bump into: toys, pods, wisps, the trail and the rings. */
-export function buildResidentsAndEffects(c) {
+export function buildResidentsAndEffects(c, leadArt) {
   const { scene, world, sfx, glow, state, P } = c;
-  c.bodies = createResidents(scene);
+  c.bodies = createResidents(scene, leadArt);
   [c.lead, c.buddy] = c.bodies;
+  if (leadArt) addEventListener('pagehide', function releaseSavedArt(event) {
+    if (event.persisted) return;
+    c.lead.textures.idle.dispose();
+    c.lead.ghostTextures.idle.dispose();
+    removeEventListener('pagehide', releaseSavedArt);
+  });
   for (const b of c.bodies) b.traversal = createTraversal(b);
   c.buddyTarget = { alive: true, pos: c.buddy.pos, radius: P.buddyRadius, id: 'chomper', at: 0 };
   c.toys = createToys({ scene, world, sfx, glow });

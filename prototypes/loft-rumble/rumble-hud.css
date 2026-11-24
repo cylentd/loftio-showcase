@@ -418,6 +418,22 @@
   box-shadow: none;
 }
 :root.lm-hud-art[data-rumble-demo] .top > #menu-toggle svg { visibility: hidden; }
+/* While the fight or its replay is paused the stone shows play (replay-controls.js sets data-glyph): the blank stone with a
+   drawn cream triangle, the size of the painted pause icon. The pack has no play icon. */
+:root.lm-hud-art[data-rumble-demo] .top > #menu-toggle[data-glyph="play"] {
+  position: relative;
+  background: var(--art-lm-hud-pause-base) center / contain no-repeat;
+}
+:root.lm-hud-art[data-rumble-demo] .top > #menu-toggle[data-glyph="play"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: var(--hud-pause-glyph);
+  height: var(--hud-pause-glyph);
+  background: var(--hud-cream);
+  clip-path: polygon(18% 0, 100% 50%, 18% 100%);
+}
 :root.lm-hud-art[data-rumble-demo] .top > #menu-toggle:focus-visible {
   outline: var(--hud-focus) solid var(--hud-cream);
   outline-offset: var(--hud-focus);

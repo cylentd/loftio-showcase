@@ -6,7 +6,7 @@ import './world-modal.css';
  *  open over another modal (the welcome card) sees it as well as an open `<dialog>`. */
 export const ROOM_MODAL_CLASS = 'room-modal';
 
-export function dismissOnBackdrop(dialog: HTMLDialogElement): void {
+export function dismissOnBackdrop(dialog: HTMLDialogElement, close = () => dialog.close()): void {
   const outside = (event: MouseEvent) => {
     const box = dialog.getBoundingClientRect();
     return event.target === dialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom);
@@ -15,7 +15,7 @@ export function dismissOnBackdrop(dialog: HTMLDialogElement): void {
   dialog.addEventListener('pointerdown', event => { pressedOutside = outside(event); });
   dialog.addEventListener('pointercancel', () => { pressedOutside = false; });
   dialog.addEventListener('click', event => {
-    if (pressedOutside && outside(event)) dialog.close();
+    if (pressedOutside && outside(event)) close();
     pressedOutside = false;
   });
 }
@@ -27,21 +27,26 @@ export function worldButton(label: string, action: () => void): HTMLButtonElemen
   return button;
 }
 
-export function worldDrawer(title: string, closeLabel: string) {
+export function worldDrawer(title: string, closeLabel: string, beforeClose?: () => false | void) {
   const dialog = document.createElement('dialog'); dialog.className = 'world-drawer world-frame';
+  const dismiss = () => {
+    if (beforeClose?.() === false) return false;
+    dialog.close(); return true;
+  };
   const header = document.createElement('header'); header.className = 'world-header';
   const heading = document.createElement('h2'); heading.textContent = title;
   dialog.setAttribute('aria-label', title);
   // A round close set on the frame, like the settings close: icon only, named for screen readers.
-  const close = worldButton('', () => dialog.close()); close.classList.add('world-close');
+  const close = worldButton('', dismiss); close.classList.add('world-close');
   close.setAttribute('aria-label', closeLabel); close.title = closeLabel; close.append(icon('close'));
   header.append(heading, close);
   const content = document.createElement('div'); content.className = 'world-content';
   dialog.append(header, content); document.body.append(dialog);
-  containFocus(dialog, () => dialog.close());
+  containFocus(dialog, dismiss);
+  if (beforeClose) dialog.addEventListener('cancel', event => { event.preventDefault(); dismiss(); });
   let trigger: HTMLElement | null = null;
   dialog.addEventListener('close', () => trigger?.focus());
-  return { dialog, content, open(from: HTMLElement) { trigger = from; if (!dialog.open) dialog.showModal(); } };
+  return { dialog, content, dismiss, open(from: HTMLElement) { trigger = from; if (!dialog.open) dialog.showModal(); } };
 }
 
 export function worldTabs(labels: string[], onSelect: (index: number) => void, icons: readonly (keyof typeof ICON_PATHS)[] = []) {

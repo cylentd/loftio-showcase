@@ -1,0 +1,72 @@
+:root {
+  --joined-frame: url('../art/first-resident-frame.webp');
+  --joined-stage: url('../art/first-resident-stage.webp');
+  --joined-frame-slice: 112;
+  --joined-stage-ratio: 360 / 230;
+  --joined-art-size: 70%;
+  --joined-stage-contact: 7%;
+  --joined-frame-clearance: calc(var(--space-5) + var(--space-4));
+  --joined-status-paper: #e5e8bd;
+  --joined-status-ink: #163921;
+}
+.resident-reveal.world-modal.first-resident-reveal.joined-resident-reveal:not([data-cinema='true']) {
+  --modal-pad: calc(var(--joined-frame-clearance) + var(--frame-tuck, 0px) + var(--first-resident-frame-buffer));
+  border-image-source: var(--joined-frame);
+  border-image-slice: var(--joined-frame-slice);
+}
+.joined-resident-reveal:not([data-cinema='true']) .world-header { gap: var(--space-1); }
+.joined-resident-reveal:not([data-cinema='true']) .world-close { align-self: start; }
+@media (max-width: 700px) {
+  .resident-reveal.world-modal.joined-resident-reveal:not([data-cinema='true']) {
+    --joined-frame-clearance: var(--space-5);
+  }
+}
+.joined-reveal {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  text-align: center;
+}
+.joined-reveal .reveal-body {
+  overflow: auto;
+}
+.joined-reveal .resident-name input:focus-visible {
+  outline-offset: calc(-1 * (var(--focus-width) + var(--focus-offset)));
+}
+.joined-resident-greeting {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.joined-reveal .reveal-body:has(> form:not([hidden])) > :is(.joined-resident-greeting, .joined-resident-status) {
+  display: none;
+}
+.joined-resident-greeting h2 { overflow-wrap: anywhere; }
+.joined-reveal .joined-resident-greeting h2 { margin-block: var(--space-2); }
+.joined-reveal .joined-resident-status {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  border-radius: var(--world-radius);
+  padding: var(--space-1) var(--space-3);
+  background: var(--joined-status-paper);
+  color: var(--joined-status-ink);
+}
+.joined-resident-reveal .joined-reveal .unboxing-video-stage[data-phase='revealed'] {
+  aspect-ratio: var(--joined-stage-ratio);
+  height: auto;
+  background: var(--joined-stage) center / cover no-repeat;
+}
+.joined-resident-reveal .joined-reveal .unboxing-video-stage[data-phase='revealed'] .unboxing-resident {
+  position: absolute;
+  inset-block-end: var(--joined-stage-contact);
+  height: var(--joined-art-size);
+  object-position: center bottom;
+}
+.joined-resident-reveal .joined-reveal .unboxing-video-stage[data-phase='revealed']::after {
+  bottom: calc(var(--joined-stage-contact) - var(--space-1));
+}

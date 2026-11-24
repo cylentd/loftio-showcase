@@ -55,12 +55,13 @@ const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 export const liveHoloZoom: CardZoom = { open: (card, trigger, done, look) => holoZoom(matchMedia(REDUCED_MOTION).matches).open(card, trigger, done, look) };
 
 /** The zoom for the binder. Each open builds the big card fresh and drops it on close, so no card idles unseen. */
-export function holoZoom(reduced: boolean, build: ZoomBuild = buildZoom): CardZoom {
+export function holoZoom(reduced: boolean, build: ZoomBuild = buildZoom, decorate?: (dialog: HTMLDialogElement) => void): CardZoom {
   return {
     open: (card, trigger, done, look) => {
       const { normal, alt, sides } = zoomSubjects(card, look?.holo);
       const view = build(normal, alt, trigger as HTMLButtonElement, reduced, new URL(GROVE_SIGN, document.baseURI).href, sides, look?.animate ?? false, look?.side);
       if (look?.recoverAlt && !card.art.alt) view.dialog.append(altRecoveryControls(look.recoverAlt));
+      decorate?.(view.dialog);
       document.body.append(view.dialog);
       view.dialog.addEventListener('close', () => { done(); view.dispose(); });
       view.open();

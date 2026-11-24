@@ -18,12 +18,12 @@ function restore(raw: string | null, initial: number): Ledger {
 }
 
 /** Build tickets: each new image costs one. Every call re-reads storage, so a second tab sees a spend at once. */
-export function buildTickets(storage: Storage, key = STORAGE_KEY, initial = FREE_BUILDS) {
+export function buildTickets(storage: Storage, key = STORAGE_KEY, initial = FREE_BUILDS, persistInitial = true) {
   if (!count(initial)) throw Error('Invalid initial ticket allowance');
   const read = () => restore(storage.getItem(key), initial);
   // Persist the initial allowance once; existing ledgers retain their balance and pending requests.
   const write = (ledger: Ledger) => storage.setItem(key, JSON.stringify(ledger));
-  write(read());
+  if (persistInitial) write(read());
   return {
     count: () => read().balance,
     spend(requestId: string) {

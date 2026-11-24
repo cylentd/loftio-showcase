@@ -1,0 +1,101 @@
+/* Fight replay controls (on unless ?replay=0, replay-controls.js). One slim bar along the arena's bottom, in the stage chrome's
+   green-black like the top bar, cream labels like the HUD. Every size below is a named token; colours come from rumble-tokens.css. */
+:root {
+  --replay-touch: 44px;            /* L8: the smallest hit target */
+  --replay-pad: var(--stage-gap);
+  --replay-inset: var(--stage-pad);
+  --replay-gap: var(--stage-gap);
+  --replay-surface: color-mix(in srgb, var(--rumble-green-black) 88%, transparent);
+  --replay-edge: color-mix(in srgb, var(--rumble-moss) 45%, transparent);
+  --replay-ink: var(--rumble-cream);
+  --replay-track: var(--rumble-track);
+  --replay-fill: var(--rumble-amber);
+  --replay-thumb: 18px;
+  --replay-rail: 6px;
+  --replay-glyph: 14px;
+  --replay-glyph-bar: 4px;
+  --replay-ease: .16s ease-out;
+}
+
+/* While replaying the results scene steps aside and the board takes no input: the player is only watching. */
+:root[data-replay] #demo-results { display: none; }
+:root[data-replay] #board { pointer-events: none; }
+/* The help opener is disabled by replay-controls.js and hidden here. The top bar's pause stone (#menu-toggle) stays: in replay it
+   pauses and plays the replay instead of opening the menu, so the replay is never paused behind a menu (#535 QA). */
+:root[data-replay] #help-toggle { visibility: hidden; }
+.replay-bar:focus { outline: none; }
+
+.replay-bar {
+  position: absolute; z-index: 5;
+  /* Above the canvas's bottom HUD strip (the team HP bar and number, C.hudBottom tall, set on #arena by resize()), so the team HP stays readable (QA #535). */
+  left: var(--replay-inset); right: var(--replay-inset); bottom: calc(var(--hud-bottom, 0px) + var(--replay-inset));
+  display: grid; align-items: center; gap: var(--replay-gap);
+  /* One row, 44 px controls: two rows (scrub over controls) covered the Sprout and Puff start spots on a phone and hero feet on
+     desktop (#535 QA). Back is a drawn close glyph so the scrub keeps its width on a 390 px phone. */
+  grid-template-columns: var(--replay-touch) minmax(0, 1fr) auto auto var(--replay-touch);
+  grid-template-areas: "toggle scrub time speed back";
+  padding: var(--replay-pad);
+  border: var(--stage-border) solid var(--replay-edge);
+  border-radius: var(--rumble-radius-control);
+  background: var(--replay-surface);
+  color: var(--replay-ink);
+  font: var(--rumble-helper-weight) var(--rumble-helper-size) / 1 inherit;
+  font-variant-numeric: tabular-nums;
+}
+.replay-bar[hidden], .replay-open[hidden] { display: none; } /* the results kit's button display would otherwise show a hidden Watch replay */
+
+.replay-bar button {
+  min-width: var(--replay-touch); min-height: var(--replay-touch);
+  padding: 0 var(--replay-pad);
+  border: var(--stage-border) solid var(--replay-edge);
+  border-radius: var(--rumble-radius-control);
+  background: transparent; color: inherit; font: inherit;
+  font-weight: var(--rumble-name-weight);
+  transition: background-color var(--replay-ease);
+  cursor: pointer;
+}
+.replay-bar button:hover { background: color-mix(in srgb, var(--replay-ink) 12%, transparent); }
+.replay-bar :focus-visible { outline: var(--lm-focus) solid var(--replay-ink); outline-offset: var(--stage-border); }
+.replay-toggle { grid-area: toggle; display: grid; place-items: center; }
+.replay-speed { grid-area: speed; }
+.replay-speed[aria-pressed="true"] { color: var(--replay-fill); border-color: var(--replay-fill); }
+.replay-bar .replay-back { grid-area: back; display: grid; place-items: center; padding: 0; }
+.replay-time { grid-area: time; white-space: nowrap; }
+
+/* Play is a triangle, pause two bars, both drawn so no glyph font is needed. */
+.replay-glyph { width: var(--replay-glyph); height: var(--replay-glyph); background: currentColor; }
+.replay-glyph[data-glyph="play"] { clip-path: polygon(10% 0, 100% 50%, 10% 100%); }
+.replay-glyph[data-glyph="pause"] {
+  background: linear-gradient(to right, currentColor var(--replay-glyph-bar), transparent var(--replay-glyph-bar),
+    transparent calc(100% - var(--replay-glyph-bar)), currentColor calc(100% - var(--replay-glyph-bar)));
+}
+
+/* Back to results is a close cross: two bars crossed, drawn like the play glyph. */
+.replay-glyph[data-glyph="close"] {
+  background: linear-gradient(45deg, transparent calc(50% - var(--replay-glyph-bar) / 2), currentColor 0,
+      currentColor calc(50% + var(--replay-glyph-bar) / 2), transparent 0),
+    linear-gradient(-45deg, transparent calc(50% - var(--replay-glyph-bar) / 2), currentColor 0,
+      currentColor calc(50% + var(--replay-glyph-bar) / 2), transparent 0);
+}
+
+/* The scrub: a 44 px tall hit area round a slim rail, the HUD's channel look. */
+.replay-scrub {
+  grid-area: scrub; width: 100%; min-width: 0; height: var(--replay-touch); margin: 0;
+  appearance: none; background: transparent; cursor: pointer;
+}
+.replay-scrub::-webkit-slider-runnable-track { height: var(--replay-rail); border-radius: var(--replay-rail); background: var(--replay-track); }
+.replay-scrub::-moz-range-track { height: var(--replay-rail); border-radius: var(--replay-rail); background: var(--replay-track); }
+.replay-scrub::-moz-range-progress { height: var(--replay-rail); border-radius: var(--replay-rail); background: var(--replay-fill); }
+.replay-scrub::-webkit-slider-thumb {
+  appearance: none; width: var(--replay-thumb); height: var(--replay-thumb);
+  margin-top: calc((var(--replay-rail) - var(--replay-thumb)) / 2);
+  border: var(--rumble-stroke) solid var(--rumble-ink); border-radius: var(--rumble-radius-round); background: var(--replay-fill);
+}
+.replay-scrub::-moz-range-thumb {
+  width: var(--replay-thumb); height: var(--replay-thumb);
+  border: var(--rumble-stroke) solid var(--rumble-ink); border-radius: var(--rumble-radius-round); background: var(--replay-fill);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .replay-bar button { transition: none; }
+}

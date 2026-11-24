@@ -7,7 +7,7 @@ import type { SavedCharacter } from '../builder/records.ts';
 import type { RoomEntry, RosterMode } from '../loadout/roster-model.ts';
 import type { OriginalEntry } from './original-lineup.ts';
 import { createRosterPublisher } from './roster-publish.ts';
-import type { PublishInput, PublishSaved, PublisherDeps } from './roster-publish.ts';
+import type { PublishInput, PublishSaved, PublisherDeps, RosterReceipt } from './roster-publish.ts';
 import { browserThumbnailer } from './roster-thumbnail.ts';
 import type { ThumbnailSource } from './roster-thumbnail.ts';
 
@@ -28,28 +28,56 @@ const toSaved = (record: KeptRecord): PublishSaved => {
 
 const toInput = (sources: RosterSources, mode: RosterMode): PublishInput => ({
   originals: sources.originals.map(({ id, inRoom }) => ({ id, name: NAMES[id] ?? id, inRoom })),
-  residents: sources.entries, saved: sources.kept.map(toSaved), mode,
+  residents: sources.entries.map(entry => ({ ...entry })), saved: sources.kept.map(toSaved), mode,
 });
 
 /** `makePublisher` is injected so a test can stand in a publisher whose promise rejects; the real one is the default. */
-export function rosterWiring({ mode, ...deps }: RosterDeps, makePublisher: typeof createRosterPublisher = createRosterPublisher) {
+type Publisher = ReturnType<typeof createRosterPublisher>;
+type PublisherFactory = (deps: PublisherDeps) => Pick<Publisher, 'publish'> & Partial<Pick<Publisher, 'launch'>>;
+
+export function rosterWiring({ mode, ...deps }: RosterDeps, makePublisher: PublisherFactory = createRosterPublisher) {
   const publisher = makePublisher(deps);
   let latest: PublishInput | null = null;
   let enabled = false;
-  const send = () => { if (latest) publisher.publish(latest).catch(() => undefined); };
+  let handingOff = false;
+  let suspended = false;
+  const send = () => { if (enabled && !handingOff && !suspended && latest) publisher.publish(latest).catch(() => undefined); };
+  const eligible = (savedId: string) => {
+    if (!enabled || mode !== 'online' || deps.previewMode || !savedId || !latest) throw new Error('Online resident unavailable');
+    const entries = latest.residents.filter(entry => entry.savedId === savedId);
+    if (entries.length !== 1 || entries[0]?.arrival !== 'welcomed' || latest.saved.filter(record => record.id === savedId).length !== 1) {
+      throw new Error('The selected resident has not been welcomed');
+    }
+    return { input: latest, entryId: entries[0].id };
+  };
   return {
     /** Records the latest sources and, once enabled, publishes them. Returns at once; an error never reaches the caller. */
     publish(sources: RosterSources): void {
       try { latest = toInput(sources, mode); } catch { return; }
-      if (enabled) send();
+      send();
     },
     /** From now on publishes go through, and the latest sources are published now: called once the saved room is back. */
     enable(): void { enabled = true; send(); },
+    requireWelcomed(savedId: string): void { eligible(savedId); },
+    resumeBackground(): void { suspended = false; send(); },
+    async publishForLaunch(savedId: string, commit: (receipt: RosterReceipt) => void): Promise<void> {
+      if (handingOff || !publisher.launch) throw new Error('Rumble handoff unavailable');
+      const { input, entryId } = eligible(savedId);
+      handingOff = true;
+      try {
+        await publisher.launch(input, { entryId, savedId, current: () => latest === input, commit });
+        suspended = true;
+      } finally {
+        handingOff = false;
+        send();
+      }
+    },
   };
 }
 
 /** The real pieces: `localStorage` (its errors reach the publisher, which swallows them), `Date.now`, a canvas thumbnailer. */
 export const browserRosterWiring = (mode: BuilderMode, previewMode: boolean) => rosterWiring({
-  storage: { setItem: (key, value) => localStorage.setItem(key, value) },
+  storage: { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) },
   now: () => Date.now(), thumbnail: browserThumbnailer(), mode, previewMode,
+  launchThumbnail: image => browserThumbnailer()(image),
 });

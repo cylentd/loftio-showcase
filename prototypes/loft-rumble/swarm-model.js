@@ -29,8 +29,16 @@
     if(s.queue)c.queue=s.queue.slice();
     if(s.crystal)c.crystal={...s.crystal};
     if(s.bench)c.bench={...s.bench};
+    if(s.combo)c.combo={...s.combo};   // counter, picks and offer are replaced whole by their pure modules, never edited in place
     return c;
   };
+
+  // Combo counter and picks (ledger #518 U2), opt-in with create({combo:true}). The modules load first (combo-counter.js, rumble-picks.js).
+  const Counter=()=>root.LoftRumbleCounter,Picks=()=>root.LoftRumblePicks;
+  const comboOn=s=>!!s.combo;
+  const scaled=e=>Object.fromEntries(Object.entries(e).map(([id,v])=>[id,v*(D.PICK_SCALE[id]??1)]));   // per-card swarm scaling (swarm-data.js PICK_SCALE)
+  const fx=s=>(s.picks?scaled(Picks().effects(s.picks)):{});
+  const STUN_FLOOR_S=0;   // Steady never makes a stun negative
   const refuse=state=>({state,out:[]});
   const num=v=>typeof v==='number'&&Number.isFinite(v);
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -51,7 +59,7 @@
     s.queue=q;   // entryIn carries over, so the next wave enters one entry gap after the last one of the wave before
   };
 
-  const create=({mode,seed,arena,bench}={})=>{
+  const create=({mode,seed,arena,bench,combo}={})=>{
     const m=D.MODES[mode];
     if(!m)throw new Error('swarm: unknown mode '+String(mode));
     const a=arena||D.ARENA;
@@ -65,6 +73,11 @@
       const B=root.LoftRumbleSwarmBench;
       s.bench={n:B.clampN(bench&&bench.n)};
       for(const p of B.layout(s.bench.n,s.arena))newMonster(s,p.kind,p.x,p.y,'alive');
+    }
+    if(combo){
+      if(!Counter()||!Picks())throw new Error('swarm: load combo-counter.js and rumble-picks.js first');
+      // combo: true runs the counter and the picks; {picks:false} runs the counter alone (the study's no-pick arm).
+      Object.assign(s,{combo:{count:0,idle:0,peak:0},counter:Counter().create('swarm'),picks:Picks().create(),offer:null,heldSeen:0,heroes:[],noPicks:combo.picks===false});
     }
     return s;
   };
@@ -94,14 +107,14 @@
   // Recoil: a hit carrying the hero `from` {x, y, vx, vy} pushes a surviving monster along the hero's flight, or away from where the
   // hero stands when it is nearly still (KNOCK.STILL_SPEED), and staggers it. The push is a velocity (kvx, kvy) that knock() spends
   // over the next ticks; a hit with no hero (fields, abilities) neither pushes nor staggers.
-  const recoil=(m,from)=>{
+  const recoil=(m,from,scale=1)=>{
     if(!from||![from.x,from.y,from.vx,from.vy].every(num))return;
     const K=D.KNOCK,speed=Math.hypot(from.vx,from.vy);
     let ux=from.vx,uy=from.vy,len=speed;
     if(speed<K.STILL_SPEED){ux=m.x-from.x;uy=m.y-from.y;len=Math.hypot(ux,uy);}
     m.stagger=K.STAGGER_S[m.kind];
     if(!(len>0))return;
-    const v=K.DIST[m.kind]/K.DECAY_S;   // a push decaying by e every DECAY_S covers v x DECAY_S in all
+    const v=K.DIST[m.kind]*scale/K.DECAY_S;   // a push decaying by e every DECAY_S covers v x DECAY_S in all
     m.kvx=ux/len*v;m.kvy=uy/len*v;
   };
   // Spend a push over dt (exact for the exponential decay, so the tick rate does not change the distance), keep the monster in the
@@ -118,17 +131,76 @@
     return true;
   };
 
+  // --- Combo counter (combo-counter.js) in the swarm. One step of the pure counter, then what the swarm does about the phase it reached.
+  // A telegraph spawns the elite and reports the ring; every ending reports itself (counter out), a landed one zeroes the combo, and an
+  // elite still on the field leaves with it. The runtime shows the result in the same frame, so the counter settles to idle at once.
+  const spawnElite=s=>{
+    const k=D.KINDS[D.ELITE.KIND],e=D.EDGE[D.ELITE.KIND],hp=Math.round(k.hp*root.LoftRumbleCounterData.ELITE_HP_SCALE);
+    s.monsters.push({id:s.nextId++,kind:D.ELITE.KIND,x:e+rand(s)*(s.arena.w-2*e),y:D.TOP_INSET[D.ELITE.KIND],r:k.r,hp,maxHP:hp,
+      life:'spawning',age:0,facing:1,cd:0,timer:0,spitIn:k.spitEvery||0,elite:true});
+  };
+  const counterStep=(s,event,out)=>{
+    const before=s.counter,after=Counter().step(before,event);
+    if(after===before)return;
+    s.counter=after;
+    if(after.phase==='telegraph'){
+      if(before.phase!=='idle')return;   // a tick of the running telegraph, not a start
+      spawnElite(s);
+      out.push({type:'counter',phase:'telegraph',x:after.zone?after.zone.x:null,y:after.zone?after.zone.y:null,r:root.LoftRumbleCounterData.COUNTER_R,hero:after.target});
+      return;
+    }
+    if(!root.LoftRumbleCounterData.RESOLVED.includes(after.phase))return;
+    const landed=after.phase==='landed',stunS=landed?Math.max(STUN_FLOOR_S,after.result.stunS+(fx(s).steady||0)):0;
+    out.push({type:'counter',phase:after.phase,stun:landed?after.result.stun:[],stunS});
+    if(landed){s.combo.count=after.result.combo;s.combo.idle=0;}
+    for(const m of s.monsters)if(m.elite&&isLive(m)){m.life='dying';m.timer=0;}   // the elite leaves with its counter (a killed one is already dying)
+    s.counter=Counter().step(s.counter,{type:'settle'});
+  };
+
+  // A landed hit: one more on the combo (or the page's own count when the hit carries it), the peak for the next pick, and a counter
+  // event. The ring goes where the hero who made the hit stands (the last tick's heroes), else where its flight began.
+  const comboHit=(s,ev,out)=>{
+    const c=s.combo,count=num(ev.combo)?ev.combo:c.count+1,hero=Number.isInteger(ev.hero)?ev.hero:null,at=hero!==null&&s.heroes[hero]||ev.from;
+    c.count=count;c.idle=0;s.picks=Picks().trackPeak(s.picks,count);
+    counterStep(s,{type:'combo',combo:count,hero,zone:at&&num(at.x)&&num(at.y)?{x:at.x,y:at.y}:null},out);
+  };
+
   const onHit=(state,ev)=>{
-    if(state.outcome!=='running'||!num(ev.amount)||ev.amount<=0)return refuse(state);
+    if(state.outcome!=='running'||!num(ev.amount)||ev.amount<=0||state.offer)return refuse(state);
     const idx=state.monsters.findIndex(m=>m.id===ev.id&&m.life==='alive');
     if(idx<0)return refuse(state);
-    const s=clone(state),m=s.monsters[idx],out=[];
-    m.hp=Math.max(0,m.hp-ev.amount);
-    if(m.hp>0){recoil(m,ev.from);return{state:s,out};}
-    m.life='dying';m.timer=0;s.kills++;
-    out.push({type:'killed',id:m.id,kind:m.kind,x:m.x,y:m.y});
-    if(s.mode==='hunt'&&s.kills>=s.goal)finish(s,out,'won');
+    const s=clone(state),m=s.monsters[idx],out=[],e=fx(s);
+    m.hp=Math.max(0,m.hp-ev.amount*(1+(e.punch||0)));
+    if(m.hp>0){recoil(m,ev.from,1+(e.shove||0));}
+    else{
+      m.life='dying';m.timer=0;s.kills++;
+      out.push({type:'killed',id:m.id,kind:m.kind,x:m.x,y:m.y});
+      if(comboOn(s)&&m.elite)counterStep(s,{type:'eliteKilled'},out);
+      if(s.mode==='hunt'&&s.kills>=s.goal)finish(s,out,'won');
+    }
+    if(comboOn(s))comboHit(s,ev,out);
     return{state:s,out};
+  };
+
+  // Picks: Defense opens an offer each time wavesHeld rises, for waves 1 to PICKS.MODES.defense.picks. The fight is paused while it is open.
+  const checkOffer=(s,out)=>{
+    const held=wavesHeld(s);
+    if(s.noPicks||held<=s.heldSeen)return;
+    s.heldSeen=held;
+    if(held>Picks().picksFor('defense'))return;
+    const cards=Picks().offer({state:s.picks,mode:'defense',rng:()=>rand(s)});
+    if(!cards.length)return;
+    s.offer={cards,wave:held};
+    out.push({type:'offer',cards});
+  };
+  const onPick=(state,ev)=>{
+    const card=state.offer&&state.offer.cards[ev.index];
+    if(!card)return refuse(state);
+    const picks=Picks().choose(state.picks,card);
+    if(picks===state.picks)return refuse(state);
+    const s=clone(state);s.picks=picks;s.offer=null;
+    if(card.id==='mend'&&s.crystal){s.crystal.hp+=card.value;s.crystal.maxHP+=card.value;}   // team HP: the crystal's pool grows
+    return{state:s,out:[{type:'picked',id:card.id,size:card.size,value:card.value}]};
   };
 
   const onTeamDown=state=>{
@@ -137,7 +209,7 @@
     return{state:s,out:[]};
   };
 
-  const onReset=state=>({state:create({mode:state.mode,seed:state.seed,arena:state.arena,bench:state.bench}),out:[]});
+  const onReset=state=>({state:create({mode:state.mode,seed:state.seed,arena:state.arena,bench:state.bench,combo:comboOn(state)&&{picks:!state.noPicks}}),out:[]});
 
   const nearest=(m,heroes)=>heroes.reduce((best,h)=>(!best||dist(m,h)<dist(m,best)?h:best),null);
 
@@ -298,8 +370,18 @@
     return finish(s,out,'won');
   };
 
+  // The combo's idle clock (Long fuse stretches it), then the live counter's timer with the heroes inside its ring this tick.
+  const comboTick=(s,dt,heroes,out)=>{
+    const c=s.combo;
+    s.heroes=heroes;
+    if(c.count>0&&(c.idle+=dt)>=D.COMBO.TIMEOUT_S+(fx(s).longFuse||0)){c.count=0;c.idle=0;counterStep(s,{type:'comboTimeout'},out);}
+    const z=s.counter.zone;
+    if(s.counter.phase==='telegraph')
+      counterStep(s,{type:'tick',dt,inZone:z?heroes.flatMap((h,i)=>dist(h,z)<=root.LoftRumbleCounterData.COUNTER_R?[i]:[]):[]},out);
+  };
+
   const onTick=(state,ev)=>{
-    if(state.outcome!=='running')return refuse(state);
+    if(state.outcome!=='running'||state.offer)return refuse(state);   // an open pick offer pauses the fight
     const dt=Math.min(num(ev.dt)?ev.dt:0,D.MAX_DT);
     if(!(dt>0))return refuse(state);
     const s=clone(state),out=[];
@@ -310,7 +392,8 @@
     for(const m of s.monsters)stepMonster(s,m,dt,heroes,out);
     space(s,heroes);
     s.shots=s.shots.filter(sh=>stepShot(s,sh,dt,heroes,out));
-    if(s.mode==='defense'){defenseTick(s,dt,out);return{state:s,out};}
+    if(comboOn(s))comboTick(s,dt,heroes,out);
+    if(s.mode==='defense'){defenseTick(s,dt,out);if(comboOn(s)&&s.outcome==='running')checkOffer(s,out);return{state:s,out};}
     if(s.mode==='bench'){refill(s);return{state:s,out};}
     s.spawnIn-=dt;
     while(s.spawnIn<=0){const row=rampRow(s.t);s.spawnIn+=row.interval;trySpawn(s,row,heroes);}
@@ -318,13 +401,14 @@
     return{state:s,out};
   };
 
-  const HANDLERS=Object.freeze({tick:onTick,hit:onHit,teamDown:onTeamDown,reset:onReset});
+  const HANDLERS=Object.freeze({tick:onTick,hit:onHit,teamDown:onTeamDown,reset:onReset,pick:onPick});
   const next=(state,event)=>{
     const type=event&&event.type;
     return typeof type==='string'&&Object.prototype.hasOwnProperty.call(HANDLERS,type)?HANDLERS[type](state,event):refuse(state);
   };
 
-  const api=Object.freeze({create,next,progress});
+  const effects=state=>fx(state);   // the picks taken so far, summed per card (reach, quickRest, bankShot and spark are the page's to apply)
+  const api=Object.freeze({create,next,progress,effects});
   root.LoftRumbleSwarm=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

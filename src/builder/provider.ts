@@ -1,5 +1,5 @@
 export type FailureKind = 'invalid' | 'network' | 'safety' | 'corrupt' | 'aborted' | 'cap' | 'busy' | 'storage' | 'preparation' | 'tickets';
-export type BuilderFailure = { kind: FailureKind; message: string };
+export type BuilderFailure = { kind: FailureKind | 'loft-full' | 'loft-pending'; message: string; dispatch?: 'not-sent' | 'unresolved' };
 
 export class ProviderError extends Error {
   readonly kind: FailureKind;

@@ -16,6 +16,10 @@ export default defineConfig({
     outDir: "../dist-showcase",
     emptyOutDir: true,
     assetsInlineLimit: 0,
-    rollupOptions: { input: { loft: page("index.html"), builder: page("builder.html") } },
+    rollupOptions: {
+      input: { loft: page("index.html"), builder: page("builder.html"), "resident-reader": page("resident-reader.ts") },
+      preserveEntrySignatures: "exports-only",
+      output: { entryFileNames: chunk => chunk.name === "resident-reader" ? "play/resident-reader.mjs" : "assets/[name]-[hash].js" },
+    },
   },
 });

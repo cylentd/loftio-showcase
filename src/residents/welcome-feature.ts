@@ -25,7 +25,7 @@ export const WELCOME_OPTIONS: ResidentOptions = { initialTickets: WELCOME_TICKET
  * Room feature, in the game and the showcase: once the intro has ended and the saved room has loaded, a fresh profile sees the welcome
  * card once. Never in arrival preview, on a minigame return, over an open dialog, or after teardown.
  */
-export function welcomeFeature(page: WelcomePage) {
+export function welcomeFeature(page: WelcomePage, options: ResidentOptions = WELCOME_OPTIONS) {
   const install = ({ residents }: WelcomeRoom) => {
     if (!residents) return;
     const first = residents.fresh ? firstVisit(page.storage, residents.storageKey + WELCOME_SEEN_SUFFIX) : () => false;
@@ -43,16 +43,21 @@ export function welcomeFeature(page: WelcomePage) {
       teardown: () => { disposed = true; card?.dispose(); },
     };
   };
-  return Object.assign(install, { residents: WELCOME_OPTIONS });
+  return Object.assign(install, { residents: options });
 }
 
 /** True while any modal is up: an open `<dialog>` or a full-screen page marked as a room modal (the storybook). */
 export const modalOpen = (root: Pick<ParentNode, 'querySelector'>): boolean =>
   root.querySelector('dialog[open]') !== null || root.querySelector(`.${ROOM_MODAL_CLASS}`) !== null;
 
-export const welcome = welcomeFeature({
+const browserPage: WelcomePage = {
   storage: { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) },
   returning: () => document.documentElement.hasAttribute('data-loft-return'),
   dialogOpen: () => modalOpen(document),
   card: welcomeCard,
-});
+};
+
+export const welcome = welcomeFeature(browserPage);
+export const showcaseWelcome = (launches?: ResidentOptions['launches'], selectGame?: ResidentOptions['selectGame']) => welcomeFeature({ ...browserPage,
+  card: (trigger, build) => welcomeCard(trigger, build, true),
+}, { ...WELCOME_OPTIONS, firstResident: true, launches, selectGame });

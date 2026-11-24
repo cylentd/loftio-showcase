@@ -1,4 +1,7 @@
 export const COPY = {
+  'loft-full': 'Your Loft is full. Send a created resident home to make room before creating another.',
+  'loft-pending': 'Your resident is saved. Send a created resident home to make room, then try joining again. No new ticket is needed.',
+  reloadJoin: 'Reload the Loft to check whether your saved resident joined.',
   title: 'Meet a new resident',
   intro: 'Choose a few sparks of personality. Keep the ones you love.',
   mockNotice: 'Mock mode · free placeholders, not AI-generated art. They do not depict your selections. Presets are provisional.',
@@ -42,6 +45,7 @@ export const COPY = {
   safety: 'The image request was rejected. No automatic retry was made.',
   aborted: 'Generation cancelled.',
   tickets: 'You’re out of build tickets. Each new image uses one.',
+  lockUnavailable: 'This browser cannot safely save shared Loft changes. Open the Loft in an up-to-date browser over HTTPS.',
   conflict: 'This request ID already belongs to different selections.',
   method: 'Use POST for generation.',
   human: 'We couldn’t confirm you’re a person. Refresh the page and try again.',

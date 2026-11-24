@@ -8,9 +8,9 @@ import { updateFrame } from './play-update.js';
 
 export { PLAY } from './play-constants.js';
 
-export function createPlay({ scene, camera, world, hud, sfx, low }) {
+export function createPlay({ scene, camera, world, hud, sfx, low, leadArt }) {
   const c = createContext({ scene, camera, world, hud, sfx, low });
-  buildResidentsAndEffects(c);
+  buildResidentsAndEffects(c, leadArt);
   buildCreatures(c);
   buildContacts(c);
   const { state, lead, input, monster, bodies, support, neighbours, P, pods, driftShots, fader, wisps, trail } = c;

@@ -83,6 +83,7 @@ window.LoftRumbleArtConfig = Object.freeze({
     "bg-title",
     "fx-hit-spark",
     "fx-perfect-burst",
+    "fx-meteor-impact",
     "fx-leaf-puff",
     "fx-shards",
     "fx-shield-shatter",

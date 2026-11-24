@@ -9,6 +9,7 @@ import { localApi } from './local-api.ts';
 import { COPY, LOCAL_COPY, ONLINE_COPY } from './copy.ts';
 import { LOCAL_DATABASE_NAME, ONLINE_DATABASE_NAME, ONLINE_JOURNAL_KEY } from './constants.ts';
 import { requestJournal } from './journal.ts';
+import { onlineAltOperation, onlineWrite } from './online-write.ts';
 import { builderMode } from './local-mode.ts';
 import { onlineApi } from './online-api.ts';
 import { turnstileTokens } from './turnstile-client.ts';
@@ -23,6 +24,7 @@ const api = local ? localApi({ durable: true })
 
 const builder = createBuilder({
   api,
+  ...(mode === 'online' ? { guardPaidRequests: true, exclusive: onlineWrite(navigator.locks), altOperation: onlineAltOperation(navigator.locks) } : {}),
   ...(local ? { journal: requestJournal(storage) } : mode === 'online' ? { journal: requestJournal(storage, ONLINE_JOURNAL_KEY) } : {}),
   store: local ? indexedStore(indexedDB, LOCAL_DATABASE_NAME) : mode === 'online' ? indexedStore(indexedDB, ONLINE_DATABASE_NAME) : indexedStore(), inspect: inspectImage,
   newId: () => crypto.randomUUID(), now: () => new Date(),

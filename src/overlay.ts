@@ -86,6 +86,11 @@ export class Overlay {
 
   residentButton(id: string): HTMLButtonElement { return this.buttons.get(id)!; }
 
+  renameResident(id: string, name: string): void {
+    this.labels.set(id, name);
+    this.buttons.get(id)?.setAttribute('aria-label', name);
+  }
+
   addResident(id: string, name: string, onPress: () => void, greeting: string): void {
     if (this.buttons.has(id)) return;
     const button = el('button', 'hit'); button.type = 'button'; button.setAttribute('aria-label', name);

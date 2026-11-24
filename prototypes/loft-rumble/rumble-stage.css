@@ -1,3 +1,5 @@
+:root { --stage-control: 44px; }
+:root:not([data-rumble-demo]) .top .demo-back { min-height: var(--stage-control); }
 :root[data-rumble-demo] {
   /* Owner's 390:844 composition; minimum keeps shallow landscape usable by scrolling. */
   --stage-frame-ratio: 390 / 844;
@@ -10,7 +12,6 @@
   --stage-pad: 10px;
   --stage-logo-width: 144px;
   --stage-logo-height: 48px;
-  --stage-control: 44px;
   --stage-radius: var(--rumble-radius-control);
   --stage-dock-height: 64px;
   --stage-avatar: 36px;
@@ -269,7 +270,7 @@
   text-shadow: var(--rumble-text-stroke);
   border-radius: var(--stage-radius);
 }
-[data-rumble-demo] #menu :is(#sound, #music, #haptics) {
+[data-rumble-demo] #menu :is(#sound, #music, #haptics, #swarm-lab) {
   grid-column: 1 / -1;
   grid-template-columns: minmax(0, 1fr) var(--stage-sheet-toggle-width);
   justify-items: start;
@@ -282,7 +283,7 @@
   color: var(--stage-sheet-ink);
   text-shadow: none;
 }
-[data-rumble-demo] #menu :is(#sound, #music, #haptics)::after {
+[data-rumble-demo] #menu :is(#sound, #music, #haptics, #swarm-lab)::after {
   content: '';
   grid-column: 2;
   grid-row: 1;
@@ -292,10 +293,11 @@
   background: radial-gradient(circle at calc(var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-toggle-knob) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle-off);
   box-shadow: inset 0 0 0 var(--stage-border) var(--stage-sheet-rule);
 }
-[data-rumble-demo] #menu :is(#sound, #music, #haptics)[aria-pressed=true]::after {
+[data-rumble-demo] #menu :is(#sound, #music, #haptics, #swarm-lab)[aria-pressed=true]::after {
   background: radial-gradient(circle at calc(100% - var(--stage-sheet-toggle-height) / 2) center, var(--stage-sheet-toggle-knob) calc(var(--stage-sheet-toggle-dot) / 2), transparent calc(var(--stage-sheet-toggle-dot) / 2 + var(--stage-border))) var(--stage-sheet-toggle);
 }
 [data-rumble-demo] #menu #help-toggle { grid-column: 1 / -1; }
+[data-rumble-demo] #menu #swarm-lab > .settings-hint { min-width: 0; white-space: normal; text-align: start; } /* the Lab: Swarm hint wraps inside the sheet */
 #music-track-row { display: grid; grid-column: 1 / -1; gap: var(--stage-gap, var(--gap)); min-width: 0; color: var(--stage-sheet-ink, var(--foreground)); font-size: var(--stage-sheet-copy, var(--text-sm)); }
 #music-track { width: 100%; min-width: 0; min-height: var(--stage-control, var(--control)); padding: 0 var(--stage-sheet-gap, var(--gap)); border: var(--stage-border) solid var(--stage-sheet-edge); border-radius: var(--stage-radius); background: var(--stage-sheet-surface); color: var(--stage-sheet-ink); font: inherit; }
 #music-track:disabled { color: var(--stage-sheet-muted); border-color: var(--stage-sheet-rule); }
@@ -340,6 +342,27 @@
 [data-rumble-demo] #menu > button:hover { background-color: var(--stage-sheet-hover); }
 [data-rumble-demo] :is(#menu #pause, .help-resume):hover { background-color: transparent; filter: brightness(1.08); }
 [data-rumble-demo] :is(#menu, #help-panel) button:focus-visible { outline: var(--stage-focus) solid var(--stage-sheet-accent); outline-offset: var(--stage-dock-gap); }
+[data-rumble-demo] :is(#menu, #help-panel) > .battle-panel-close {
+  position: absolute;
+  inset-block-start: calc(var(--stage-sheet-pad-block) + var(--stage-sheet-gap));
+  inset-inline-end: calc(var(--stage-sheet-pad-inline) + var(--stage-sheet-gap));
+  display: grid;
+  place-items: center;
+  width: var(--stage-control);
+  height: var(--stage-control);
+  min-height: var(--stage-control);
+  padding: 0;
+  border: 0;
+  border-image: url('art/results-button-secondary.webp') var(--stage-button-inset) fill / var(--stage-button-slice) stretch;
+  border-radius: var(--stage-radius);
+  background: var(--stage-sheet-surface);
+  color: var(--stage-sheet-ink);
+  font-size: var(--stage-sheet-title);
+  line-height: 1;
+}
+[data-rumble-demo] #help-panel > h2 {
+  min-height: var(--stage-control);
+}
 [data-rumble-demo] #help-panel {
   gap: var(--stage-sheet-space);
   max-height: calc(100dvh - var(--stage-help-viewport-gap));
@@ -354,7 +377,9 @@
 [data-rumble-demo] .help-body > * + * { margin-top: var(--stage-sheet-gap) !important; }
 [data-rumble-demo] .help-footer { display: flex; gap: var(--stage-sheet-gap); }
 [data-rumble-demo] .help-footer .help-resume { width: 100%; }
-[data-rumble-demo] #help-panel h2 { margin: 0; }
+[data-rumble-demo] #help-panel h2 {
+  margin: 0 calc(var(--stage-control) + var(--stage-sheet-gap) + var(--stage-focus));
+}
 [data-rumble-demo] #help-panel :is(#help, #team-help) { color: var(--stage-sheet-ink); font-size: var(--stage-sheet-copy); font-weight: var(--rumble-body-weight); line-height: 1.65; }
 
 /* Training (rumble-tutorial-plain.js): the line sits over the resident it names, Skip under the boss bar. Both carry the

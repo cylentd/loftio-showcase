@@ -3,7 +3,7 @@ import { DragPlacement, floorPosition, placementPosition, surfaceAt, worldPoint 
 import { activeRoom } from '../room-layout';
 import type { Scene } from '../scene';
 import type { Runtime } from '../runtime';
-import type { ResidentEntry, Position } from './registry';
+import { hasParcel, type ResidentEntry, type Position } from './registry';
 import { blindBox } from './blind-box';
 import { deliveryArt } from './delivery-art';
 import type { Resident } from '../resident';
@@ -30,7 +30,7 @@ type Parcel = {
 
 export function roomDeliveries(scene: Scene, runtime: Runtime,
   reveal: (entry: ResidentEntry, trigger: HTMLButtonElement) => void, audio: RevealAudioPreference,
-  save: (id: string, room: typeof activeRoom, point: Position) => ResidentEntry | undefined, failure: (error: unknown) => void) {
+  save: (id: string, room: typeof activeRoom, point: Position) => ResidentEntry | undefined | Promise<ResidentEntry | undefined>, failure: (error: unknown) => void) {
   const parcels = new Map<string, Parcel>();
   const thump = deliverySound(audio);
   const world = (point: Position) => {
@@ -44,10 +44,10 @@ export function roomDeliveries(scene: Scene, runtime: Runtime,
     const left = world({ x: half, y: 0 }).x, right = world({ x: innerWidth - half, y: 0 }).x;
     return { x: Math.max(left, Math.min(right, position.x)), y: Math.max(0, Math.min(WORLD.height, position.y)) };
   };
-  const persist = (parcel: Parcel) => {
+  const persist = async (parcel: Parcel) => {
     parcel.settled = true;
     try {
-      const saved = save(parcel.entry.id, activeRoom, parcel.motion.state().ground);
+      const saved = await save(parcel.entry.id, activeRoom, parcel.motion.state().ground);
       if (saved) parcel.entry = saved;
     } catch (error) { failure(error); }
   };
@@ -155,7 +155,7 @@ export function roomDeliveries(scene: Scene, runtime: Runtime,
   document.addEventListener('visibilitychange', () => { if (document.hidden) parcels.forEach(cancel); });
   return {
     sync(entries: ResidentEntry[]) {
-      const waiting = entries.filter(entry => entry.arrival === 'waiting');
+      const waiting = entries.filter(hasParcel);
       for (const [id, parcel] of parcels) if (!waiting.some(entry => entry.id === id)) {
         cancel(parcel); parcel.disposed = true;
         if (parcel.resident) {
@@ -199,7 +199,7 @@ export function roomDeliveries(scene: Scene, runtime: Runtime,
           } else resident.poseAt(state.ground.x, state.ground.y, lift, {
             air: Math.min(1, lift / resident.height), sx: 1, sy: 1, rotation: state.tilt * Math.PI / TUNE.tiltDegrees,
           });
-          if (state.phase === 'held') resident.root.zIndex = PLACEMENT.heldDepth;
+          if (state.phase === 'held' || parcel.entry.parcelPending) resident.root.zIndex = PLACEMENT.heldDepth;
           parcel.button.style.width = Math.max(TUNE.touchSize, resident.height * resident.aspect * runtime.look.scale) + 'px';
           parcel.button.style.height = Math.max(TUNE.touchSize, resident.height * runtime.look.scale) + 'px';
           parcel.button.style.zIndex = String(Math.round(resident.root.zIndex));

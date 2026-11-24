@@ -109,9 +109,9 @@
     return d<weakHalf?GUARD_ZONES.weak:GUARD_ZONES.body;
   }
   // Owner rules (2026-11-18), round 4 shield health: who: {trait, chomper}. On the plate, Chomper or a heavy trait takes
-  // heavyShare of the shield's HP and anyone else otherShare, both for 0 boss damage; at 0 HP it breaks. A piercing trait
+  // heavyShare of the shield's HP and anyone else otherShare; at 0 HP it breaks. Boss damage: 0, except a heavy TRAIT (#523 a), whose plate hit is plain (mult 1, plain: true, never the weak x3). A piercing trait
   // passes through to the weak spot under it (inside the weak arc only; elsewhere on the plate it is a plain x1) and takes no HP. The broken weak spot takes the usual weak multiplier only.
-  // mult: 0 (no damage) or 1 (the usual hit); weak: counts as a weak-spot hit (the page applies its usual x3); chip: the
+  // mult: 0 (no damage) or 1 (the usual hit); plain: a mult-1 plate hit that never takes the weak x3; weak: counts as a weak-spot hit (the page applies its usual x3); chip: the
   // shield HP the hit took. The optional reduced flag in who never changes a rule.
   const CRACKER_TRAIT='heavy',PASS_TRAIT='piercing',CRACK_STAGES=2;
   const GUARD_EVENTS=Object.freeze({crack:'crack',chip:'chip',break:'break',pierce:'pierce',slide:'slide',exposed:'exposed',opening:'opening'});
@@ -135,8 +135,11 @@
       // and takes no HP, same as with no shield (owner 2026-11-18: x3 through the shield, never stronger than broken).
       if(!heavy&&who.trait===PASS_TRAIT)return who.inWeak?{event:'pierce',mult:1,weak:true,chip:0,shield}:{event:'slide',mult:1,weak:false,chip:0,shield};
       const chip=hitPoints(G,heavy?G.heavyShare:G.otherShare),hp=Math.max(0,shield.hp-chip);
-      if(!hp)return {event:'break',mult:0,weak:false,chip,shield:{...shield,hp:0,cracks:0,down:G.exposedSeconds}};
-      return {event:heavy?'crack':'chip',mult:0,weak:false,chip,shield:{...shield,hp,cracks:crackStage(hp,G)}};
+      // Look #523 option a (David, 2026-11-21): a heavy-TRAIT hit on the plate is a plain hit (mult 1, plain: never the weak x3;
+      // trait-sim.md "Heavy options rerun", option E). It still takes its shield HP and bounces. Chomper's other traits stay 0.
+      const plainHit=who.trait===CRACKER_TRAIT,mult=plainHit?1:0,plain=plainHit?{plain:true}:null;
+      if(!hp)return {event:'break',mult,weak:false,...plain,chip,shield:{...shield,hp:0,cracks:0,down:G.exposedSeconds}};
+      return {event:heavy?'crack':'chip',mult,weak:false,...plain,chip,shield:{...shield,hp,cracks:crackStage(hp,G)}};
     }
     if(zone==='weak'&&shield.down>0)return {event:'exposed',mult:1,weak:true,chip:0,shield};
     return {event:zone,mult:1,weak:zone==='weak',chip:0,shield};

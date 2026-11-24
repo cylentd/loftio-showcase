@@ -4,7 +4,7 @@
 (function(root){
   'use strict';
   const settings=Object.freeze({
-    minute:60,percent:100,
+    percent:100, // magic-ok: a share is written as a percent of a whole
     // Stars: a grade for how fast the fight was won (owner, 2026-11-09). Win within starTimes[0] seconds for 3 stars, within
     // starTimes[1] for 2; any win is 1 and a loss is 0. At 4800 HP the owner's skilled fight took 46 s and a casual one about
     // 120 s, so 1:00 keeps 3 stars for skilled play and 2:30 lets a casual win still earn 2.
@@ -53,7 +53,9 @@
     const extra={biggest:stats.biggest,perfects:total(sources,'perfects'),breaks:Object.values(s.hitBreaks??{}).reduce((sum,count)=>sum+count,0)};
     return {...extra,seconds:s.time,won:!!s.won,stars:stars(s.time,s.won),peak:s.hitsPeak,hits:stats.hits,damage,perSecond:s.time>0?Math.round(damage/s.time):0,sources};
   }
-  const clock=seconds=>Math.floor(seconds/settings.minute)+':'+String(Math.floor(seconds%settings.minute)).padStart(2,'0');
+  // The one battle-time formatter, LoftRumbleDemo.clock (rumble-demo.js, D5): the page header, the swarm end card and this card read it.
+  // Looked up when called, not at load, so the load order of the two files does not matter.
+  const clock=seconds=>root.LoftRumbleDemo.clock(seconds);
   const nextStarTime=result=>settings.starTimes[best-result.stars-1];
   // Plain-text form of the results, one fact a line. The card shows the same facts; this is what the tests and a log read.
   function starLine(result,copy){
@@ -190,6 +192,9 @@
       ledger[event.owner].ability+=event.amount;
     }else if(event.kind==='special'){
       ledger[event.by].special+=event.amount;
+    }else if(event.kind==='special-used'){
+      // Tap-to-fire (?specials=tap): the tap fires the special, not a throw, so it counts here (#536).
+      ledger[event.by].specials+=1;
     }else if(event.kind==='throw'){
       // A special counts when fired, not on its bonus damage: Overdrive adds speed only (bug, owner 2026-11-15).
       ledger[event.by].throws+=1;if(event.special)ledger[event.by].specials+=1;
@@ -206,5 +211,5 @@
     const top=list[0]?.total??0;
     return list.map(row=>({...row,fill:top?row.total/top:0}));
   }
-  root.LoftRumbleStats={settings,stars,record,mark,summary,lines,rows,cardHeight,draw,parts,fresh,split,credit,counts,total:totalOf,breakdown,board};
+  root.LoftRumbleStats={settings,stars,record,mark,summary,lines,rows,cardHeight,draw,parts,fresh,split,credit,creditSpecial:(ledger,by)=>credit(ledger,{kind:'special-used',by}),counts,total:totalOf,breakdown,board};
 })(globalThis);

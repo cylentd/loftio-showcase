@@ -94,7 +94,25 @@
   // ART.barTop x drawScale x r (+ LoftRumbleHudData.swarm.bar.gap 5 + ART.bar.h 10, - r for walkers, whose anchor is their
   // feet), rounded up: capling 64.06, mossback 63.84, sporemoth 53.22. swarm-model.test.cjs draws each kind at the clamp.
   const TOP_INSET=Object.freeze({capling:65,mossback:64,sporemoth:54});
-  const REACH_SLACK=1e-7;            // spacing leaves a monster this far inside a hero's reach, so float error never voids its bite
+  // Combo counter and picks in the swarm (ledger #518 U2; plan ~/.claude/plans/rumble-combo-counter-picks.md). The counter's own numbers
+  // (first at 55, every 40, ring 45, telegraph 2.5 s, stun 2 s, elite hp scale 3) live in combo-counter-data.js; these are the swarm's.
+  const COMBO=Object.freeze({
+    TIMEOUT_S:2.5,                   // seconds without a hit before the combo falls to 0: the page's FEEL.comboTimeout (camera-config.js)
+  });
+  // Per-card scaling in the swarm (#518 U2, study studies/combo-swarm.md): the card's value times this, for a card listed here; the rest are
+  // 1. In the harder-setting study quickRest lifted the median crystal hp at win 357% and bankShot 267% against a median card of 98%, over the
+  // plan's best <= 2.5x median gate, because every throw of the whole fight gets the shorter rest. Tuned on seed set 518000: .45. The study bot
+  // used to round a cooldown up to its think tick, which made any quickRest a 17% jump; with that fixed (U2d) the gates pass at .45, best card
+  // 1.9x the median.
+  const PICK_SCALE=Object.freeze({quickRest:.45,bankShot:.75});
+  // The harder wave setting the study measures picks on: every monster has this times its hp (study: studies/combo-swarm.md). With the bot
+  // arming its heroes on exact cooldowns (U2d) the no-pick bot wins 98% at 3.45, 72% at 3.5, 58% at 3.6 and 37% at 3.75 (n 100-200, seeds
+  // 518000): a cliff at 3.45-3.5, then a slope. 3.6 sits mid-band, clear of the cliff.
+  const HARD_HP_SCALE=3.6;
+  const ELITE=Object.freeze({
+    KIND:'sporemoth',                // the counter's elite is a sporemoth with ELITE_HP_SCALE x its hp (plan section 1); it spawns at the top, like a defense entry
+  });
+  const REACH_SLACK=1e-7;           // spacing leaves a monster this far inside a hero's reach, so float error never voids its bite
 
   const TELEGRAPH_S=.7;              // a spit shows its ring this long before the seed flies
   const SHOT_SPEED=150;              // arena units per second, slower than a thrown hero so it reads
@@ -241,7 +259,7 @@
   });
   function deepFreeze(o){for(const v of Object.values(o))if(v&&typeof v==='object')deepFreeze(v);return Object.freeze(o)}
 
-  const api=Object.freeze({MODES,BENCH,SPRITE,SWARM_LIVE,ARENA,SPAWN_BAND,SPAWN_MIN_HERO_DIST,FIRST_SPAWN_S,LIVE_CAP,SPAWN_RUNE_S,DYING_S,MAX_DT,TICK_S,FORECAST_TICK_S,KILL_REFUND,KNOCK,LAB_SEED,HELD_S,
+  const api=Object.freeze({MODES,BENCH,SPRITE,SWARM_LIVE,ARENA,SPAWN_BAND,SPAWN_MIN_HERO_DIST,FIRST_SPAWN_S,LIVE_CAP,SPAWN_RUNE_S,DYING_S,MAX_DT,TICK_S,FORECAST_TICK_S,KILL_REFUND,KNOCK,LAB_SEED,HELD_S,COMBO,PICK_SCALE,HARD_HP_SCALE,ELITE,
     KINDS,IDS,SPACE,SPACING_PASSES,EDGE,TOP_INSET,REACH_SLACK,TELEGRAPH_S,SHOT_SPEED,SHOT_R,SHOT_DAMAGE,RAMP,ART,
     DEFENSE_WAVES,DEFENSE_LIVE_CAP,DEFENSE_ENTRY_GAP_S,CRYSTAL,CRYSTAL_BITE,CRYSTAL_BITE_CD_S,DEFENSE_MARCH,DEFENSE_FLIERS});
   root.LoftRumbleSwarmData=api;

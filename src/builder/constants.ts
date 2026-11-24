@@ -5,6 +5,12 @@ export const REQUEST_ID_MAX_LENGTH = 64;
 export const REQUEST_BODY_MAX_LENGTH = 4096;
 export const IMAGE_MAX_SIDE = 4096;
 export const IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+// RIFF FourCC length and VP8 keyframe field offsets; VP8X canvas sides are packed after one preceding byte.
+export const WEBP_FOURCC_BYTES = 4;
+export const VP8_KEYFRAME_SIGNATURE_OFFSET = 3;
+export const VP8_KEYFRAME_WIDTH_OFFSET = 6;
+export const VP8_KEYFRAME_HEIGHT_OFFSET = 8;
+export const VP8X_CANVAS_SIDE_SHIFT = 8;
 // Follow-up images drawn after the idle. The id names the artifact pair (`<id>.png`, `<id>.webp`) under a record's UUID.
 // Adding a follow-up (feature 2, the alt art) adds its id here and its entry in follow-ups.ts.
 export const EXPRESSION_ID = 'expression';

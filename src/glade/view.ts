@@ -3,6 +3,7 @@ import { GLADE } from './copy';
 import { dismissOnBackdrop } from '../world-ui';
 import { icon } from '../icons';
 import { installGladeDeparture } from './departure';
+import { gladeSelection } from './selection';
 
 function element<Tag extends keyof HTMLElementTagNameMap>(tag: Tag, className: string, text?: string): HTMLElementTagNameMap[Tag] {
   const node = document.createElement(tag);
@@ -11,7 +12,7 @@ function element<Tag extends keyof HTMLElementTagNameMap>(tag: Tag, className: s
   return node;
 }
 
-export function playGlade(): { ready(): void } {
+export function playGlade() {
   const trigger = element('button', 'glade-sign room-action');
   trigger.dataset.label = GLADE.trigger;
   const appIcon = element('img', 'glade-app-icon');
@@ -54,12 +55,17 @@ export function playGlade(): { ready(): void } {
   valley.append(valleyArt, valleyBody);
   const activities = element('div', 'glade-activities');
   activities.append(activity, valley);
-  panel.append(title, close, activities);
-  dismissOnBackdrop(panel);
+  const header = element('div', 'glade-header');
+  const error = element('p', 'glade-selection-error'); error.setAttribute('role', 'alert');
+  header.append(title, close, error);
+  panel.append(header, activities);
+  const { select, reset } = gladeSelection(panel, play, valleyPlay, error);
+  const dismiss = () => { reset(); panel.close(); };
+  dismissOnBackdrop(panel, dismiss);
   trigger.addEventListener('click', () => panel.showModal());
-  close.addEventListener('click', () => panel.close());
+  close.addEventListener('click', dismiss);
   panel.addEventListener('close', () => trigger.focus({ preventScroll: true }));
   document.querySelector('.tray-items')!.prepend(trigger);
   document.body.append(panel);
-  return { ready() { trigger.hidden = false; } };
+  return { ready() { trigger.hidden = false; }, select };
 }

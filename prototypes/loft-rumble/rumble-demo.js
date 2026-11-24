@@ -36,7 +36,7 @@
   let originalRoster;
   function rememberRoster(){
     originalRoster??=Object.fromEntries(Object.keys(look.originalRoster).map(id=>
-      [id,root.document?.querySelector(`[data-resident="${id}"] .portrait img`)?.src]));
+      [id,root.document?.querySelector(`.roster [data-resident="${id}"] .portrait img`)?.src]));
   }
   let residentNames={};
   const make=(tag,props={})=>Object.assign(document.createElement(tag),props);
@@ -64,7 +64,7 @@
   const placements=count=>look.stage[count]?.map(slot=>({...slot}))
     ??Array.from({length:count},(_,index)=>({x:(index+look.slotMidpoint)/count,size:look.crowdSize,tilt:0,back:0}));
   function rosterArt(id){
-    const card=document.querySelector(`[data-resident="${id}"]`),image=card?.querySelector('.portrait img');
+    const card=document.querySelector(`.roster [data-resident="${id}"]`),image=card?.querySelector('.portrait img');
     const src=image?.src??'';
     const canonical=src&&!card.hasAttribute('data-own-art')
       &&(src===originalRoster?.[id]||src===image.dataset.hudPortraitSource);
@@ -173,6 +173,7 @@
   }
   // A dedicated scene: pinned celebration and summary, scrolling damage, fixed actions.
   function buildResults(){
+    if(document.getElementById('demo-summary'))return false;
     const panel=document.getElementById('demo-results'),replay=document.getElementById('demo-replay');
     const summary=panel.querySelector(':scope > dl');summary.id='demo-summary';summary.className='results-summary';
     summary.replaceChildren(); // renderSummary builds its items from results.summary
@@ -191,16 +192,27 @@
     surface.append(crest,celebration,body,buildActions(replay));
     const boss=make('div',{className:'results-boss'});
     panel.replaceChildren(boss,surface);
+    return true;
   }
   // A swarm fight reaches here without the demo install while it is lab-only (SWARM_LIVE false): build the results kit once
   // and wire its replay to the page's again().
   // The page's reset() presents at boot with no `again`, so the kit is built before one exists: the click reads the latest one.
   let swarmAgain;
+  const replaySwarm=()=>swarmAgain?.();
   function swarmKit(again){
     swarmAgain=again??swarmAgain;
-    if(document.getElementById('demo-summary'))return;
-    buildResults();
-    document.getElementById('demo-replay').addEventListener('click',()=>swarmAgain?.());
+    if(buildResults())document.getElementById('demo-replay').addEventListener('click',replaySwarm);
+  }
+  // A Bramble defeat card stands in the arena, not the frame round it: centred on the frame it ran about 10 px past each arena
+  // side and past the bottom (#610 QA). The fixed panel is anchored to the frame (<main>, contain:layout), so the panel takes the
+  // arena's box relative to the frame; the card stands on the arena's bottom (rumble-demo.css) at its natural height when the
+  // arena has it, and Bramble's header above it keeps half the clearance under the frame's top (the top bar hides on results).
+  const defeatBox=(frame,arena)=>({top:arena.y-frame.y,left:arena.x-frame.x,width:arena.right-arena.x,height:arena.bottom-arena.y});
+  const defeatHeight=(box,natural,clearance)=>Math.min(natural,box.height,box.top+box.height-clearance/2);
+  function placeDefeat(panel,on){
+    const box=on?defeatBox(panel.closest('main').getBoundingClientRect(),document.getElementById('arena').getBoundingClientRect()):null;
+    for(const key of ['top','left','width','height']){const value=box?box[key]+'px':'';if(panel.style[key]!==value)panel.style[key]=value}
+    return box;
   }
   function present(state,ready,again){
     if(!active(state)&&!state.swarm)return;
@@ -227,12 +239,14 @@
     panel.toggleAttribute('data-compact-victory',compactVictory);
     if((!result.won||compactVictory)&&celebration.parentElement!==body)body.prepend(celebration);
     if(result.won&&!compactVictory&&celebration.parentElement!==surface)surface.insertBefore(celebration,body);
+    const arenaBox=placeDefeat(panel,!result.won&&!swarm);
     if(!result.won){
       const style=getComputedStyle(surface);
       const natural=[...surface.children].filter(child=>!child.classList.contains('results-crest'))
         .reduce((height,child)=>height+child.scrollHeight,0)+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
-      const available=Math.min(panel.clientHeight,innerHeight)-parseFloat(getComputedStyle(panel).getPropertyValue('--lm-defeat-clearance'));
-      panel.style.setProperty('--lm-defeat-height',Math.min(natural,available)+'px');
+      const clearance=parseFloat(getComputedStyle(panel).getPropertyValue('--lm-defeat-clearance'));
+      const height=arenaBox?defeatHeight(arenaBox,natural,clearance):Math.min(natural,Math.min(panel.clientHeight,innerHeight)-clearance);
+      panel.style.setProperty('--lm-defeat-height',height+'px');
     }
     if(!wasHidden)return;
     panel.querySelector('.results-body').scrollTop=0;
@@ -268,16 +282,22 @@
   function nameResident({names,doc,keep}){
     if(keep)return;
     names.custom=data.resident.name;
-    doc.querySelector('[data-resident="custom"] b').textContent=data.resident.name;
+    doc.querySelector('.roster [data-resident="custom"] b').textContent=data.resident.name;
   }
-  function install({s,names,reset:restart,again,draw,ready,keep=false}){
+  function addBack(doc,href){
+    const back=doc.createElement('a');back.className='demo-back';back.textContent=copy.back;
+    back.href=href;doc.querySelector('.top').prepend(back);
+  }
+  function ensureArrivalReturn(doc){
+    if(!doc.querySelector('.top .demo-back'))addBack(doc,'/?from=rumble');
+  }
+  function install({s,names,reset:restart,again,draw,ready,keep=false,direct=false}){
     if(root.LoftRumbleLabPolicy.allowed(location,document.documentElement))return;
     rememberRoster();
     s.demo={enraged:false};document.documentElement.dataset.rumbleDemo='';
     if(document.documentElement.hasAttribute('data-published-rumble')){
-      const back=document.createElement('a');back.className='demo-back';back.textContent=copy.back;
       const loft=new URL('../../',location.href);loft.searchParams.set('from','rumble');
-      back.href=loft.href;document.querySelector('.top').prepend(back);
+      addBack(document,direct?'/?from=rumble':loft.href);
     }
     const menu=document.getElementById('menu'),toggle=document.getElementById('menu-toggle');
     const pause=document.getElementById('pause'),help=document.getElementById('help-toggle');
@@ -294,24 +314,33 @@
     brand.append(logo);
     const title=document.createElement('h2');title.id='pause-title';title.textContent=copy.pausedTitle;
     menu.setAttribute('aria-labelledby',title.id);
-    menu.prepend(brand,title);
-    menu.append(pause,document.getElementById('sound'),document.getElementById('music'),document.getElementById('music-track-row'),document.getElementById('haptics'),document.getElementById('throw-style'),help,document.getElementById('replay-tutorial'),document.getElementById('reset'));
+    menu.prepend(panelClose(copy.closeSettings,()=>pause.click()),brand,title);
+    menu.append(pause,document.getElementById('sound'),document.getElementById('music'),document.getElementById('music-track-row'),document.getElementById('haptics'),document.getElementById('throw-style'),document.getElementById('swarm-lab'),help,document.getElementById('replay-tutorial'),document.getElementById('reset'));
     const helpPanel=document.getElementById('help-panel'),helpTitle=document.createElement('h2');
     helpTitle.id='battle-help-title';helpTitle.textContent=copy.helpMenu;helpTitle.tabIndex=-1;helpTitle.autofocus=true;
     const helpBody=document.createElement('div');helpBody.className='help-body';
     helpBody.id='battle-help-body';helpBody.tabIndex=0;helpBody.setAttribute('role','region');
     helpBody.setAttribute('aria-labelledby',helpTitle.id);
     helpBody.append(...helpPanel.childNodes);
-    helpPanel.setAttribute('aria-labelledby',helpTitle.id);helpPanel.append(helpTitle,helpBody);
+    helpPanel.setAttribute('aria-labelledby',helpTitle.id);
+    helpPanel.append(panelClose(copy.closeHelp,()=>help.click()),helpTitle,helpBody);
     const helpClose=document.createElement('button');helpClose.className='help-resume';helpClose.textContent=copy.resume;
     const helpFooter=document.createElement('div');helpFooter.className='help-footer';
     helpClose.onclick=()=>help.click();helpFooter.append(helpClose);helpPanel.append(helpFooter);
-    residentNames=names;buildResults();
+    residentNames=names;const builtResults=buildResults();
     const replay=document.getElementById('demo-replay');
+    if(!builtResults)replay.removeEventListener('click',replaySwarm);
     replay.addEventListener('click',()=>{(again||restart)();draw();document.getElementById('menu-toggle').focus({preventScroll:true})});
     restart();draw();
+    if(direct){delete document.documentElement.dataset.rumblePending;return;}
     const cinematic=root.LoftRumbleCinematic.play({main:document.querySelector('main'),setBlocked:on=>{s.cinematic=on}});
     reveal(ready,draw,cinematic);
+  }
+  function panelClose(label,dismiss){
+    const button=document.createElement('button');
+    button.type='button';button.className='battle-panel-close';button.setAttribute('aria-label',label);
+    button.textContent='\u00d7';button.onclick=dismiss;
+    return button;
   }
   // ---- Swarm end screen (ledger #487): pure data from a SwarmState; Bramble's present() is untouched. ----
   const swarmResult=state=>({mode:state.mode,won:state.outcome==='won',kills:state.kills,seconds:state.t});
@@ -332,7 +361,7 @@
       {key:'bites',label:words.defense.bites,value:String(p.bites)}]};
   }
   // clock is the one battle-time formatter (D5): it floors the elapsed seconds, and the page's header and end card call it.
-  root.LoftRumbleDemo=Object.freeze({clock,active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install,nameResident,
+  root.LoftRumbleDemo=Object.freeze({clock,defeatBox,defeatHeight,active,reset,advance,rotation,interval,trackWarning,observeImpact,present,install,nameResident,ensureArrivalReturn,
     swarm:Object.freeze({swarmResult,swarmEnd}),
     results:Object.freeze({facts,actions,looks,placements})});
 })(globalThis);

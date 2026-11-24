@@ -7,6 +7,10 @@ import { ProviderError } from './provider.ts';
 import { validImage } from './storage-contract.ts';
 
 export async function inspectImage(image: GeneratedImage) {
+  return withImageInspection(image, report => report);
+}
+
+export async function withImageInspection<T>(image: GeneratedImage, use: (report: ReturnType<typeof inspectAlpha>, bitmap: ImageBitmap) => T) {
   if (!validImage(image)) throw new Error(COPY.corrupt);
   let blob: Blob;
   if (image.mime === 'image/webp') {
@@ -33,6 +37,6 @@ export async function inspectImage(image: GeneratedImage) {
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) throw new Error(COPY.corrupt);
     context.drawImage(bitmap, 0, 0);
-    return inspectAlpha(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+    return use(inspectAlpha(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height), bitmap);
   } finally { bitmap.close(); }
 }

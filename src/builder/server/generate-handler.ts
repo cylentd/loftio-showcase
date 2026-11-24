@@ -126,7 +126,9 @@ function decodeIdle(value: unknown): Uint8Array | null {
   if (typeof value !== 'string' || value.length > FOLLOW_UP_IDLE_MAX_LENGTH) return null;
   try {
     const bytes = Uint8Array.from(atob(value), char => char.charCodeAt(0));
-    return bytes.length <= IMAGE_MAX_BYTES && readPngInfo(bytes) ? bytes : null;
+    if (bytes.length > IMAGE_MAX_BYTES) return null;
+    const info = readPngInfo(bytes);
+    return info && info.width <= IMAGE_MAX_SIDE && info.height <= IMAGE_MAX_SIDE ? bytes : null;
   } catch { return null; }
 }
 
@@ -202,12 +204,26 @@ class GenerateSession {
     if (now - entry.createdAt > FOLLOW_UP_START_DEADLINE_MS) return failure(HTTP_GATEWAY_TIMEOUT, 'network', COPY.network);
     // The expression prompt reads only `resolved`; the alt's kind, trait and element were checked above.
     const ctx = { resolved: entry.resolved, residentId: entry.buildId, ...alt } as FollowUpContext;
+    return this.paintFollowUp(def, ctx, idle, expression, signal, body.token);
+  }
+
+  private async recoverAlt(body: Record<string, unknown>, signal: AbortSignal): Promise<Response> {
+    const idle = decodeIdle(body.idle);
+    const alt = parseAltFields(body);
+    const picks = validateSelections(body.selections);
+    const def = FOLLOW_UPS.find(entry => entry.id === ALT_ID);
+    if (!idle || !alt || !picks.ok || !def) return failure(HTTP_BAD_REQUEST, 'invalid', COPY.invalid);
+    const ctx = { resolved: resolveSelections(picks.value, this.options.rng), residentId: this.options.newId(), ...alt };
+    return this.paintFollowUp(def, ctx, idle, undefined, signal);
+  }
+
+  private async paintFollowUp(def: FollowUpDef, ctx: FollowUpContext, idle: Uint8Array, expression: Uint8Array | null | undefined, signal: AbortSignal, token?: string): Promise<Response> {
     try {
       const references = { referenceImages: def.id === ALT_ID && expression ? [idle, expression] : [idle] };
       const { bytes, info } = await drawFollowUp(this.options.provider, def, ctx, references, signal);
       const base64 = encodeBase64(bytes);
       if (base64.length > (this.options.responseMaxBytes ?? ONLINE_RESPONSE_MAX_BYTES)) return failure(HTTP_PAYLOAD_TOO_LARGE, 'cap', COPY.expressionTooLarge);
-      if (def.id === EXPRESSION_ID) await this.vouchExpression(body.token, bytes);
+      if (def.id === EXPRESSION_ID && token) await this.vouchExpression(token, bytes);
       const { width, height, hasAlphaChannel } = info;
       return Response.json({ ok: true, id: def.id, [def.id]: { base64, mime: 'image/png', width, height, hasAlphaChannel } },
         { headers: { 'Cache-Control': 'no-store' } });
@@ -274,6 +290,7 @@ class GenerateSession {
       body = JSON.parse(text);
       if (!body || typeof body !== 'object' || Array.isArray(body)) return failure(HTTP_BAD_REQUEST, 'invalid', COPY.invalid);
       // A body with a token is a follow-up and may be as large as one idle; every other body keeps the create cap.
+      if ('action' in body && body.action === 'recover-alt') return await this.recoverAlt(body as Record<string, unknown>, request.signal);
       if ('token' in body) return await this.followUp(body as Record<string, unknown>, request.signal);
       if (text.length > REQUEST_BODY_MAX_LENGTH) return failure(HTTP_BAD_REQUEST, 'invalid', COPY.invalid);
     } catch { return failure(HTTP_BAD_REQUEST, 'invalid', COPY.invalid); }

@@ -17,6 +17,10 @@
   const MAX_NAME=40;                        // fits the hero card name line
   const MAX_ART_SRC=400000;                 // a ~96px thumbnail data URL is a few KB; anything this size is not one
   const MAX_STORED=2000000;                 // characters of raw JSON fromStorage will parse
+  const MAX_THUMB_SIDE=256;                 // roster thumbnail publisher cap
+  const DECIMAL=/^(0|[1-9][0-9]*)$/;
+  const GENERIC=Object.freeze({kind:'generic'});
+  const UNAVAILABLE=Object.freeze({kind:'unavailable',unavailable:true});
 
   const isObject=v=>typeof v==='object'&&v!==null&&!Array.isArray(v);
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k)?o[k]:undefined;   // never an inherited or __proto__ value
@@ -88,13 +92,63 @@
   };
 
   // `store` is a Storage-like with getItem (pass window.localStorage). Missing, broken or oversized values give null.
-  const fromStorage=store=>{
+  const readSnapshot=store=>{
     try{
       const raw=store.getItem(KEY);
       if(typeof raw!=='string'||raw.length>MAX_STORED)return null;
-      return readTeam(JSON.parse(raw));
+      return JSON.parse(raw);
     }catch(e){return null;}
   };
+  const fromStorage=store=>readTeam(readSnapshot(store));
 
+  const exactId=id=>typeof id==='string'&&id.length>0&&id.length<=MAX_ID;
+  const parseReceipt=search=>{
+    const params=new URLSearchParams(search);
+    const ids=params.getAll('resident'),modes=params.getAll('mode'),revisions=params.getAll('revision');
+    if(!ids.length&&!revisions.length&&modes.length<=1)return GENERIC;
+    if(ids.length!==1||modes.length!==1||revisions.length!==1)return UNAVAILABLE;
+    const [id]=ids,[mode]=modes,[decimal]=revisions;
+    if(!exactId(id)||!MODES.includes(mode)||!DECIMAL.test(decimal))return UNAVAILABLE;
+    const revision=Number(decimal);
+    return Number.isSafeInteger(revision)?Object.freeze({kind:'receipt',id,mode,revision}):UNAVAILABLE;
+  };
+
+  const usableArt=art=>art&&art.width<=MAX_THUMB_SIDE&&art.height<=MAX_THUMB_SIDE;
+  const eligible=row=>{
+    if(row.inRoom!==true)return null;
+    const resident=readResident(row);
+    return resident&&(resident.kind==='original'||usableArt(resident.art))?resident:null;
+  };
+
+  const resolveLaunch=(receipt,store)=>{
+    if(receipt.kind!=='receipt')return receipt;
+    const snapshot=readSnapshot(store);
+    if(!isObject(snapshot)||snapshot.version!==VERSION||snapshot.mode!==receipt.mode||
+        snapshot.writtenAt!==receipt.revision||!Array.isArray(snapshot.residents))return UNAVAILABLE;
+    const rows=new Map();
+    for(const row of snapshot.residents){
+      if(!isObject(row)||!exactId(row.id))continue;
+      rows.set(row.id,rows.has(row.id)?null:row);
+    }
+    const target=rows.get(receipt.id);
+    const fighter=target?.kind==='made'?eligible(target):null;
+    if(!fighter)return UNAVAILABLE;
+    const team=[fighter];
+    for(const [id,row] of rows){
+      if(team.length===MAX_TEAM)break;
+      if(!row||id===receipt.id)continue;
+      const companion=eligible(row);
+      if(companion)team.push(companion);
+    }
+    return Object.freeze({kind:'targeted',targeted:true,team:Object.freeze(team)});
+  };
+  const prepareLaunch=receipt=>{
+    const launch=resolveLaunch(receipt,{getItem:key=>root.localStorage.getItem(key)});
+    if(launch===GENERIC)return false;
+    root.rumbleArrival=launch;
+    if(launch.targeted)root.rumbleTeam=root.LoftRumbleSlotFill.fill(launch.team);
+    return true;
+  };
   root.LoftRumbleRosterReader=Object.freeze({KEY,MAX_TEAM,traits:TRAITS,readTeam,fromStorage});
+  root.LoftRumbleArrival=Object.freeze({parseReceipt,resolveLaunch,prepareLaunch,MAX_THUMB_SIDE,GENERIC});
 })(globalThis);

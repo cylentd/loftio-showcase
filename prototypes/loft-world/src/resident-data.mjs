@@ -1,3 +1,5 @@
+import {AIR_LIFT,STARTER_AIR_PIVOT_Y} from './resident-art-constants.mjs';
+
 export const RESIDENTS = ['sprout','chomper'];
 export const POSES = ['happy','determined','dizzy','back'];
 export const ASSET_ROOT = 'assets/residents/';
@@ -21,6 +23,8 @@ export const RESIDENT_LOOK = {frontOnly:false,easing:12,walkTilt:.12,flightTilt:
   shadowStretch:1.35, // how much longer than wide the contact shadow is along the moon's direction
   shadowOffsetCap:.8, // longest a low moon may push the shadow away from the feet, in world units
   shadowLift:.12, // how far the pool floats above the ground, so a bumpy path does not swallow it
+  starterAirPivotY:STARTER_AIR_PIVOT_Y,
+  airLift:AIR_LIFT,
   footSink:.02, // how far the feet settle into the grass, as a share of the sprite's height
   footFade:.1, // height above the feet over which the painting fades in, as a share of the sprite's height
   footFadeMin:.0}; // painting opacity at the very sole

@@ -44,7 +44,8 @@ export function residentChrome() {
   });
   drawer.content.append(tabs.root, status, error, ...panels); tabs.select(0);
   const openCreate = () => { tabs.select(2); if (!drawer.dialog.open) drawer.open(trigger); };
-  return { drawer, trigger, status, error, panels, openCreate };
+  return { drawer, trigger, status, error, panels, openCreate,
+    openCollection: () => { tabs.select(1); if (!drawer.dialog.open) drawer.open(trigger); } };
 }
 
 function rosterCard(id: string, name: string, source: string, inRoom: boolean, change: () => void, portrait?: PortraitAction, supported = true,

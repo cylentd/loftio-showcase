@@ -7,7 +7,7 @@ import type { OriginalLineup } from './original-lineup';
 import { openSpot } from './scene-adapter';
 
 export function originalResidents(scene: Scene, runtime: Runtime, overlay: Overlay,
-  controls: ReturnType<typeof installResidentControls>, lineup: OriginalLineup) {
+  controls: ReturnType<typeof installResidentControls>, lineup: OriginalLineup, edit: <T>(work: () => T) => T | Promise<T>) {
   const originals = new Map(scene.residents.map(resident => [resident.cast.id, resident]));
   const remove = (id: string) => {
     const resident = originals.get(id);
@@ -20,10 +20,10 @@ export function originalResidents(scene: Scene, runtime: Runtime, overlay: Overl
   };
   for (const entry of lineup.list()) if (!entry.inRoom) remove(entry.id);
   return {
-    setInRoom(id: string, inRoom: boolean) {
+    async setInRoom(id: string, inRoom: boolean) {
       const resident = originals.get(id);
       if (!resident) return;
-      lineup.setInRoom(id, inRoom);
+      await edit(() => lineup.setInRoom(id, inRoom));
       if (!inRoom) remove(id);
       else if (!scene.residents.includes(resident)) {
         const target = openSpot(scene);

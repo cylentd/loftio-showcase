@@ -24,7 +24,7 @@ export function arrivalNameField(entry: ResidentEntry) {
   input.addEventListener('input', validate);
   input.addEventListener('invalid', validate);
   field.append(label, input, hint, error);
-  return { field, input, read() {
+  return { field, input, showError(message: string) { error.textContent = message; }, read() {
     const name = validate(); if (name === null) input.reportValidity(); return name;
   } };
 }

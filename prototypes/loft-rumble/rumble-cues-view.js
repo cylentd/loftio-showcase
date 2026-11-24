@@ -6,6 +6,9 @@
   'use strict';
   let rail=null,alertList=null,newsList=null,alertShown='',newsShown='';
   let layer=null,attackChip=null,momentNode=null,momentKey='',options=null,shownTop=null;
+  // Measured once per sticker (its peak width) and once per layer resize, never every frame.
+  let momentWidth=0,layerWidth=0;
+  const measureLayer=()=>{layerWidth=layer?layer.clientWidth:0};
   const art={},ratio={},pins=new Map(),spirals=new Map();
   const make=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!=null)node.textContent=text;return node};
   const url=path=>'url("'+path+'")';
@@ -34,6 +37,8 @@
     const arena=document.getElementById('arena');arena.append(layer,rail);
     alertShown='';newsShown='';momentKey='';shownTop=null;momentNode=null;pins.clear();spirals.clear();
     preload(config.art,config.cells);
+    // The arena is sized by its own resize() after boot, with no window resize, so the layer itself is observed.
+    layerWidth=0;if(root.ResizeObserver)new ResizeObserver(measureLayer).observe(layer);
   }
 
   // Rewrites only the items whose text changed, so a steady ready cue is never re-inserted into the live list.
@@ -87,6 +92,20 @@
     }
   }
 
+  // A word sticker is centred on its anchor, so one anchored near an arena edge would hang outside the layer and be
+  // clipped. This keeps its whole width inside; one as wide as the layer or wider is centred. The width passed is the
+  // pop's peak width (the rumble-word keyframes scale it past full size, about its centre), so the pop never clips.
+  function clampCentre(x,width,layerWidth){
+    if(width>=layerWidth)return layerWidth/2;
+    return Math.min(Math.max(x,width/2),layerWidth-width/2);
+  }
+
+  // The sticker's peak width: its layout width times the pop overshoot read from the CSS (--field-word-over).
+  function peakWidth(node){
+    const over=parseFloat(getComputedStyle(node).getPropertyValue('--field-word-over'));
+    return node.offsetWidth*(over>1?over:1);
+  }
+
   // The one moment layer node: a cut-in or a word pop.
   function renderMoment(moment){
     const key=moment?moment.kind+(moment.id??moment.word)+(moment.at?.x??''):'';
@@ -105,9 +124,14 @@
           if(plate){momentNode.dataset.plate='';momentNode.style.backgroundImage=url(plate)}
         }
         layer.append(momentNode);
+        momentWidth=moment.x!=null?peakWidth(momentNode):0;
       }
     }
-    if(momentNode&&moment?.x!=null){momentNode.style.setProperty('--x',moment.x+'px');momentNode.style.setProperty('--y',moment.y+'px')}
+    if(momentNode&&moment?.x!=null){
+      if(!layerWidth)measureLayer();
+      const x=clampCentre(moment.x,momentWidth,layerWidth);
+      momentNode.style.setProperty('--x',x+'px');momentNode.style.setProperty('--y',moment.y+'px');
+    }
   }
 
   function render({alert,news,top,field}){
@@ -122,5 +146,5 @@
     renderMoment(field.moment);
   }
 
-  root.LoftRumbleCuesView=Object.freeze({install,render,hasArt:key=>!!art[key]});
+  root.LoftRumbleCuesView=Object.freeze({install,render,clampCentre,hasArt:key=>!!art[key]});
 })(globalThis);

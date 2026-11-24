@@ -29,6 +29,7 @@ import { wirePause } from './pause.js';
 import { createDay } from './day-view.js';
 import { warmScene, createTextureWarmer } from './warm.js';
 import { createPetals } from './petals.js';
+import { takeResidentArt } from './resident-entry.mjs';
 
 const params = new URLSearchParams(location.search);
 const benchOff = params.has('bench') ? parseOff(params.get('off')) : []; // parts a benchmark run switches off
@@ -184,8 +185,9 @@ function go(name, snap = false) {
 // ---- Explore mode ----
 const hudEl = document.querySelector('.play-hud'), countEl = document.querySelector('[data-count]'), flashEl = document.querySelector('.flash');
 const audio = createAudio({ muted: params.has('mute') });
+const leadArt = takeResidentArt();
 const play = createPlay({
-  scene, camera, world, sfx: audio, low,
+  scene, camera, world, sfx: audio, low, leadArt,
   hud: {
     charge(ready) { const el=document.querySelector('[data-fling-charge]');el.textContent=TRAVERSAL_COPY[ready?'ready':'spent'];el.dataset.ready=String(ready);el.hidden=true; }, // unused while flings are unlimited
     show(on) { hudEl.hidden = !on; document.body.classList.toggle('playing', on); },

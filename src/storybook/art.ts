@@ -118,3 +118,4 @@ function loadImage(src: string): Promise<string> {
   }
   return held;
 }
+

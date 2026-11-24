@@ -7,6 +7,14 @@
 }
 
 :root {
+  --first-resident-drawer-width: 420px;
+  --first-resident-create-height: 48rem;
+  --first-resident-frame-buffer: 3px;
+  --first-resident-card-title-layer: 3;
+  --first-resident-box-unit: clamp(12px, 1.95dvh, 13px);
+  --first-resident-stage: clamp(10rem, 31dvh, 16.5rem);
+  --first-resident-figure: 70%;
+  --resident-cinema-dim: .65;
   --font-body: "Nunito", "Segoe UI", sans-serif;
   /* Canvas colours, read by the Pixi scene at start */
   --grove-shadow: #1c0f0a; /* contact shadow under a resident: the floor's own dark brown, not black */

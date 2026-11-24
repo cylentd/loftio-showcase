@@ -1,7 +1,8 @@
 import { focusCardsOnRequest, lobbyPlay } from '../src/features';
 import { startRoom } from '../src/room';
 import { playGlade } from '../src/glade/view';
-import { welcome } from '../src/residents/welcome-feature';
+import { showcaseWelcome } from '../src/residents/welcome-feature';
+import { createResidentLaunches } from '../src/residents/resident-launch';
 import { hostedVisits } from '../src/visits/feature';
 import { showcaseStorybook } from '../src/storybook/feature';
 
@@ -11,4 +12,9 @@ import { showcaseStorybook } from '../src/storybook/feature';
 // on request only, as in the game (../src/main.ts), and it gives a fresh profile the welcome allowance of 3 tickets.
 // hostedVisits: resident invitations, files and hosted links (owner, 2026-11-18). The showcase is the one build that
 // deploys the endpoint (game/vercel.json), so it asks for links itself; the game (../src/main.ts) follows a build flag.
-startRoom([focusCardsOnRequest, lobbyPlay, playGlade, welcome, hostedVisits, showcaseStorybook]);
+let selectGame: ReturnType<typeof playGlade>['select'];
+const glade = () => {
+  const menu = playGlade(); selectGame = menu.select; return menu;
+};
+const welcome = showcaseWelcome(createResidentLaunches, (...args) => selectGame(...args));
+startRoom([focusCardsOnRequest, lobbyPlay, glade, welcome, hostedVisits, showcaseStorybook]);

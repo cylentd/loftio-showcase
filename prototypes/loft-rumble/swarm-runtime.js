@@ -37,11 +37,26 @@
   // Put a swarm into the fight and restart it. The fight's reset() reaches rearm() through camera.resetScene().
   // teamMax is the configured pool (the page's RT.teamHP, which its TURN.hp and team bar text use), never the current s.teamHP:
   // a start after damage would otherwise shrink the bar's scale (D5).
-  function start(camera,{mode,seed,bench}){
-    const {s,RT}=camera.game;
-    root.LoftRumbleArt?.loadSwarm?.();   // swarm-only art, never on a Bramble page; none since 2026-11-20 (monsters and bar are code-drawn, puff and seed are in `assets`)
-    s.swarm={model:Swarm.create({mode,seed:seed??SD.LAB_SEED,arena:{w:s.w,h:s.h},bench}),hp0:s.hp,teamMax:RT.teamHP};
+  function start(camera,options){
+    put(camera,options);
     camera.game.reset();
+  }
+  // The swarm without the restart: the Lab: Swarm toggle (LoftRumbleSwarmLab, below) calls this from inside the page's reset().
+  // A swarm it replaces may have grown the page's bumper (defense): that size comes back first, so no path loses the original.
+  // combo (ledger #518 U2): the Lab toggle asks for the combo counter and picks; they run only when the page has loaded combo-counter.js
+  // and rumble-picks.js, so a page without those scripts plays the swarm exactly as before.
+  function put(camera,{mode,seed,bench,combo}){
+    const {s,RT,FEEL}=camera.game;
+    if(s.swarm?.bumperRadius0!==undefined)FEEL.bumperRadius=s.swarm.bumperRadius0;
+    root.LoftRumbleArt?.loadSwarm?.();   // swarm-only art, never on a Bramble page; none since 2026-11-20 (monsters and bar are code-drawn, puff and seed are in `assets`)
+    const withCombo=!!(combo&&root.LoftRumbleCounter&&root.LoftRumblePicks);
+    s.swarm={model:Swarm.create({mode,seed:seed??SD.LAB_SEED,arena:{w:s.w,h:s.h},bench,combo:withCombo}),hp0:s.hp,teamMax:RT.teamHP};
+  }
+  // Take the swarm out before a Bramble fight (the toggle turned off): the page's bumper size comes back. Call before resetScene().
+  function drop(camera){
+    const {s,FEEL}=camera.game;
+    if(s.swarm?.bumperRadius0!==undefined)FEEL.bumperRadius=s.swarm.bumperRadius0;
+    delete s.swarm;
   }
 
   // Called by camera.resetScene() after it has made a fresh scene: a swarm in the fight restarts with its own seed.
@@ -65,11 +80,28 @@
         fx?.hurt(out.amount,out.x,out.y,out.by);
       }else if(out.type==='killed')fx?.killed(out);
       else if(out.type==='crystalHit')crystalHit(camera,out);
+      else if(out.type==='counter')counter(camera,out);
+      else if(out.type==='offer')offer(camera,out);
+      else if(out.type==='picked')game.swarmFx?.picked?.(out);
       else if(out.type==='outcome')finish(camera,out.value==='won');
     }
     if(state(camera).mode==='defense'){mirrorHp(camera);return}   // the model owns hp here: no teamDown, it resolves the loss itself
     // The model never tracks the pool: an empty pool is told to it here, and it resolves the loss on its next tick.
     if(s.teamHP<=0&&!state(camera).downed&&state(camera).outcome==='running')send(camera,{type:'teamDown'},false);
+  }
+
+  // Combo counter (#518): the page shows the ring and the result (swarmFx.counter) and stuns the heroes a landed one reports; the combo
+  // itself breaks through the page's own breakCombo('counter') when it has one.
+  function counter(camera,out){
+    const {game}=camera;
+    if(out.phase==='landed')game.breakCombo?.('counter');
+    game.swarmFx?.counter?.(out);
+  }
+  // A pick offer pauses the model's ticks until a card is taken. The page's pick screen (swarmFx.offer(cards, take)) calls take(index);
+  // a page with none takes the first card, so the fight never waits on a screen that is not there.
+  function offer(camera,out){
+    const take=index=>send(camera,{type:'pick',index},false),fx=camera.game.swarmFx;
+    if(fx?.offer)fx.offer(out.cards,take);else take(0);
   }
 
   // Defense: the page's team bar shows the crystal's hp as a share of the pool the page started with.
@@ -91,9 +123,9 @@
     const {s,ids}=camera.game;
     if(!active(camera)||state(camera).mode!=='defense')return;
     ids.forEach((id,i)=>Object.assign(s.bodies[id],{x:s.w*(i+1)/(ids.length+1),y:s.h*Data.defense.heroRow}));
-    // The crystal's bumper is as wide as the crystal (a share of the arena width). This overwrites the page's shared FEEL.bumperRadius
-    // on purpose and never restores it: the swarm stage comes only from ?stage= at boot (rumble-encounters.js stageMode, one
-    // SwarmRuntime.start), the encounter control is locked while a swarm runs, so no non-defense fight ever follows on this page load.
+    // The crystal's bumper is as wide as the crystal (a share of the arena width). This overwrites the page's shared FEEL.bumperRadius;
+    // the first value is kept so drop() can put it back when the Lab: Swarm toggle turns a later battle back into Bramble's.
+    s.swarm.bumperRadius0??=camera.game.FEEL.bumperRadius;
     camera.game.FEEL.bumperRadius=Data.defense.bumperRadius*s.w;
     mirrorHp(camera);
   }
@@ -132,17 +164,18 @@
     const {s}=camera.game;
     if(!active(camera))return run();
     const flight=body&&{x:body.x,y:body.y,vx:body.vx,vy:body.vy,left:body.glide?.left};
-    const before=s.hp,popups=s.popups?.length,tally=s.tally,stop=s.hitStop,shake=s.shake,result=run(),dealt=before-s.hp;
+    const before=s.hp,popups=s.popups?.length,tally=s.tally,stop=s.hitStop,stopAt=s.stopAt,shake=s.shake,shakeDir=s.shakeDir,result=run(),dealt=before-s.hp;
     s.hp=before;
     // The page's boss hit-stop and shake are dropped too (owner 2026-11-20): re-armed on every monster a fling plows through, they
     // froze and shook the fight many times a second, which read as lag. A kill keeps its spark burst (swarmFx.killed).
-    s.hitStop=stop??0;s.shake=shake??0;
+    s.hitStop=stop??0;s.stopAt=stopAt;s.shake=shake??0;s.shakeDir=shakeDir;
     if(popups!==undefined)s.popups.length=popups;
     if(tally===undefined)delete s.tally;else s.tally=tally;
     if(!(dealt>0)||target.monsterId===undefined)return result;
     // The hero as it flew into the hit (before the page's reflection): the model pushes the monster along that flight (recoil).
     const from=flight&&{x:flight.x,y:flight.y,vx:flight.vx,vy:flight.vy};
-    send(camera,{type:'hit',id:target.monsterId,amount:dealt,from},camera.predicting);
+    const hero=camera.game.ids?.findIndex(id=>s.bodies?.[id]===body)??-1;   // who threw it: the counter's ring locks on that hero (-1: unknown)
+    send(camera,{type:'hit',id:target.monsterId,amount:dealt,from,hero:hero<0?undefined:hero},camera.predicting);
     const struck=state(camera).monsters.find(m=>m.id===target.monsterId);
     if(flight&&struck&&struck.life!=='alive')plowOn(body,flight);
     return result;
@@ -164,6 +197,44 @@
     if(first)send(camera,{type:'hit',id:first.monsterId,amount:dealt},false);
   }
 
-  const api=Object.freeze({active,state,calm,start,rearm,place,sync,beforeStep,afterStep,collide});
+  const api=Object.freeze({active,state,calm,start,put,drop,rearm,place,sync,beforeStep,afterStep,collide});
   root.LoftRumbleSwarmRuntime=api;
+})(typeof globalThis!=='undefined'?globalThis:this);
+
+(function(root){
+  'use strict';
+  // Lab: Swarm (owner, 2026-11-21): a Settings switch that makes the next battle the swarm defense stage (the crystal), on any host.
+  // The switch is the player's opt-in, so it does not ask LoftRumbleLabPolicy; ?stage, SWARM_LIVE and the bench stay as they were.
+  // It is read once, when a battle starts (begin, from the page's reset()): flipping it mid-fight changes the next battle only.
+  // It shares this file with the runtime so the release file list (game/build/rumble-files.json) needs no new entry.
+  const KEY='loftRumbleSwarmLab';   // localStorage 'on' | 'off'; missing means off (docs/architecture/ICD.md)
+  const STAGE='swarm-defense';      // the ?stage id whose mode the switch runs (rumble-encounter-data.js swarm.stages)
+
+  const page=()=>{try{return root.localStorage}catch{return null}}; // a blocked store reads as off and saves nothing
+  function get(storage=page()){try{return storage?.getItem(KEY)==='on'}catch{return false}}
+  function set(storage=page(),on){try{storage?.setItem(KEY,on?'on':'off')}catch{}}
+
+  // A battle starts: put the defense swarm in, or take a toggle swarm out. A ?stage swarm (no `lab` mark) is never touched.
+  // Call before camera.resetScene(), which re-arms whatever swarm is in the fight.
+  function begin(camera,storage=page()){
+    const s=camera?.game.s,runtime=root.LoftRumbleSwarmRuntime;
+    if(!s||!runtime||(s.swarm&&!s.swarm.lab))return;
+    const on=get(storage);
+    if(on&&!s.swarm){runtime.put(camera,{mode:root.LoftRumbleEncounterData.swarm.stages[STAGE],combo:true});s.swarm.lab=true}
+    else if(!on&&s.swarm)runtime.drop(camera);
+  }
+
+  // The Settings row: one label that never changes, the switch shows the state, and a hint that is part of its name.
+  function install({doc,storage=page(),copy}){
+    const button=doc.getElementById('swarm-lab');
+    if(!button)return;
+    const show=()=>{
+      const hint=doc.createElement('data');hint.className='settings-hint';hint.textContent=copy.hint;
+      button.replaceChildren(copy.label,hint);button.setAttribute('aria-pressed',String(get(storage)));
+    };
+    button.onclick=()=>{set(storage,!get(storage));show()};
+    show();
+  }
+
+  root.LoftRumbleSwarmLab=Object.freeze({key:KEY,get,set,begin,install});
 })(typeof globalThis!=='undefined'?globalThis:this);

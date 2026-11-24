@@ -11,7 +11,7 @@
   --reveal-ground-shadow: color-mix(in srgb, var(--world-ink) 20%, transparent);
   --reveal-fill-blur: var(--space-6);
   --reveal-fill-scale: 1.12;
-  --reveal-fill-light: .65;
+  --reveal-fill-light: var(--resident-cinema-dim);
 }
 .resident-reveal .unboxing-video-stage {
   position: relative; display: grid; place-items: center; width: 100%;

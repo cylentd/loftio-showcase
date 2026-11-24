@@ -67,6 +67,7 @@ export function onlineApi({ fetcher = fetch, getToken, bodyMaxLength = FOLLOW_UP
       const { kind, trait, element, image } = request;
       try {
         const text = JSON.stringify({ action: 'recover-alt', idle: base64Of(image), selections, kind, trait, element, [TURNSTILE_BODY_FIELD]: await verify() });
+        signal?.throwIfAborted();
         if (text.length > bodyMaxLength) return { ok: false, kind: 'cap' };
         const response = await fetcher(LOCAL_API_PREFIX + '/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text, signal });
         return await readFollowUp(response, ALT_ID, ['idle']);

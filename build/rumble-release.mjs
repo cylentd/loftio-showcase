@@ -2,6 +2,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname, relative, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 const manifestPath = fileURLToPath(new URL('./rumble-files.json', import.meta.url));
 const runtimeDirectory = 'prototypes/loft-rumble';
@@ -52,6 +53,13 @@ async function renderRumbleFile(source, target, paths, gameRoot) {
     .replace('<html lang="en">', '<html lang="en" data-published-rumble>')
     .replace('<title>Loft Rumble · Real-time</title>', '<title>Loft Rumble · Loftio</title>')
     .replace('<a class="mode-link" href="loft-rumble.html"></a>', '');
+  if (source.endsWith('.html') && bytes.includes('<!--arrival:')) {
+    const context = {};
+    runInNewContext(await readFile(join(dirname(source), 'rumble-demo-data.js'), 'utf8'), context);
+    const copy = context.LoftRumbleDemoData.arrivalUnavailable;
+    bytes = bytes.replace(/<!--arrival:(\w+)-->/g, (_, key) =>
+      copy[key].replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'));
+  }
   return bytes;
 }
 

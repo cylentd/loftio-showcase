@@ -8,7 +8,8 @@
     tutorialKey:'loftRumbleDemoTutorialSeen',
     soundKey:'loftRumbleSound',          // localStorage 'on' | 'off', read and written like loftRumbleMusic (docs/architecture/ICD.md)
     resident:Object.freeze({name:'Puff',trait:'piercing'}),
-playerControls:Object.freeze(['pause','help-toggle','sound','music','music-track-row','haptics','throw-style','reset','replay-tutorial']),
+    arrivalUnavailable:Object.freeze({title:'Resident unavailable',body:'Return to the loft and try again with your resident.',back:'Back to Loft'}),
+playerControls:Object.freeze(['pause','help-toggle','sound','music','music-track-row','haptics','throw-style','swarm-lab','reset','replay-tutorial']),
     // Living-magic results screen (LM6c, owner's results kit 2026-11-15). Every list here is data: the screen draws as many
     // summary items, heroes and actions as it is given, and no texture holds a fixed number of any of them.
     results:Object.freeze({
@@ -37,9 +38,14 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','music-track
     }),
     copy:Object.freeze({
       menuLabel:'Pause and settings',resume:'Resume battle',helpMenu:'How to play',pausedTitle:'Battle paused',
+      closeSettings:'Close settings',closeHelp:'Close help',
       arrivalLead:'Ready to',arrivalTitle:'Rumble',
       // Settings rows: the label never changes; the switch shows the state (audit 2026-11-15, top 10 #6).
       sound:'Sound',music:'Music',musicHint:'Turn on Sound', // the hint shows under Music while Sound is off
+      // Lab: Swarm (owner, 2026-11-21): the switch is read when a battle starts, so the hint says when it takes effect.
+      swarmLab:Object.freeze({label:'Lab: Swarm',hint:'Defend a crystal from monsters. Starts next battle.'}),
+      // Tap-to-fire specials (#536, ?specials=tap): the switch is on for Auto, off for Tap.
+      specialsMode:Object.freeze({label:'Specials: Auto',hint:'Off: tap a ready resident to fire its special.'}),
       // Every player string that names the boss reads this one key (owner, 2026-11-15: Bramble).
       boss,enragedBoss:boss+' · Enraged',back:'Back to Loft',
       // Enrage shows on the field only (owner, 2026-11-15): no banner and no subline. This sentence is for screen readers.
@@ -50,6 +56,9 @@ playerControls:Object.freeze(['pause','help-toggle','sound','music','music-track
         // Defense (D2): lost when the swarm walks through, not when the team falls.
         defense:Object.freeze({lost:'The swarm broke through',waves:'Waves held',bites:'Crystal bites'})}),
       winHint:'Try another run. Build a longer combo.',lossHint:'Bump teammates. Watch the warnings.',
+      // Fight replay (on for everyone, ?replay=0 turns it off; replay-controls.js): the end-screen button and the playback bar's labels. `speed` fills {n} with 1 or 2; `time` fills {now} and {end}.
+      watch:Object.freeze({open:'Watch replay',bar:'Replay controls',play:'Play',pause:'Pause',scrub:'Replay position',
+        speed:'{n}x',time:'{now} / {end}',speedLabel:'Playback speed',back:'Back to results'}),
       time:'Battle time',combo:'Best combo',replay:'Play Again', // "Play Again" is the owner's pick, 2026-11-15; it wins over the audit glossary's sentence case
       // End-screen damage list and breakdown: labels and numbers only. Counts are plain numbers, never "×2" (audit glossary).
       // "Bumps" and "Teammates bumped" replace "Set off" and "Teammates set off" (owner, 2026-11-15); the stat key stays setOff.

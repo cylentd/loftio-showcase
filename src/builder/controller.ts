@@ -1,94 +1,31 @@
-import { followUpRequest, recoverSavedAlt, type FollowUpBase } from './recover-saved-alt.ts';
-import { backfillLoadout, isRerollable, newLoadout, parseLoadout, rollLoadout, type Element, type Loadout, type Trait } from '../loadout/loadout-model.ts';
+import { followUpRequest, recoverSavedAlt, SharedAltRecovery, type FollowUpBase } from './recover-saved-alt.ts';
+import { backfillLoadout, newLoadout, parseLoadout, type Loadout } from '../loadout/loadout-model.ts';
 import { parseNamePack, type NamePack } from '../loadout/loadout-name-model.ts';
 import { ProviderError, type BuilderFailure, type FailureKind } from './provider.ts';
 import { FOLLOW_UPS, type FollowUpDef } from './follow-ups.ts';
-import { altKindFor, type AltKind } from './alt-kind.ts';
+import { altKindFor } from './alt-kind.ts';
 import { ALT_ID } from './constants.ts';
 import { failPending, freshSlots, settleSlot, slotFields, slotOf, slotsOf, type SlotSet } from './follow-up-slots.ts';
-import type { AltReference, GeneratedImage, GenerationRecord, SavedCharacter } from './records.ts';
+import type { GeneratedImage, SavedCharacter } from './records.ts';
+import { backfillRecord, durableSlots, keepRecord, putGeneratedRecord, rerollRecord, savedRecord, showPendingSlots, writeSharedSlots } from './saved-record-write.ts';
 import { validateSelections, type UserSelections, type SelectionField } from './selections.ts';
-import type { CharacterStore } from './store.ts';
 import { COPY } from './copy.ts';
-import type { BuildTickets } from './tickets.ts';
+import { paidJournalFailure, paidOutcomeFailure, settleBuild } from './journal.ts';
+import { admitBuild } from './admit-build.ts';
 import { canCreate, initial, next, retryMode } from './controller-model.ts';
+import { commitLoftJoin, pendingLoftJoins } from './loft-join.ts';
+import { displayableIdle, type ImageCheck } from './displayable-idle.ts';
 import type { BuilderRequest, GenerationStage, Life, LifeEvent, RunMode } from './controller-model.ts';
 
-export type { BuilderRequest, GenerationStage } from './controller-model.ts';
-export type GenerateOutcome =
-  // `names` is the server's themed-name pack, unchecked: the controller parses it again before it is stored.
-  // `followUp` is the online worker's one-time token for the images drawn after the idle; other apis leave it out.
-  | { ok: true; generation: GenerationRecord; image: GeneratedImage; usage?: { used: number; cap: number }; names?: unknown; followUp?: { token: string; ids: string[] } }
-  | { ok: false; error: BuilderFailure };
-export type StageListener = (stage: GenerationStage) => void;
-/** One image drawn after the idle: which one, for which build, from which idle, and the online token when there is one. */
-// `expression` is the expression image, sent only when its slot is ready; `kind`, `trait` and `element` are set for the alt alone.
-export type FollowUpRequest = {
-  id: string; requestId: string; image: GeneratedImage; token?: string;
-  expression?: GeneratedImage; kind?: AltKind; trait?: Trait; element?: Element;
-};
-export type FollowUpOutcome =
-  // `references`: the images the api really sent, when it knows (online drops the expression over the body max).
-  | { ok: true; image: GeneratedImage; promptVersion: string; createdAt: string; references?: AltReference[] }
-  | { ok: false; kind: FailureKind };
-export type BuilderApi = {
-  // Absent in the standalone harness: the resident then has no expression. Never spends or refunds a ticket.
-  followUp?: (request: FollowUpRequest, signal?: AbortSignal) => Promise<FollowUpOutcome>;
-  recoverAlt?: (request: FollowUpRequest, selections: UserSelections, verify: () => Promise<string>, signal?: AbortSignal) => Promise<FollowUpOutcome>;
-  // Only an api whose worker keeps the slot (local) has this: a reloaded page polls it again. Online and mock lose their token.
-  resumeFollowUp?: (request: FollowUpRequest, signal?: AbortSignal) => Promise<FollowUpOutcome>;
-  generate(body: BuilderRequest, signal?: AbortSignal, onStage?: StageListener): Promise<GenerateOutcome>;
-  observe?: (requestId: string, signal?: AbortSignal, onStage?: StageListener) => Promise<GenerateOutcome>;
-  // Resolves false when the job had already finished or was preparing, so its result still arrives.
-  cancel?: (requestId: string) => Promise<boolean>;
-  prepare?: (requestId: string) => Promise<GenerateOutcome>;
-};
-export type ImageCheck = { verdict: string; marginOk?: boolean };
-export type BuilderState = {
-  status: 'idle' | 'generating' | 'ready' | 'failed';
-  stage: GenerationStage;
-  selections: UserSelections;
-  preview: { generation: GenerationRecord; image: GeneratedImage; check: ImageCheck } | null;
-  previewKept: boolean;
-  saving: boolean;
-  kept: SavedCharacter[];
-  error: BuilderFailure | null;
-  refineSupported: false;
-  usage: { used: number; cap: number } | null;
-  tickets: number | null; // null when this builder has no ticket store (the standalone harness)
-  resumable: boolean; // the API has observe, so a failed request can be reattached instead of paid for again
-};
-
-type Dependencies = {
-  api: BuilderApi;
-  store: CharacterStore;
-  newId: () => string;
-  now: () => Date;
-  inspect: (image: GeneratedImage) => Promise<ImageCheck>;
-  journal?: { read(): BuilderRequest[]; add(request: BuilderRequest): void; remove(requestId: string): void };
-  tickets?: Pick<BuildTickets, 'count' | 'spend' | 'refund' | 'settle'>;
-  rng?: () => number; // draws a reroll; Math.random unless a test injects one
-};
-
+import type { BuilderState, Dependencies, FollowUpOutcome, FollowUpRequest, GenerateOutcome, StageListener } from './controller-types.ts';
+export type { BuilderApi, BuilderRequest, BuilderState, FollowUpOutcome, FollowUpRequest, GenerateOutcome, GenerationStage, ImageCheck, StageListener } from './controller-types.ts';
 // What the visitor sees besides the lifecycle: the lifecycle itself (status, stage, error, saving, whether the
 // preview was kept) lives in `Life`, and `state()` joins the two.
-type Shown = Pick<BuilderState, 'selections' | 'preview' | 'kept' | 'usage'>;
-type Preview = NonNullable<BuilderState['preview']>;
+type Shown = Pick<BuilderState, 'selections' | 'preview' | 'kept' | 'usage' | 'pendingJoinIds'>;
 
 // The worker answers these before any image is attempted, so the request's ticket comes back.
 const REFUNDED = new Set(['invalid', 'cap', 'busy']);
 const sameSelections = (a: UserSelections, b: UserSelections) => JSON.stringify(a) === JSON.stringify(b);
-
-function savedRecord(preview: Preview, keptAt: string, rumble: Loadout, slots?: SlotSet): SavedCharacter {
-  const generation = preview.generation;
-  return structuredClone({
-    schemaVersion: 2, id: generation.id, state: 'kept', generationId: generation.id,
-    userSelections: generation.userSelections, resolvedSelections: generation.resolvedSelections,
-    promptVersion: generation.promptVersion, providerModelId: generation.providerId + '/' + generation.modelId,
-    referenceIds: generation.referenceIds, image: preview.image, generation,
-    keptAt, parentId: null, identityNotes: null, rumble, ...slotFields(slots),
-  });
-}
 
 // A follow-up that must be transparent (its entry's `alphaRequired`) is checked on its pixels when a PNG; a webp artifact was
 // checked by the worker.
@@ -119,6 +56,7 @@ class BuilderController {
   private followUps = new Set<Promise<void>>();
   private disposed = false;
   private followUpAbort = new AbortController();
+  private sharedAlt = new SharedAltRecovery();
 
   constructor(dependencies: Dependencies, selections: UserSelections) {
     this.dependencies = dependencies;
@@ -185,21 +123,26 @@ class BuilderController {
 
   async create() {
     if (!canCreate(this.life)) return;
+    if (this.dependencies.joinSaved) {
+      const [pending] = pendingLoftJoins(this.shown.kept, this.dependencies.journal);
+      if (pending) return this.collectJoin(pending.request, pending.saved);
+      if (this.shown.pendingJoinIds?.length) {
+        this.send({ type: 'reject', error: { kind: 'storage', message: COPY.reloadJoin, dispatch: 'not-sent' } }); return;
+      }
+    }
     const retry = retryMode(this.life);
     const held = this.life.request;
     if (retry && held && sameSelections(held.selections, this.shown.selections)) return this.run(held, retry);
-    const validated = validateSelections(this.shown.selections);
-    if (!validated.ok) { this.send({ type: 'reject', error: { kind: 'invalid', message: COPY.invalid } }); return; }
-    const request = { requestId: this.dependencies.newId(), selections: validated.value };
-    // Every new image costs a ticket, spent before dispatch; reattaching to a request never spends again.
+    const admit = () => canCreate(this.life) ? admitBuild(this.dependencies, this.shown.selections) : null;
     try {
-      if (this.dependencies.tickets && !this.dependencies.tickets.spend(request.requestId)) {
-        this.send({ type: 'reject', error: { kind: 'tickets', message: COPY.tickets } }); return;
-      }
-    } catch { this.send({ type: 'reject', error: this.storageFailure() }); return; }
-    try { this.dependencies.journal?.add(request); }
-    catch { this.giveBack(request); this.send({ type: 'reject', error: this.storageFailure() }); return; }
-    return this.run(request, 'generate');
+      const admission = this.dependencies.exclusive ? await this.dependencies.exclusive(admit) : admit();
+      if (!admission) return;
+      if (admission.error) { this.send({ type: 'reject', error: admission.error }); return; }
+      return this.run(admission.request, 'generate');
+    } catch (error) {
+      const failure = error instanceof ProviderError ? { kind: error.kind, message: error.message } : this.storageFailure();
+      this.send({ type: 'reject', error: { ...failure, dispatch: 'not-sent' } });
+    }
   }
 
   // Starts a run, or returns null when the model refuses (a run is live, or the builder is disposed). The run's
@@ -221,9 +164,11 @@ class BuilderController {
     try {
       await this.attempt(run, started.signal, request, mode);
     } catch (error) {
-      const kind = error instanceof ProviderError ? error.kind : 'network';
-      if (kind === 'corrupt') this.forget(request); // Undecodable for good; retrying cannot help.
-      this.end({ type: 'fail', run, error: { kind, message: COPY[kind] } });
+      let kind = error instanceof ProviderError ? error.kind : 'network';
+      try { if (kind === 'corrupt') await this.forget(request); }
+      catch { kind = 'storage'; }
+      const failure = { kind, message: COPY[kind] };
+      this.end({ type: 'fail', run, error: this.dependencies.guardPaidRequests ? paidOutcomeFailure(failure) : failure });
     }
   }
 
@@ -238,22 +183,25 @@ class BuilderController {
       result = { ok: false, error: { kind: 'preparation', message: result.error.message } };
     }
     if (!result.ok) {
-      if (mode === 'generate' && REFUNDED.has(result.error.kind)) this.giveBack(request);
-      if (result.error.kind !== 'preparation') this.forget(request);
-      this.end({ type: 'fail', run, error: result.error });
+      const error = this.dependencies.guardPaidRequests ? paidOutcomeFailure(result.error) : result.error;
+      if (error.kind !== 'preparation' && !(this.dependencies.guardPaidRequests && error.dispatch === 'unresolved')) {
+        await this.forget(request, mode === 'generate' && REFUNDED.has(error.kind));
+      }
+      this.end({ type: 'fail', run, error });
       return;
     }
     await this.finish(run, request, result);
   }
 
-  // The image arrived: check it, save it as a draft when the journal makes it durable, then show it.
   private async finish(run: number, request: BuilderRequest, result: Extract<GenerateOutcome, { ok: true }>) {
     let check: ImageCheck;
     try { check = await this.dependencies.inspect(result.image); }
     catch (error) { throw error instanceof ProviderError ? error : new ProviderError('corrupt', COPY.corrupt); }
     if (!this.isLive(run)) return;
+    if (this.dependencies.joinSaved && !displayableIdle(check)) throw new ProviderError('corrupt', COPY.corrupt);
     const preview = { generation: result.generation, image: result.image, check };
     const existing = this.shown.kept.find(item => item.generationId === result.generation.id);
+    let candidate = existing && { ...existing, generation: preview.generation, image: preview.image };
     const names = parseNamePack(result.names);
     const id = result.generation.id;
     if (names) this.packs.set(id, names);
@@ -261,20 +209,52 @@ class BuilderController {
     // and element); a record that already has one (a resumed build) keeps it.
     const draws = !!this.dependencies.api.followUp && !this.slots.has(id) && !existing?.expression;
     if (draws) this.slots.set(id, freshSlots(altKindFor(id)));
-    if (this.dependencies.journal && !existing) {
+    if ((this.dependencies.journal || this.dependencies.joinSaved) && !existing) {
       const draft = savedRecord(preview, this.dependencies.now().toISOString(), withNames(newLoadout(id), names), this.slots.get(id));
-      draft.state = 'draft';
-      try { await this.dependencies.store.put(draft); }
+      if (!this.dependencies.joinSaved) draft.state = 'draft';
+      try { await putGeneratedRecord(this.dependencies, { ...draft, ...durableSlots(this.dependencies, this.slots.get(id)) }); }
       catch { throw new ProviderError('storage', COPY.storage); }
-      this.update({ kept: [...this.shown.kept, draft] });
-    } else if (draws) await this.writeSlots(id);
+      candidate = draft;
+      if (this.dependencies.joinSaved) {
+        if (!this.isLive(run)) return;
+        this.update({ kept: [...this.shown.kept, draft], pendingJoinIds: [draft.id] });
+      } else this.update({ kept: [...this.shown.kept, draft] });
+    } else if (draws) await this.writeSlots(id, FOLLOW_UPS.map(entry => entry.id));
     if (draws) {
       const asked = { requestId: request.requestId, image: result.image, token: result.followUp?.token };
       this.launchFollowUps(id, asked, (call, signal) => this.dependencies.api.followUp!(call, signal));
     }
-    this.forget(request);
+    if (!this.dependencies.joinSaved) await this.forget(request);
+    else if (!candidate || !await this.completeJoin(run, request, candidate)) return;
     if (!this.isLive(run)) return;
-    this.end({ type: 'ready', run, kept: existing?.state === 'kept' }, { preview, usage: result.usage ?? null });
+    this.end({ type: 'ready', run, kept: !!this.dependencies.joinSaved || existing?.state === 'kept' }, { preview, usage: result.usage ?? null,
+      ...(this.dependencies.joinSaved ? { pendingJoinIds: this.shown.pendingJoinIds?.filter(item => item !== id) } : {}) });
+  }
+
+  private async completeJoin(run: number, request: BuilderRequest, inspected: SavedCharacter) {
+    const joined = await commitLoftJoin(this.dependencies, request, inspected, () => this.isLive(run), () => this.settle(request));
+    if (!this.isLive(run)) return;
+    if (joined) this.showSharedRecord(joined);
+    else this.end({ type: 'fail', run, error: { kind: 'loft-pending', message: COPY['loft-pending'] } }, joined === null
+      ? { kept: this.shown.kept.filter(item => item.id !== inspected.id) } : undefined);
+    return joined;
+  }
+
+  private async collectJoin(request: BuilderRequest, saved: SavedCharacter) {
+    const started = this.begin('generate', request);
+    if (!started) return;
+    const { run } = started;
+    try {
+      const check = await this.dependencies.inspect(saved.image);
+      if (!displayableIdle(check)) throw new ProviderError('corrupt', COPY.corrupt);
+      const joined = await this.completeJoin(run, request, saved);
+      if (!joined) return;
+      this.end({ type: 'ready', run, kept: true }, { preview: { generation: joined.generation, image: joined.image, check },
+        usage: null, pendingJoinIds: this.shown.pendingJoinIds?.filter(item => item !== saved.id) });
+      await this.resumeFollowUps(joined);
+    } catch (error) {
+      this.end({ type: 'fail', run, error: { kind: 'loft-pending', message: error instanceof ProviderError ? error.message : COPY.reloadJoin } });
+    }
   }
 
   private isLive(run: number) { return this.life.run === run; }
@@ -297,7 +277,7 @@ class BuilderController {
       this.launchFollowUps(item.id, { requestId: item.generation.requestId, image: item.image }, (call, signal) => api.resumeFollowUp!(call, signal));
     } else {
       this.slots.set(item.id, failPending(set, 'network'));
-      await this.writeSlots(item.id);
+      await this.writeSlots(item.id, FOLLOW_UPS.filter(entry => slotOf(set, entry.id)?.status === 'pending').map(entry => entry.id));
     }
   }
 
@@ -319,7 +299,7 @@ class BuilderController {
     } catch (error) { outcome = { ok: false, kind: error instanceof ProviderError ? error.kind : 'network' }; }
     if (this.disposed) return;
     this.slots.set(id, settleSlot(this.slots.get(id) ?? {}, entry.id, outcome, !!request.expression));
-    await this.writeSlots(id);
+    await this.writeSlots(id, [entry.id]);
   }
 
   private async requireTransparent(outcome: Extract<FollowUpOutcome, { ok: true }>): Promise<FollowUpOutcome> {
@@ -332,18 +312,32 @@ class BuilderController {
   // Writes the slots onto the saved record (draft or kept) and shows them. It waits for a Keep or reroll in flight, so
   // the record it reads is the one they wrote. A failed save keeps the slots in memory, where Keep carries them.
   recoverAlt(id: string, verify: () => Promise<string>): Promise<'ready' | FailureKind> {
-    return recoverSavedAlt({ id, verify, api: this.dependencies.api, saved: this.shown.kept.find(item => item.id === id), slots: this.slots,
-      signal: this.followUpAbort.signal,
-      write: () => this.writeSlots(id) });
+    const recovery = { id, verify, saved: this.shown.kept.find(item => item.id === id), slots: this.slots, signal: this.followUpAbort.signal };
+    return this.dependencies.guardPaidRequests
+      ? this.sharedAlt.run({ ...recovery, dependencies: this.dependencies, show: record => this.showSharedRecord(record) })
+      : recoverSavedAlt({ ...recovery, api: this.dependencies.api, write: () => this.writeSlots(id, [ALT_ID]) });
   }
 
-  private async writeSlots(id: string) {
+  private showSharedRecord(record: SavedCharacter) {
+    const shown = showPendingSlots(record, this.slots.get(record.id));
+    this.update({ kept: this.shown.kept.map(item => item.id === record.id ? shown : item) });
+  }
+
+  private async writeSlots(id: string, changed: readonly string[]) {
     await this.pendingSave;
     await this.rerolls.get(id);
     const set = this.slots.get(id);
     const current = this.shown.kept.find(item => item.id === id);
     if (!set || !current) return false;
-    try { await this.dependencies.store.put({ ...current, ...slotFields(set) }); } catch { return false; }
+    if (this.dependencies.guardPaidRequests) {
+      try {
+        const saved = await writeSharedSlots(this.dependencies, current, durableSlots(this.dependencies, set), changed);
+        if (!saved) return false;
+        this.showSharedRecord(saved);
+        return true;
+      } catch { return false; }
+    }
+    try { await this.dependencies.store.put({ ...current, ...durableSlots(this.dependencies, set) }); } catch { return false; }
     this.update({ kept: this.shown.kept.map(item => (item.id === id ? { ...item, ...slotFields(set) } : item)) });
     return true;
   }
@@ -395,16 +389,13 @@ class BuilderController {
     await Promise.all([...this.followUps]);
   }
 
-  private forget(request: BuilderRequest) {
-    this.dependencies.journal?.remove(request.requestId);
-    this.life = next(this.life, { type: 'forget', requestId: request.requestId });
-    // Finished, made or not: the ticket stays spent. Unwritable storage leaves it open, never refunded twice.
-    try { this.dependencies.tickets?.settle(request.requestId); } catch { /* see above */ }
+  private forget(request: BuilderRequest, refund = false) {
+    return this.dependencies.exclusive ? this.dependencies.exclusive(() => this.settle(request, refund)) : this.settle(request, refund);
   }
 
-  // Nothing was made. If storage can't record the refund the ticket stays spent; it never mints an extra one.
-  private giveBack(request: BuilderRequest) {
-    try { this.dependencies.tickets?.refund(request.requestId); } catch { /* see above */ }
+  private settle(request: BuilderRequest, refund = false) {
+    settleBuild(this.dependencies, request, refund);
+    this.life = next(this.life, { type: 'forget', requestId: request.requestId });
   }
 
   keep() {
@@ -421,31 +412,35 @@ class BuilderController {
       const carried = parseLoadout(this.shown.kept.find(item => item.id === id)?.rumble); // a draft's loadout, rerolled or not
       const draft = this.shown.kept.find(item => item.id === id);
       const resident = savedRecord(preview, this.dependencies.now().toISOString(), carried ?? withNames(newLoadout(id), this.packs.get(id) ?? null), this.slots.get(id) ?? slotsOf(draft));
-      await this.dependencies.store.put(resident);
-      const kept = [...this.shown.kept.filter(item => item.id !== resident.id), resident];
+      const saved = await keepRecord(this.dependencies, resident);
+      const kept = [...this.shown.kept.filter(item => item.id !== saved.id), showPendingSlots(saved, this.slots.get(id))];
       this.send({ type: 'saved' }, { kept });
     } catch {
       this.send({ type: 'saveFailed', error: this.storageFailure() });
     }
   }
 
-  // Saved residents only; never waits on a pending job, so the room can restore at once. A record with no valid
-  // loadout is shown with the one backfilled from its id, and saved; a failed save loses nothing, because the same id
-  // backfills the same loadout on the next load.
+  // Restore saved records without waiting for pending jobs. Loadout backfill is deterministic per resident ID.
   async load() {
     try {
       const stored = await this.dependencies.store.list();
-      const fixed = stored.filter(needsLoadout).map(item => ({ ...item, rumble: backfillLoadout(item.id) }));
+      const pending = this.dependencies.joinSaved ? pendingLoftJoins(stored, this.dependencies.journal) : [];
+      const pendingIds = new Set(pending.map(item => item.saved.id));
+      const fixed = stored.filter(item => !pendingIds.has(item.id) && needsLoadout(item)).map(item => ({ ...item, rumble: backfillLoadout(item.id) }));
       const records = stored.map(item => fixed.find(candidate => candidate.id === item.id) ?? item);
       const unique = new Map([...records, ...this.shown.kept].map(item => [item.id, item]));
-      this.update({ kept: [...unique.values()] });
+      this.update({ kept: [...unique.values()], ...(this.dependencies.joinSaved ? { pendingJoinIds: [...pendingIds] } : {}) });
+      for (const { request, saved } of pending) await this.collectJoin(request, saved);
       await Promise.all(fixed.map(item => this.saveBackfilled(item)));
-      await Promise.all(records.map(item => this.resumeFollowUps(item)));
+      await Promise.all(records.filter(item => !pendingIds.has(item.id)).map(item => this.resumeFollowUps(item)));
     } catch { this.send({ type: 'note', error: this.storageFailure() }); }
   }
 
   private async saveBackfilled(item: SavedCharacter) {
-    try { await this.dependencies.store.put(item); } catch { /* shown anyway; the next load backfills and saves again */ }
+    try {
+      const saved = await backfillRecord(this.dependencies, item);
+      if (saved) this.showSharedRecord(saved);
+    } catch { /* shown anyway; the next load backfills and saves again */ }
   }
 
   // A record edit, not a lifecycle event: it never moves `Life` (a failed save sets its error via `note`). A second reroll of the same id while one is saving
@@ -463,20 +458,26 @@ class BuilderController {
   private async rerollSaved(id: string): Promise<Loadout | null> {
     const current = this.shown.kept.find(item => item.id === id);
     if (!current) return null;
-    const old = parseLoadout(current.rumble) ?? backfillLoadout(id);
-    if (!isRerollable(old)) return null;
-    const fresh = rollLoadout(this.dependencies.rng ?? Math.random, undefined, old.synergy); // the synergy the player sees must change
-    const rolled: Loadout = old.names ? { ...fresh, names: old.names } : fresh; // a reroll picks from the pack, never replaces it
-    const slots = slotFields(this.slots.get(id) ?? slotsOf(current)); // a reroll leaves the idle alone, so the expression and alt ride along
-    try { await this.dependencies.store.put({ ...current, rumble: rolled, ...slots }); }
+    try {
+      const { saved, rolled } = await rerollRecord(this.dependencies, current, this.slots.get(id));
+      if (saved) this.showSharedRecord(saved);
+      return rolled;
+    }
     catch { this.send({ type: 'note', error: this.storageFailure() }); return null; }
-    this.update({ kept: this.shown.kept.map(item => (item.id === id ? { ...item, rumble: rolled, ...slots } : item)) });
-    return rolled;
   }
 
   // Reattaches to each pending request in turn, oldest first. Never dispatches a new generation.
   resume() {
     const work = (async () => {
+      if (this.shown.pendingJoinIds?.length) return;
+      if (this.dependencies.guardPaidRequests && !this.life.observable) {
+        const read = () => paidJournalFailure(this.dependencies.journal);
+        let blocked;
+        try { blocked = this.dependencies.exclusive ? await this.dependencies.exclusive(read) : read(); }
+        catch (error) { blocked = { ...this.storageFailure(), ...(error instanceof ProviderError ? { message: error.message } : {}), dispatch: 'not-sent' as const }; }
+        if (blocked) this.send({ type: 'reject', error: blocked });
+        return;
+      }
       let pending: BuilderRequest[];
       try { pending = this.dependencies.journal?.read() ?? []; }
       catch { this.send({ type: 'note', error: this.storageFailure() }); return; }

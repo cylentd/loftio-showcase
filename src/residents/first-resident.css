@@ -1,0 +1,127 @@
+.showcase-residents[data-panel='create'] .visit-extension { display: none; }
+.residents-drawer.world-modal.showcase-residents,
+.resident-reveal.world-modal.first-resident-reveal { --modal-width: var(--world-drawer-width); }
+.residents-drawer.world-modal.showcase-residents { --world-drawer-width: var(--first-resident-drawer-width); }
+.residents-drawer.world-modal.showcase-residents[data-panel='create'] { --modal-height: var(--first-resident-create-height); }
+.residents-drawer.world-modal.showcase-residents[data-panel='create'],
+.resident-reveal.world-modal.first-resident-reveal:not([data-cinema='true']) {
+  --first-resident-frame-inset: var(--space-5);
+  --modal-pad: calc(var(--first-resident-frame-inset) + var(--frame-tuck, 0px) + var(--first-resident-frame-buffer));
+}
+.showcase-residents .resident-wizard:has(.wizard-summary-actions:not([hidden])):not([data-phase='creating']) {
+  grid-template-rows: minmax(0, max-content) auto;
+  align-content: start;
+}
+.showcase-residents .wizard-bar:not([hidden]):has(> .wizard-summary-actions > .wizard-make:not([hidden])) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'failure failure' 'create back' 'tickets tickets';
+  column-gap: var(--space-3);
+  row-gap: 0;
+}
+.showcase-residents .wizard-summary-actions:has(> .wizard-make:not([hidden])) { display: contents; }
+.showcase-residents .wizard-summary-actions .resident-failure { grid-area: failure; }
+.showcase-residents .wizard-summary-actions .resident-failure:empty { display: none; }
+.showcase-residents .wizard-summary-actions .wizard-make { grid-area: create; }
+.showcase-residents .wizard-bar .wizard-back { grid-area: back; }
+.showcase-residents .wizard-summary-actions .wizard-ticket-note { grid-area: tickets; margin-block-start: var(--space-2); }
+.showcase-residents .wizard-bar:has(.wizard-make:not([hidden])) :is(.wizard-make, .wizard-back),
+.showcase-residents .creation-progress > .world-button,
+.first-resident-footer .world-button {
+  box-sizing: border-box;
+  height: var(--tap-min);
+  min-height: var(--tap-min);
+  padding-block: 0;
+}
+.showcase-residents .creation-progress,
+.showcase-residents .creation-progress[data-state='arrived'] {
+  grid-template: minmax(0, max-content) auto / minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-3);
+}
+.showcase-residents .creation-progress[data-state='arrived'] .creation-progress-body { display: grid; }
+.showcase-residents .creation-progress[data-state='arrived'] .creation-package {
+  --arrival-unit: var(--first-resident-box-unit);
+  --arrival-stage-height: calc(16 * var(--arrival-unit));
+}
+.showcase-residents .creation-progress[data-state='arrived'] :is(.creation-package, .creation-message, .world-primary) {
+  grid-area: auto;
+  justify-self: center;
+  justify-items: center;
+  text-align: center;
+}
+.showcase-residents .creation-stage { margin-block: 0; }
+.showcase-residents .wizard-cards:not([data-field='palette']),
+.showcase-residents .wizard-picks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.resident-reveal.world-modal.first-resident-reveal {
+  --reveal-stage: var(--first-resident-stage);
+  --reveal-figure: var(--first-resident-figure);
+}
+.first-resident-reveal .resident-arrival-form { gap: var(--space-3); }
+.first-resident-reveal :is(.reveal-body, .resident-name) { gap: var(--space-1); }
+.first-resident-reveal .resident-name p { font-size: var(--text-sm); line-height: var(--line-tight); }
+.first-resident-reveal .reveal-body > p:empty { display: none; }
+.first-resident-reveal .resident-name [role='alert']:empty { display: none; }
+.first-resident-reveal .first-resident-card {
+  display: grid;
+  align-self: stretch;
+  padding: var(--space-2);
+  border-radius: var(--world-radius);
+  background: var(--world-paper-sunk);
+  color: var(--world-ink);
+}
+.first-resident-card h3 { margin: 0; }
+.first-resident-card button { text-align: start; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); }
+.first-resident-card img { width: var(--tap-min); height: var(--tap-min); object-fit: contain; }
+.first-resident-card-summary { display: grid; line-height: var(--line-tight); }
+.first-resident-footer,
+.first-resident-launches { display: grid; gap: var(--space-3); }
+.first-resident-footer .world-button { text-align: start; }
+.first-resident-launches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.first-resident-launches .world-button { padding-inline: var(--space-2); }
+.first-resident-launches > p { grid-column: 1 / -1; }
+.first-resident-launches p { margin: 0; }
+.first-resident-launches p:empty { display: none; }
+
+.holo-dialog.binder-zoom.first-resident-inspector {
+  aspect-ratio: auto;
+  padding-block-start: calc(var(--tap-min) + 2 * var(--space-3));
+  box-sizing: border-box;
+}
+.first-resident-inspector .holo-card-big { height: auto; aspect-ratio: var(--holo-ratio); }
+.first-resident-inspector .holo-front > .holo-head { z-index: var(--first-resident-card-title-layer); }
+.first-resident-inspector .holo-name {
+  padding-inline: var(--space-1);
+  border-radius: var(--space-1);
+  color: var(--world-paper);
+  background: var(--world-ink);
+  text-shadow: none;
+}
+.first-resident-inspector .first-resident-inspector-close {
+  position: absolute;
+  inset: var(--space-3) var(--space-3) auto auto;
+  box-sizing: border-box;
+  inline-size: var(--tap-min);
+  padding-inline: 0;
+  color: var(--world-ink);
+  background: var(--world-paper);
+}
+.first-resident-inspector :is(.holo-card-big, .first-resident-inspector-close):focus-visible {
+  outline: var(--focus-width) solid var(--world-paper);
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 calc(var(--focus-offset) + var(--focus-width) + var(--border-width)) var(--world-ink);
+}
+.first-resident-inspector .holo-card-big:focus-visible .holo-face { outline: none; }
+
+@media (max-width: 700px) {
+  .residents-drawer.world-modal.showcase-residents[data-panel='create'],
+  .resident-reveal.world-modal.first-resident-reveal:not([data-cinema='true']) {
+    --first-resident-frame-inset: var(--space-4);
+  }
+  .residents-drawer.world-modal.showcase-residents[data-panel='create']:has(
+    .wizard-summary-actions > .wizard-make:not([hidden]), .creation-progress:not([hidden])
+  ) { height: fit-content; }
+  .resident-reveal.first-resident-reveal {
+    --modal-sheet-height: calc(100dvh - var(--modal-gap));
+  }
+}

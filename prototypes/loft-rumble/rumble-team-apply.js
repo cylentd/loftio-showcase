@@ -3,7 +3,7 @@
   // Team apply (ledger #443, unit B3a). Pure: turns window.rumbleTeam (rumble-slot-fill.js) into what the realtime page needs, so the
   // saved team drives the fight. Inactive (the page keeps its demo trio, third hero rerolls) when there is no team or the team is the
   // demo trio. A roster slot keeps its own trait; a slot whose synergy fell back already carries its trait's default synergy.
-  // Art and portraits still follow the slot id (slot 1 draws as Sprout); only names, traits and synergies come from the team.
+  // Names, traits and synergies come from the team here; art and portraits come from rumble-hero-art.js, so each slot draws its own resident.
   const DEMO_IDS=Object.freeze(['sprout','chomper','custom']);
   const rules=(active,ids)=>({
     showsCard:id=>!active||ids.includes(id),

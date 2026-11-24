@@ -9,6 +9,7 @@
     totalDamage:12,rosterSize:3,
     geometryEpsilon:1e-9,clockEpsilon:1e-12,
     // Contact precision in arena pixels/eligible seconds; conservative angular bound, three convex warning wedges.
-    contactTolerance:.05,contactTimeTolerance:1e-6,speedSafety:2,rigMargin:200,sectorSlices:3
+    contactTolerance:.05,contactTimeTolerance:1e-6,speedSafety:2,rigMargin:200,sectorSlices:3,
+    nearestSlack:1e-9 // relative margin on the squared-distance prefilter in distance(): far above a double's rounding step, far below contactTolerance
   });
 })(globalThis);

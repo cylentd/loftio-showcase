@@ -1,22 +1,23 @@
 import { dismissOnBackdrop, worldButton, worldDrawer } from '../world-ui';
 import { WELCOME_COPY as COPY } from './welcome-copy';
+import { FIRST_RESIDENT_COPY as FIRST } from './first-resident-copy';
 import welcomeArt from '../art/welcome-envelope.webp';
 import './welcome.css';
 
 /** Presentation only: the session's ticket ledger already owns the allowance. */
-export function welcomeCard(trigger: HTMLElement, build: () => void) {
-  const card = worldDrawer(COPY.title, COPY.close);
+export function welcomeCard(trigger: HTMLElement, build: () => void, showcase = false) {
+  const card = worldDrawer(showcase ? FIRST.title : COPY.title, COPY.close);
   card.dialog.classList.remove('world-frame');
   card.dialog.classList.add('welcome-card');
   dismissOnBackdrop(card.dialog);
-  const body = document.createElement('p'); body.textContent = COPY.body;
+  const body = document.createElement('p'); body.textContent = showcase ? FIRST.body : COPY.body;
   body.id = 'resident-welcome-description'; card.dialog.setAttribute('aria-describedby', body.id);
   const tickets = document.createElement('div'); tickets.className = 'welcome-tickets'; tickets.setAttribute('aria-hidden', 'true');
   const hero = document.createElement('img'); hero.className = 'welcome-hero';
   hero.src = welcomeArt; hero.alt = ''; hero.draggable = false; tickets.append(hero);
   const actions = document.createElement('div'); actions.className = 'welcome-actions';
   let building = false;
-  const primary = worldButton(COPY.build, () => { building = true; card.dialog.close(); });
+  const primary = worldButton(showcase ? FIRST.build : COPY.build, () => { building = true; card.dialog.close(); });
   primary.classList.add('world-primary');
   const explore = worldButton(COPY.explore, () => card.dialog.close());
   // The drawer restores focus first. Opening Create afterwards keeps focus inside the new dialog.

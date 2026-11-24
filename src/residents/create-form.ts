@@ -53,11 +53,23 @@ function stepSection(title: string, index: number, uid: string) {
   section.append(head); return { section, heading };
 }
 
+type Builder = ReturnType<typeof createBuilder>;
+type ShownAction = ReturnType<typeof createAction>;
+
+function bindCreateSubmit(form: HTMLFormElement, builder: Builder, action: (state: ReturnType<Builder['state']>) => ShownAction, make: () => unknown, ask: () => void) {
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const state = builder.state(); const shown = action(state);
+    if (state.status === 'generating' || state.saving || shown.outOfTickets || shown.uncertain) return;
+    if (shown.confirmBeforeCreate) ask(); else void make();
+  });
+}
+
 /** grant adds a test ticket; passed in mock mode only, where images are free placeholders. */
-export function residentForm(builder: ReturnType<typeof createBuilder>, mode: BuilderMode, grant?: () => void, exit: () => void = () => {}, confirmLabel = RESIDENT_COPY.confirmYes) {
+export function residentForm(builder: ReturnType<typeof createBuilder>, mode: BuilderMode, grant?: () => void, exit: () => void = () => {}, confirmLabel = RESIDENT_COPY.confirmYes, direct = false, meet?: () => void) {
   const uid = `resident-wizard-${formCount++}`;
   // Only an API with observe can reattach to a request; without it a failed build's button starts a new one.
-  const action = (state: ReturnType<typeof builder.state>) => createAction({ ...state, resumable: state.resumable === true });
+  const action = (state: ReturnType<typeof builder.state>) => createAction({ ...state, resumable: state.resumable === true, direct });
   const wizard = createWizard(builder, Math.random);
   const form = document.createElement('form'); form.className = 'resident-form resident-wizard';
   const cards: { button: HTMLButtonElement; field: SelectionField; value: string | null }[] = [];
@@ -80,7 +92,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     const button = document.createElement('button'); button.type = 'button'; button.className = 'wizard-pick';
     button.addEventListener('click', () => { wizard.goTo(index); show(true); }); picks.append(button); return button;
   });
-  const progress = creationProgress(exit);
+  const progress = creationProgress(exit, meet);
   const notice = document.createElement('p'); notice.className = 'wizard-notice'; notice.textContent = RESIDENT_COPY.notice[mode];
   // The failure sits directly above the button that answers it: on a phone the drawer is scrolled to the button.
   const failure = document.createElement('p'); failure.className = 'resident-failure'; failure.setAttribute('role', 'alert');
@@ -113,7 +125,7 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
   const dice = worldButton('', () => roll()); dice.classList.add('wizard-dice');
   const face = document.createElement('span'); face.className = 'wizard-dice-face'; face.append(icon('effects'));
   const diceLabel = document.createElement('span'); diceLabel.textContent = WIZARD_COPY.surprise; dice.append(face, diceLabel);
-  bar.append(back, dice, actions);
+  bar.append(...(direct ? [actions, back, dice] : [back, dice, actions]));
   form.append(...steps.map(step => step.section), summary.section, progress.root, bar);
 
   // A pick, the dice and Pick for me share one hold: the hop plays, then the answer applies. `life` refuses a second
@@ -139,18 +151,15 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     update();
     if (focus) (steps[current]?.heading ?? summary.heading).focus();
   }
-  // A submit that would spend a ticket only opens the question; Use 1 ticket is the one way to start.
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    if (!action(builder.state()).confirmBeforeCreate) { void wizard.make(); return; }
-    if (!life.send({ type: 'submit' })) return;
-    update(); question.focus({ preventScroll: true });
+  bindCreateSubmit(form, builder, action, wizard.make, () => {
+    if (life.send({ type: 'submit' })) { update(); question.focus({ preventScroll: true }); }
   });
 
   function update() {
     const state = builder.state(); const busy = state.status === 'generating' || state.saving;
     if (busy) life.send({ type: 'busy', generating: state.status === 'generating' });
-    if (busy && wizard.step !== SUMMARY_STEP) { wizard.goTo(SUMMARY_STEP); show(false); return; }
+    const shown = action(state);
+    if ((busy || (direct && shown.recovery) || shown.uncertain) && wizard.step !== SUMMARY_STEP) { wizard.goTo(SUMMARY_STEP); show(false); return; }
     const finished = lastStatus === 'generating' && state.status === 'ready'; lastStatus = state.status;
     if (finished) { life.send({ type: 'finish', notice: !!form.closest('dialog')?.open }); wizard.restart(); show(false); return; }
     if (!busy) life.send({ type: 'idle' });
@@ -159,10 +168,11 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     if (phase !== 'holding') for (const { button, field, value } of cards) button.setAttribute('aria-pressed', String(wizard.chosen(field) && state.selections[field] === value));
     for (const { button } of cards) button.disabled = busy;
     steps[wizard.step]?.picker.update(wizard.options, busy);
+    const recovering = (direct && !!shown.recovery) || shown.uncertain;
     WIZARD_FIELDS.forEach((field, index) => {
       const tile = pickTile(field, state.selections[field]); const button = pickButtons[index]!;
       button.classList.toggle('is-named', tile.kind === 'text');
-      button.replaceChildren(picture(tile), label(tile.label), label(WIZARD_COPY.parts[index]!, 'wizard-part')); button.disabled = busy;
+      button.replaceChildren(picture(tile), label(tile.label), label(WIZARD_COPY.parts[index]!, 'wizard-part')); button.disabled = busy || recovering;
       button.setAttribute('aria-label', WIZARD_COPY.change(WIZARD_COPY.parts[index]!, tile.label));
     });
     const generating = state.status === 'generating';
@@ -176,16 +186,16 @@ export function residentForm(builder: ReturnType<typeof createBuilder>, mode: Bu
     bar.hidden = progressVisible;
     actions.hidden = active !== SUMMARY_STEP;
     picks.hidden = generating;
-    back.disabled = busy; dice.disabled = busy; back.hidden = generating || wizard.step === 0;
+    back.disabled = busy; dice.disabled = busy; back.hidden = generating || recovering || wizard.step === 0;
     submit.disabled = busy; notice.hidden = generating;
-    const shown = action(state); submit.textContent = shown.label;
+    submit.textContent = shown.label;
     if (failure.textContent !== shown.failure) failure.textContent = shown.failure;
     const asking = (phase === 'unarmed' || phase === 'armed') && shown.confirmBeforeCreate;
     if (state.tickets) question.textContent = RESIDENT_COPY.confirmBuild(state.tickets);
     confirm.hidden = !asking; yes.disabled = busy || phase !== 'armed'; no.disabled = busy;
-    submit.hidden = generating || shown.outOfTickets || asking; out.hidden = !shown.outOfTickets;
+    submit.hidden = generating || shown.outOfTickets || asking || shown.uncertain; out.hidden = !shown.outOfTickets || shown.uncertain;
     if (grantButton) grantButton.disabled = busy;
-    ticketNote.textContent = shown.ticketNote; ticketNote.hidden = generating || asking || !shown.ticketNote; // the question already says it
+    ticketNote.textContent = shown.ticketNote; ticketNote.hidden = generating || asking || !shown.ticketNote || shown.uncertain; // the question already says it
   }
   show(false);
   return { form, update, dismissProgress() { life.send({ type: 'dismiss' }); update(); }, dispose() { life.dispose(); } };

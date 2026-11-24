@@ -5,6 +5,7 @@ export const LOADING = Object.freeze({
   drawing: 'Lighting the grove…',
   error: 'The grove could not load. Try again, or return to the Loft.',
   retry: 'Try again',
+  residentUnavailable: 'This resident is unavailable. Return to the Loft to choose a resident.',
   back: 'Back to Loft',
   timeoutMs: 90000,
 });

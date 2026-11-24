@@ -52,8 +52,16 @@
 #demo-results[data-outcome="defeat"] .results-boss{display:flex;position:absolute;bottom:calc(50% + var(--lm-defeat-height) / 2 + var(--lm-tight));flex-direction:column;align-items:center;color:var(--lm-cream);font-size:var(--lm-body);font-weight:var(--lm-strong);text-shadow:var(--rumble-text-stroke);white-space:nowrap}
 #demo-results[data-outcome="defeat"] .results-surface{height:var(--lm-defeat-height);display:flex;flex-direction:column;align-items:center}
 #demo-results[data-outcome="defeat"] .results-body{flex:1 1 auto;min-height:0}
+/* Bramble's defeat panel is the arena's box (rumble-demo.js placeDefeat): the card stands on the arena's bottom and the boss
+   header sits on the card, so the card keeps its natural height inside the arena (#610 QA). */
+#demo-results[data-outcome="defeat"]:not([data-swarm]){place-items:end center}
+#demo-results[data-outcome="defeat"]:not([data-swarm]) .results-surface{max-height:100%}
+#demo-results[data-outcome="defeat"]:not([data-swarm]) .results-boss{bottom:calc(var(--lm-defeat-height) + var(--lm-tight))}
 #demo-results[data-outcome="defeat"] .results-body{scroll-snap-type:y proximity}
 #demo-results[data-outcome="defeat"] .damage-row{scroll-snap-align:start}
+/* The heading block is a snap position too: with only the damage rows as targets, opening the card (scrollTop=0) snapped to the
+   last row's clamped position, the bottom, and clipped "Team knocked out" above the card (#610 QA). */
+#demo-results[data-outcome="defeat"] .results-celebration{scroll-snap-align:start}
 :root[data-rumble-demo] body > main:has(#demo-results[data-outcome="defeat"]:not([hidden])){height:min(var(--stage-frame-height),100dvh)}
 #demo-results[data-outcome="defeat"] .results-celebration{flex-shrink:0}
 /* Keep the complete victory scene in the reading body when landscape is shallow. */
@@ -66,6 +74,8 @@
    end screen sets (rumble-demo.js present), so Bramble's screen is untouched. */
 #demo-results[data-swarm][data-outcome="victory"] .results-surface{height:auto;max-height:calc(100% - var(--lm-defeat-clearance));
   width:min(100%,var(--lm-defeat-width));padding:calc(var(--lm-frame-slice) + var(--lm-defeat-pad));grid-template-rows:auto auto auto}
+/* A swarm card sits inside the arena, not the stage frame round it: the frame's leaves ran 10 px past each arena edge (#535 QA). */
+#demo-results[data-swarm][data-outcome] .results-surface{width:min(100% - 2 * var(--stage-pad),var(--lm-defeat-width))}
 /* Swarm Defense (D2): kills are the score, so the first fact takes its own row at the title size and the waves held and
    monsters that got through sit under it, smaller. Scoped by data-swarm-mode, set only for a swarm end card. */
 #demo-results[data-swarm-mode="defense"] .results-summary > div:first-child{flex-basis:100%;border-inline-start:0}

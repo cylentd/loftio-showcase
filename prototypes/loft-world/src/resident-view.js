@@ -11,12 +11,14 @@ import {shadowShape,shadowOffset} from './resident-light-model.mjs';
 
 const IDLE_ROOT=ASSET_ROOT;
 
-export function createResidents(scene) {
+export function createResidents(scene, leadArt) {
   const loader=new THREE.TextureLoader();
-  return RESIDENTS.map(name=>{
+  return RESIDENTS.map((name,index)=>{
+    const art=index===0?leadArt:undefined;
     const load=url=>{const tex=loader.load(url);tex.colorSpace=THREE.SRGBColorSpace;return tex;};
-    const textures=Object.fromEntries(POSES.map(pose=>[pose,load(`${ASSET_ROOT}${name}-${pose}.webp`)]));
-    textures.idle=load(`${IDLE_ROOT}${name}-idle.webp`);
+    const textures=art?{idle:new THREE.CanvasTexture(art.image)}:Object.fromEntries(POSES.map(pose=>[pose,load(`${ASSET_ROOT}${name}-${pose}.webp`)]));
+    if(art)textures.idle.colorSpace=THREE.SRGBColorSpace;
+    else textures.idle=load(`${IDLE_ROOT}${name}-idle.webp`);
     // the fading-out copy needs its own picture settings, so it can face the old way while the new one faces the new way
     const ghostTextures=Object.fromEntries(Object.entries(textures).map(([pose,tex])=>[pose,tex.clone()]));
     // both paintings take the scene's light; each one's feet height is a uniform the draw sets per frame
@@ -32,13 +34,14 @@ export function createResidents(scene) {
     // drawn before every sprite so the painting blends over its own shadow; Euler order lets the pool turn about the ground's up
     const shadow=new THREE.Mesh(new THREE.PlaneGeometry(2,2),shadowMaterial());
     shadow.rotation.order='YXZ';shadow.rotation.x=-Math.PI/2;shadow.visible=false;shadow.renderOrder=-1;scene.add(shadow);
-    return {name,sprite,ghost,shadow,mat,feet,ghostFeet,textures,ghostTextures,shownFace:1,ghostFace:1,pose:'idle',pos:new THREE.Vector3(),vel:new THREE.Vector3(),walkVel:new THREE.Vector3(),
+    return {name,savedFit:art?.fit,sprite,ghost,shadow,mat,feet,ghostFeet,textures,ghostTextures,shownFace:1,ghostFace:1,pose:'idle',pos:new THREE.Vector3(),vel:new THREE.Vector3(),walkVel:new THREE.Vector3(),
       walkSpeed:0,grounded:true,spin:0,squash:0,dive:0,isle:null,stride:0,face:1,offGround:9,hopped:false,dizzy:0,away:false,excited:0,turn:1,fade:0,swap:0};
   });
 }
 
 /** Which painting: resting by default; other faces only while something is actually happening. */
 function choosePose(b,flags) {
+  if(b.savedFit)return 'idle';
   if(b.dizzy>0)return 'dizzy';
   if(flags.winding)return 'determined';
   if(b.excited>0)return 'happy';
@@ -51,7 +54,7 @@ function ghostOf(b,pose) {
   if(!tex.userData.sent&&tex.image?.width){tex.needsUpdate=true;tex.userData.sent=true;}
   return tex;
 }
-const fit=(b,pose)=>pose==='idle'?IDLE_FIT[b.name]:{scale:1,anchor:ANCHORS[`${b.name}-${pose}`]};
+const fit=(b,pose)=>b.savedFit??(pose==='idle'?IDLE_FIT[b.name]:{scale:1,anchor:ANCHORS[`${b.name}-${pose}`]});
 
 /** flags: {aiming, charging} for the leader, and floorAt(x,z,y) for the ground shadow. */
 export function drawResidents(bodies,camera,support,dt,reduced=false,flags={}) {
@@ -116,10 +119,13 @@ export function drawResidents(bodies,camera,support,dt,reduced=false,flags={}) {
       map.repeat.x=mirrored?-1:1;map.offset.x=mirrored?1:0;
       sprite.material.rotation=b.spinShown;
       // spin about the middle of the body in the air, stand on the feet on the ground
-      sprite.center.set(f.anchor[0],standing?f.anchor[1]:.5);
-      sprite.scale.set(size/Math.sqrt(sq)*width,size*sq,1);
+      const airCenter=f.visibleHeight==null?LOOK.starterAirPivotY:f.anchor[1]+f.visibleHeight/2;
+      sprite.center.set(f.anchor[0],standing?f.anchor[1]:airCenter);
+      if(b.savedFit&&mirrored)sprite.center.x=1-f.anchor[0];
+      sprite.scale.set(size*(f.aspect??1)/Math.sqrt(sq)*width,size*sq,1);
       // on the ground the feet settle a little into the grass
-      sprite.position.copy(b.pos).setY(b.pos.y+(standing?-PLAY.radius+lift-LOOK.footSink*size:.15));
+      const sink=LOOK.footSink*size*(f.visibleHeight??1);
+      sprite.position.copy(b.pos).setY(b.pos.y+(standing?-PLAY.radius+lift-sink:LOOK.airLift));
     };
     place(b.sprite,b.pose,b.shownFace,b.feet);
     b.ghost.visible=b.sprite.visible&&b.fade>0;
